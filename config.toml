@@ -1,6 +1,6 @@
 baseurl = "https://tanjunchen.com"
 title = "漫步远方，心荡神往"
-theme = "hugo-theme-cleanwhite"
+theme = "hugo-cleanwhite"
 languageCode = "en-us"
 # Enable comments by entering your Disqus shortname
 disqusShortname = ""
