@@ -1,0 +1,180 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="使用 Golang 扩展 Envoy 代理 - WASM 过滤器"><meta property="og:title" content="使用 Golang 扩展 Envoy 代理 - WASM 过滤器"><meta property="twitter:title" content="使用 Golang 扩展 Envoy 代理 - WASM 过滤器"><meta name=description content="Envoy 是一个开源的服务代理，Envoy 专为云原生应用而设计。 Envoy具有很多的特性，如连接池、重试机制、TLS 管理、压缩、健康检查、故障注入、速率限制、授权等。而这些功能都是通过内置的 http 过滤器 实现的。现在，我们我们介绍一个特殊的过滤器 - WASM 过滤器。"><meta property="og:description" content="Envoy 是一个开源的服务代理，Envoy 专为云原生应用而设计。 Envoy具有很多的特性，如连接池、重试机制、TLS 管理、压缩、健康检查、故障注入、速率限制、授权等。而这些功能都是通过内置的 http 过滤器 实现的。现在，我们我们介绍一个特殊的过滤器 - WASM 过滤器。"><meta property="twitter:description" content="Envoy 是一个开源的服务代理，Envoy 专为云原生应用而设计。 Envoy具有很多的特性，如连接池、重试机制、TLS 管理、压缩、健康检查、故障注入、速率限制、授权等。而这些功能都是通过内置的 http 过滤器 实现的。现在，我们我们介绍一个特殊的过滤器 - WASM 过滤器。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>使用 Golang 扩展 Envoy 代理 - WASM 过滤器 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2021-11-28-golang-envoy-wam/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/photos/>PHOTOS</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/wasm title=wasm>wasm</a>
+<a class=tag href=/tags/istio title=istio>istio</a>
+<a class=tag href=/tags/wasm title=wasm>wasm</a></div><h1>使用 Golang 扩展 Envoy 代理 - WASM 过滤器</h1><h2 class=subheading></h2><span class=meta>Posted by
+陈谭军
+on
+Sunday, November 28, 2021</span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=介绍>介绍</h1><p>Envoy 是一个开源的服务代理，Envoy 专为云原生应用而设计。 Envoy具有很多的特性，如连接池、重试机制、TLS 管理、压缩、健康检查、故障注入、速率限制、授权等。而这些功能都是通过内置的 http 过滤器 实现的。现在，我们我们介绍一个特殊的过滤器 - WASM 过滤器。</p><p><img src=/images/2021-11-28-golang-envoy-wam/1.png alt></p><h1 id=为什么使用-wasm-过滤器>为什么使用 WASM 过滤器</h1><p>这篇文章不会解释什么是 WASM，所以对 WASM 不做过多的介绍，而是在文章末尾添加相关资源链接。</p><p>在 Trendyol 科技公司。我们使用 Istio 作为服务网格。我们团队 (DevX) 的职责是通过开发满足微服务常见要求的应用程序来改善开发人员体验，例如缓存、授权、速率限制、跨集群服务发现等。既然我们已经在使用 Istio，为什么不利用 Envoy Proxy 的可扩展性的优势呢？</p><p>我们的案例 demo 是获取用于标识该微服务应用程序的微服务的 JWT 令牌。当我们想避免每个团队用不同的语言编写相同的代码时，我们可以创建一个 WASM Filter 并将其注入 Envoy Proxies 来实现上述功能。</p><p>WASM 过滤器的优点：</p><ol><li>它允许用任何支持 WASM 的语言编写代码。</li><li>动态加载代码到 Envoy。</li><li>WASM 代码与 Envoy 隔离，因此 WASM 中的崩溃不会影响 Envoy。</li></ol><h1 id=说明>说明</h1><p>在 Envoy Proxy 中有专门处理传入请求的工作线程。每个工作线程都有自己的 WASM VM(WASM 虚拟机)。因此，如果想编写基于时间的操作代码，它会为每个线程单独工作。</p><p>在 Envoy Proxy 中，每个工作线程彼此隔离，并且拥有一个或多个 WASM VM。还有一个叫做 WASM Service 的概念，用于线程间通信和数据共享（我们不涉及这个）。</p><p><img src=/images/2021-11-28-golang-envoy-wam/2.png alt></p><h1 id=用-go-编写-wasm>用 Go 编写 WASM</h1><p>我们将使用 tetratelabs/proxy-wasm-go-sdk 在 Go 中编写 WASM。我们还需要 TinyGo 将我们的 Go 代码构建为 WASM。</p><p>我们的案例 demo 非常简单，我们编写了一个代码，每 15 秒向 JWT API 发送一次请求。它提取授权 header 并将其值设置为全局变量，并将该值放入每个请求的响应 header 中。我们还将 &ldquo;hello from wasm&rdquo; 值设置为另一个名为 &ldquo;x-wasm-filter&rdquo; 的 header 中。在 OnTick 函数中，我们对 Envoy 中称为集群的服务进行 http 调用。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#ff79c6>package</span> main
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> (
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;github.com/tetratelabs/proxy-wasm-go-sdk/proxywasm/types&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>const</span> tickMilliseconds <span style=color:#8be9fd>uint32</span> = <span style=color:#bd93f9>15000</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>var</span> authHeader <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>main</span>() {
+</span></span><span style=display:flex><span>  proxywasm.<span style=color:#50fa7b>SetVMContext</span>(<span style=color:#ff79c6>&amp;</span>vmContext{})
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> vmContext <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>  <span style=color:#6272a4>// Embed the default VM context here,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  <span style=color:#6272a4>// so that we don&#39;t need to reimplement all the methods.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  types.DefaultVMContext
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Override types.DefaultVMContext.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (<span style=color:#ff79c6>*</span>vmContext) <span style=color:#50fa7b>NewPluginContext</span>(contextID <span style=color:#8be9fd>uint32</span>) types.PluginContext {
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>pluginContext{contextID: contextID}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> pluginContext <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>  <span style=color:#6272a4>// Embed the default plugin context here,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  <span style=color:#6272a4>// so that we don&#39;t need to reimplement all the methods.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  types.DefaultPluginContext
+</span></span><span style=display:flex><span>  contextID <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>  callBack  <span style=color:#8be9fd;font-style:italic>func</span>(numHeaders, bodySize, numTrailers <span style=color:#8be9fd>int</span>)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Override types.DefaultPluginContext.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (<span style=color:#ff79c6>*</span>pluginContext) <span style=color:#50fa7b>NewHttpContext</span>(contextID <span style=color:#8be9fd>uint32</span>) types.HttpContext {
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>httpAuthRandom{contextID: contextID}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> httpAuthRandom <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>  <span style=color:#6272a4>// Embed the default http context here,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  <span style=color:#6272a4>// so that we don&#39;t need to reimplement all the methods.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>  types.DefaultHttpContext
+</span></span><span style=display:flex><span>  contextID <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Override types.DefaultPluginContext.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (ctx <span style=color:#ff79c6>*</span>pluginContext) <span style=color:#50fa7b>OnPluginStart</span>(pluginConfigurationSize <span style=color:#8be9fd>int</span>) types.OnPluginStartStatus {
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> proxywasm.<span style=color:#50fa7b>SetTickPeriodMilliSeconds</span>(tickMilliseconds); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>    proxywasm.<span style=color:#50fa7b>LogCriticalf</span>(<span style=color:#f1fa8c>&#34;failed to set tick period: %v&#34;</span>, err)
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> types.OnPluginStartStatusFailed
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>  proxywasm.<span style=color:#50fa7b>LogInfof</span>(<span style=color:#f1fa8c>&#34;set tick period milliseconds: %d&#34;</span>, tickMilliseconds)
+</span></span><span style=display:flex><span>  ctx.callBack = <span style=color:#8be9fd;font-style:italic>func</span>(numHeaders, bodySize, numTrailers <span style=color:#8be9fd>int</span>) {
+</span></span><span style=display:flex><span>    respHeaders, _ <span style=color:#ff79c6>:=</span> proxywasm.<span style=color:#50fa7b>GetHttpCallResponseHeaders</span>()
+</span></span><span style=display:flex><span>    proxywasm.<span style=color:#50fa7b>LogInfof</span>(<span style=color:#f1fa8c>&#34;respHeaders: %v&#34;</span>, respHeaders)
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span> _, headerPairs <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> respHeaders {
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>if</span> headerPairs[<span style=color:#bd93f9>0</span>] <span style=color:#ff79c6>==</span> <span style=color:#f1fa8c>&#34;authorization&#34;</span> {
+</span></span><span style=display:flex><span>        authHeader = headerPairs[<span style=color:#bd93f9>1</span>]
+</span></span><span style=display:flex><span>      }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>return</span> types.OnPluginStartStatusOK
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (ctx <span style=color:#ff79c6>*</span>httpAuthRandom) <span style=color:#50fa7b>OnHttpResponseHeaders</span>(<span style=color:#8be9fd>int</span>, <span style=color:#8be9fd>bool</span>) types.Action {
+</span></span><span style=display:flex><span>  proxywasm.<span style=color:#50fa7b>AddHttpResponseHeader</span>(<span style=color:#f1fa8c>&#34;x-wasm-filter&#34;</span>, <span style=color:#f1fa8c>&#34;hello from wasm&#34;</span>)
+</span></span><span style=display:flex><span>  proxywasm.<span style=color:#50fa7b>AddHttpResponseHeader</span>(<span style=color:#f1fa8c>&#34;x-auth&#34;</span>, authHeader)
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>return</span> types.ActionContinue
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Override types.DefaultPluginContext.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (ctx <span style=color:#ff79c6>*</span>pluginContext) <span style=color:#50fa7b>OnTick</span>() {
+</span></span><span style=display:flex><span>  hs <span style=color:#ff79c6>:=</span> [][<span style=color:#bd93f9>2</span>]<span style=color:#8be9fd>string</span>{
+</span></span><span style=display:flex><span>    {<span style=color:#f1fa8c>&#34;:method&#34;</span>, <span style=color:#f1fa8c>&#34;GET&#34;</span>}, {<span style=color:#f1fa8c>&#34;:authority&#34;</span>, <span style=color:#f1fa8c>&#34;some_authority&#34;</span>}, {<span style=color:#f1fa8c>&#34;:path&#34;</span>, <span style=color:#f1fa8c>&#34;/auth&#34;</span>}, {<span style=color:#f1fa8c>&#34;accept&#34;</span>, <span style=color:#f1fa8c>&#34;*/*&#34;</span>},
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>if</span> _, err <span style=color:#ff79c6>:=</span> proxywasm.<span style=color:#50fa7b>DispatchHttpCall</span>(<span style=color:#f1fa8c>&#34;my_custom_svc&#34;</span>, hs, <span style=color:#ff79c6>nil</span>, <span style=color:#ff79c6>nil</span>, <span style=color:#bd93f9>5000</span>, ctx.callBack); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>    proxywasm.<span style=color:#50fa7b>LogCriticalf</span>(<span style=color:#f1fa8c>&#34;dispatch httpcall failed: %v&#34;</span>, err)
+</span></span><span style=display:flex><span>  }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>让我们将 Go 代码编译成 WASM：</p><pre tabindex=0><code>tinygo build -o optimized.wasm -scheduler=none -target=wasi ./main.go
+</code></pre><p>现在我们需要配置 Envoy 代理以对传入请求使用 WASM 过滤器。
+我们将为我们的 WASM 代码定义一个路由规则和一个 WASM 过滤器，我们还将定义一个代表我们服务的集群。</p><pre tabindex=0><code># cat /etc/envoy/envoy.yaml
+admin:
+  access_log_path: /tmp/admin_access.log
+  address:
+    socket_address:
+      protocol: TCP
+      address: 0.0.0.0
+      port_value: 9901
+static_resources:
+  listeners:
+  - name: listener_0
+    address:
+      socket_address:
+        protocol: TCP
+        address: 0.0.0.0
+        port_value: 10000
+    filter_chains:
+    - filters:
+      - name: envoy.filters.network.http_connection_manager
+        typed_config:
+          &#34;@type&#34;: type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+          stat_prefix: ingress_http
+          route_config:
+            name: local_route
+            virtual_hosts:
+            - name: local_service
+              domains: [&#34;*&#34;]
+              routes:
+              - match:
+                  prefix: &#34;/&#34;
+                route:
+                  cluster: my_custom_svc
+          http_filters:
+          - name: envoy.filters.http.wasm
+            typed_config:
+              &#34;@type&#34;: type.googleapis.com/udpa.type.v1.TypedStruct
+              type_url: type.googleapis.com/envoy.extensions.filters.http.wasm.v3.Wasm
+              value:
+                config:
+                  name: &#34;my_plugin&#34;
+                  root_id: &#34;my_root_id&#34;
+                  configuration:
+                    &#34;@type&#34;: &#34;type.googleapis.com/google.protobuf.StringValue&#34;
+                    value: |
+                      {}
+                  vm_config:
+                    runtime: &#34;envoy.wasm.runtime.v8&#34;
+                    vm_id: &#34;my_vm_id&#34;
+                    code:
+                      local:
+                        filename: &#34;/etc/envoy/optimized.wasm&#34;
+                    configuration: { }
+          - name: envoy.filters.http.router
+            typed_config: { }
+  clusters:
+  - name: my_custom_svc
+    connect_timeout: 30s
+    type: static
+    lb_policy: ROUND_ROBIN
+    load_assignment:
+      cluster_name: service1
+      endpoints:
+      - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: 192.168.1.4
+                port_value: 8080
+</code></pre><p>我把所有的文件放在同一个目录下。现在让我们使用 Docker 运行 Envoy 代理：</p><pre tabindex=0><code>docker run -it  --rm -v &#34;$PWD&#34;/envoy.yaml:/etc/envoy/envoy.yaml -v &#34;$PWD&#34;/optimized.wasm:/etc/envoy/optimized.wasm -p 9901:9901 -p 10000:10000 envoyproxy/envoy:v1.17.0
+</code></pre><p>正如我们从日志中看到的，我们的 WASM 过滤器开始工作，并每 15 秒向 JWT API 发送请求。</p><p><img src=/images/2021-11-28-golang-envoy-wam/3.png alt></p><p>现在让我们向 Envoy Proxy 发送请求。我们将 Envoy 配置为侦听来自 10000 端口的传入请求，并使用端口映射启动容器。
+所以我们可以向 localhost:10000 发送请求：</p><p><img src=/images/2021-11-28-golang-envoy-wam/4.png alt></p><p>在响应头中，我们可以看到 &ldquo;x-wasm-filter: hello from wasm&rdquo; 和 &ldquo;x-auth&rdquo; 值。</p><p>感谢阅读。我希望这篇文章能让大家了解如何以及为什么在 Envoy Proxy 中使用 WASM。</p><h1 id=参考>参考</h1><ol><li><a href=https://github.com/mstrYoda/envoy-proxy-wasm-filter-golang>https://github.com/mstrYoda/envoy-proxy-wasm-filter-golang</a></li><li><a href=https://github.com/tetratelabs/proxy-wasm-go-sdk>https://github.com/tetratelabs/proxy-wasm-go-sdk</a></li><li><a href=https://medium.com/trendyol-tech/extending-envoy-proxy-wasm-filter-with-golang-9080017f28ea>https://medium.com/trendyol-tech/extending-envoy-proxy-wasm-filter-with-golang-9080017f28ea</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2020-10-06-participate-community/ data-toggle=tooltip data-placement=top title="如何参与 Kubernetes 开源社区">&larr;
+Previous Post</a></li><li class=next><a href=/post/2021-12-04-wasm-envoyfilter/ data-toggle=tooltip data-placement=top title="Wasm C++ Filter 拓展 Envoy">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023<br><a href=https://themes.gohugo.io/hugo-theme-cleanwhite>CleanWhite Hugo Theme</a> by <a href=https://github.com/tanjunchen>tanjunchen</a> |
+<iframe style=margin-left:2px;margin-bottom:-5px frameborder=0 scrolling=0 width=100px height=20px src="https://ghbtns.com/github-btn.html?user=tanjunchen&repo=hugo-theme-cleanwhite&type=star&count=true"></iframe></p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
