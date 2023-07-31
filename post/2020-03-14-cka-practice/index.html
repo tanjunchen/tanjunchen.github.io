@@ -1,0 +1,483 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="高效通过 Kubernetes CKAD 考试"><meta property="og:title" content="高效通过 Kubernetes CKAD 考试"><meta property="twitter:title" content="高效通过 Kubernetes CKAD 考试"><meta name=description content="为 Kubernetes 应用程序开发人员认证考试做好准备的练习题，高效通过 CKAD 考试"><meta property="og:description" content="为 Kubernetes 应用程序开发人员认证考试做好准备的练习题，高效通过 CKAD 考试"><meta property="twitter:description" content="为 Kubernetes 应用程序开发人员认证考试做好准备的练习题，高效通过 CKAD 考试"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>高效通过 Kubernetes CKAD 考试 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2020-03-14-cka-practice/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/photos/>PHOTOS</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/ckad title=ckad>ckad</a>
+<a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>高效通过 Kubernetes CKAD 考试</h1><h2 class=subheading></h2><span class=meta>Posted by
+陈谭军
+on
+Saturday, March 14, 2020</span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=介绍>介绍</h1><p>Kubernetes 是一个开源系统，用于自动化和容器化部署、扩展和管理应用程序。CNCF/Linux 基金会针对 kubernetes 技能的开发人员提供职能考试，考试内容主要包括应用程序部署、应用程序配置、创建持久卷等。由于考试是理论与实操性相结合的，不仅仅是选择题，仅仅知道概念是不够的，所以我们在考试前需要大量的练习。我们不会在这里讨论任何概念，我们为 CKAD 考试创建一堆练习题，希望我们可以高效通过考试。本文帮助我们理解、练习并为考试做好准备。</p><h1 id=主要内容>主要内容</h1><ul><li>核心概念（13％）</li><li>Pod 多个容器（10％）</li><li>Pod 设计（20％）</li><li>状态持久性（8％）</li><li>配置（18％）</li><li>可观察性（18％）</li><li>服务和网络（13％）</li></ul><h1 id=习题>习题</h1><h2 id=核心概念>核心概念</h2><p>了解 Kubernetes API，创建和配置基本 Pod 概念。可以点击中文题目，查看参考答案。</p><ol><li><details><summary>列出集群中的所有命名空间</summary><pre tabindex=0><code>kubectl get namespaces
+kubectl get ns
+</code></pre></details></li><li><details><summary>列出所有命名空间中的所有 Pod</summary><pre tabindex=0><code>kubectl get po --all-namespaces
+</code></pre></details></li><li><details><summary>列出特定命名空间中的所有 Pod</summary><pre tabindex=0><code>kubectl get pod -n kube-system
+kubectl get pod -n 命名空间名称
+</code></pre></details></li><li><details><summary>列出特定命名空间中的所有 Service</summary><pre tabindex=0><code>kubectl get svc --all-namespaces
+kubectl get svc -n 命名空间名称
+kubectl get svc -n default
+</code></pre></details></li><li><details><summary>用 json 路径表达式列出所有显示名称和命名空间的 Pod</summary><pre tabindex=0><code>kubectl get pods -o=jsonpath=&#34;{.items[*][&#39;metadata.name&#39;, &#39;metadata.namespace&#39;]}&#34;
+</code></pre></details></li><li><details><summary>在默认命名空间中创建一个 Nginx Pod，并验证 Pod 是否正在运行</summary><pre tabindex=0><code>// 创建 Pod
+kubectl run nginx --image=nginx --restart=Never
+// Pod 列表
+kubectl get po
+</code></pre></details></li><li><details><summary>使用 yaml 文件创建相同的 Nginx Pod</summary><pre tabindex=0><code>// get the yaml file with --dry-run flag
+kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml &gt; nginx-pod.yaml
+// cat nginx-pod.yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+// create a pod 
+kubectl create -f nginx-pod.yaml
+</code></pre></details></li><li><details><summary>输出刚创建的 Pod 的 yaml 文件</summary><pre tabindex=0><code>kubectl get po nginx -o yaml
+</code></pre></details></li><li><details><summary>输出刚创建的 Pod 的 yaml 文件，并且其中不包含特定于集群的信息</summary><pre tabindex=0><code>kubectl get po nginx -o yaml --export
+</code></pre></details></li><li><details><summary>获取刚刚创建的 Pod 的完整详细信息</summary><pre tabindex=0><code>kubectl describe pod nginx
+</code></pre></details></li><li><details><summary>删除刚创建的 Pod</summary><pre tabindex=0><code>kubectl delete pod nginx
+kubectl delete -f nginx-pod.yaml
+</code></pre></details></li><li><details><summary>强制删除刚创建的 Pod</summary><pre tabindex=0><code>kubectl delete po nginx --grace-period=0 --force
+</code></pre></details></li><li><details><summary>创建版本为 1.17.4 的 Nginx Pod，并将其暴露在端口 80 上</summary><pre tabindex=0><code>kubectl run nginx --image=nginx:1.17.4 --restart=Never --port=80
+kubectl run nginx --image=nginx:1.17.4 --restart=Never --port=80 --dry-run -o yaml
+</code></pre></details></li><li><details><summary>将刚创建的容器的镜像更改为 1.15-alpine，并验证该镜像是否已更新</summary><pre tabindex=0><code>kubectl set image pod/nginx nginx=nginx:1.15-alpine
+kubectl edit po nginx
+kubectl get po nginx -w
+</code></pre></details></li><li><details><summary>对于刚刚更新的 Pod，将镜像版本改回 1.17.1，并观察变化</summary><pre tabindex=0><code>kubectl set image pod/nginx nginx=nginx:1.17.1
+kubectl edit po nginx
+kubectl get po nginx -w
+</code></pre></details></li><li><details><summary>在不用 describe 命令的情况下检查镜像版本</summary><pre tabindex=0><code>kubectl get po nginx -o=jsonpath=&#39;{.spec.containers[].image}{&#34;\n&#34;}&#39;
+</code></pre></details></li><li><details><summary>创建 Nginx Pod 并在 Pod 上执行简单的 shell</summary><pre tabindex=0><code>kubectl run nginx --image=nginx --restart=Never
+kubectl exec -it nginx /bin/bash
+</code></pre></details></li><li><details><summary>获取刚刚创建的 Pod 的 IP 地址</summary><pre tabindex=0><code>kubectl get po nginx -o wide
+</code></pre></details></li><li><details><summary>创建一个 busybox Pod，在创建它时运行命令 ls 并检查日志</summary><pre tabindex=0><code>kubectl run busybox --image=busybox --restart=Never -- ls
+kubectl logs busybox
+</code></pre></details></li><li><details><summary>如果 Pod 崩溃了，请检查 Pod 的先前日志</summary><pre tabindex=0><code>kubectl logs busybox -p
+</code></pre></details></li><li><details><summary>创建一个带有命令 sleep 3600 的 busybox Pod</summary><pre tabindex=0><code>kubectl run busybox --image=busybox --restart=Never -- /bin/sh -c &#34;sleep 3600&#34;
+</code></pre></details></li><li><details><summary>从 busybox Pod 中检查 Nginx Pod 网络连接性</summary><pre tabindex=0><code>kubectl get pod nginx -o wide 
+kubectl exec -it busybox -- wget -o- 上述命令列出的 ip 地址
+</code></pre></details></li><li><details><summary>创建一个 echo 消息 How are you 的 busybox Pod，并手动将其删除</summary><pre tabindex=0><code>kubectl run busybox --image=busybox --restart=Never -it -- echo &#34;How are you&#34;
+kubectl delete po busybox
+</code></pre></details></li><li><details><summary>创建一个 Nginx Pod 并列出具有不同日志等级（verbosity）的 Pod</summary><pre tabindex=0><code>kubectl run nginx --image=nginx --restart=Never --port=80
+kubectl get po nginx --v=7
+</code></pre></details></li><li><details><summary>使用自定义列 PODNAME 和 PODSTATUS 列出 Nginx Pod</summary><pre tabindex=0><code>kubectl get po nginx -o=custom-columns=&#34;POD_NAME:.metadata.name,POD_STATUS:.status.containerStatuses&#34;
+</code></pre></details></li><li><details><summary>列出所有按名称排序的 Pod</summary><pre tabindex=0><code>kubectl get po --sort-by=.metadata.name
+</code></pre></details></li><li><details><summary>列出所有按创建时间排序的 Pod</summary><pre tabindex=0><code>kubectl get po --sort-by=.metadata.creationTimestamp
+</code></pre></details></li></ol><h2 id=pod-多个容器>Pod 多个容器</h2><p>了解 Pod 中多个容器设计模式（例如：Ambassador、Adapter、Sidecar）。</p><ol><li><details><summary>用“ls; sleep 3600;”“echo Hello World; sleep 3600;”及“echo this is the third container; sleep 3600”三个命令创建一个包含三个 busybox 容器的 Pod，并观察其状态</summary><pre tabindex=0><code>kubectl run busybox --image=busybox --restart=Never --dry-run -o yaml -- bin/sh -c &#34;sleep 3600; ls&#34; &gt; multi-container.yaml
+kubectl create -f multi-container.yaml
+kubectl get po busybox
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: busybox
+  name: busybox
+spec:
+  containers:
+  - args:
+    - bin/sh
+    - -c
+    - ls; sleep 3600
+    image: busybox
+    name: busybox1
+    resources: {}
+  - args:
+    - bin/sh
+    - -c
+    - echo Hello world; sleep 3600
+    image: busybox
+    name: busybox2
+    resources: {}
+  - args:
+    - bin/sh
+    - -c
+    - echo this is third container; sleep 3600
+    image: busybox
+    name: busybox3
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+</code></pre></details></li><li><details><summary>检查刚创建的每个容器的日志</summary><pre tabindex=0><code>kubectl logs busybox -c busybox1
+kubectl logs busybox -c busybox2
+kubectl logs busybox -c busybox3
+</code></pre></details></li><li><details><summary>检查第二个容器 busybox2 的先前日志（如果有）</summary><pre tabindex=0><code>kubectl logs busybox -c busybox2 --previous
+</code></pre></details></li><li><details><summary>在上述容器的第三个容器 busybox3 中运行命令 ls</summary><pre tabindex=0><code>kubectl exec busybox -c busybox3 -- ls
+</code></pre></details></li><li><details><summary>显示以上容器的 metrics，将其放入 file.log 中并进行验证</summary><pre tabindex=0><code>kubectl top pod busybox --containers &gt; file.log &amp;&amp; cat file.log
+</code></pre></details></li><li><details><summary>用主容器 busybox 创建一个 Pod，并执行“while true; do echo ‘Hi I am from Main container’ >> /var/log/index.html; sleep 5; done”，并带有暴露在端口 80 上的 Nginx 镜像的 sidecar 容器。用 emptyDir Volume 将该卷安装在 /var/log 路径（用于 busybox）和 /usr/share/nginx/html 路径（用于nginx容器）。验证两个容器都在运行。</summary><pre tabindex=0><code>kubectl run multi-cont-pod --image=busbox --restart=Never --dry-run -o yaml &gt; multi-container.yaml
+kubectl create -f multi-container.yaml
+kubectl get po multi-cont-pod
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: multi-cont-pod
+  name: multi-cont-pod
+spec:
+  volumes:
+  - name: var-logs
+    emptyDir: {}
+  containers:
+  - image: busybox
+    command: [&#34;/bin/sh&#34;]
+    args: [&#34;-c&#34;, &#34;while true; do echo &#39;Hi I am from Main container&#39; &gt;&gt; /var/log/index.html; sleep 5;done&#34;]
+    name: main-container
+    resources: {}
+    volumeMounts:
+    - name: var-logs
+      mountPath: /var/log
+  - image: nginx
+    name: sidecar-container
+    resources: {}
+    ports:
+      - containerPort: 80
+    volumeMounts:
+    - name: var-logs
+      mountPath: /usr/share/nginx/html
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+</code></pre></details></li><li><details><summary>进入两个容器并验证 main.txt 是否存在，并用 curl localhost 从 sidecar 容器中查询 main.txt</summary><pre tabindex=0><code>kubectl exec -it muilti-containers-pod -c main-container -- sh
+cat var/log/index.html
+kubectl exec -it muilti-containers-pod -c sidercar-container -- sh
+cat /usr/share/nginx/html/index.html
+kubectl exec -it  multi-cont-pod -c sidecar-container -- sh
+# apt-get update &amp;&amp; apt-get install -y curl
+# curl localhost
+</code></pre></details></li></ol><h2 id=pod-设计>Pod 设计</h2><p>了解如何 Pod 使用标签、选择器和注释、了解 Pod 部署以及如何执行滚动更新、了解 Pod 部署以及如何执行回滚、了解 Pod 作业和 CronJobs 等。</p><ol><li><details><summary>获取 Pod label 标签</summary><pre tabindex=0><code>kubectl get po --show-labels
+</code></pre></details></li><li><details><summary>创建 5 个 Nginx Pod，其中两个标签为 env=prod，另外三个标签为 env=dev</summary><pre tabindex=0><code>kubectl run nginx-dev1 --image=nginx --restart=Never --labels=env=dev
+kubectl run nginx-dev2 --image=nginx --restart=Never --labels=env=dev
+kubectl run nginx-dev3 --image=nginx --restart=Never --labels=env=dev
+
+kubectl run nginx-pro1 --image=nginx --restart=Never --labels=env=pro
+kubectl run nginx-pro2 --image=nginx --restart=Never --labels=env=pro
+</code></pre></details></li><li><details><summary>确认所有 Pod 都使用正确的标签创建</summary><pre tabindex=0><code>kubectl get po --show-labels
+</code></pre></details></li><li><details><summary>确认所有 Pod 都使用正确的标签创建</summary><pre tabindex=0><code>kubectl get po --show-labels
+</code></pre></details></li><li><details><summary>获得带有标签 env=dev 的 Pod</summary><pre tabindex=0><code>kubectl get pods -l env=dev
+</code></pre></details></li><li><details><summary>获得带标签 env=dev 的 Pod 并输出标签</summary><pre tabindex=0><code>kubectl get pods -l env=dev --show-labels
+</code></pre></details></li><li><details><summary>获得带有标签 env=pro 的 Pod</summary><pre tabindex=0><code>kubectl get pods -l env=pro
+</code></pre></details></li><li><details><summary>获取带有标签 env 的 Pod</summary><pre tabindex=0><code>kubectl get po -L env
+</code></pre></details></li><li><details><summary>获得带标签 env=dev、env=pro 的 Pod</summary><pre tabindex=0><code>kubectl get po -l &#39;env in (dev,pro)&#39;
+</code></pre></details></li><li><details><summary>获取带有标签 env=dev 和 env=pro 的 Pod 并输出标签</summary><pre tabindex=0><code>kubectl get po -l &#39;env in (dev,pro)&#39; --show-labels
+</code></pre></details></li><li><details><summary>将其中一个容器的标签更改为 env=uat 并列出所有要验证的容器</summary><pre tabindex=0><code>kubectl label pod/nginx-pro1 env=aa --overwrite
+kubectl get pods --show-labels
+</code></pre></details></li><li><details><summary>删除刚才创建的 Pod 标签，并确认所有标签均已删除</summary><pre tabindex=0><code>kubectl label pod nginx-dev{1..3} env-
+kubectl label pod nginx-pro{1..2} env-
+kubectl get pods --show-labels
+</code></pre></details></li><li><details><summary>为所有 Pod 添加标签 app=nginx 并验证</summary><pre tabindex=0><code>kubectl label pod nginx-dev{1..3} app=nginx
+kubectl label pod nginx-pro{1..2} app=nginx
+kubectl get pods --show-labels
+</code></pre></details></li><li><details><summary>获取所有带有标签的节点（如果使用 minikube，则只会获得主节点）</summary><pre tabindex=0><code>kubectl get nodes --show-labels
+</code></pre></details></li><li><details><summary>标记节点（如果正在使用，则为 minikube）nodeName=nginxnode</summary><pre tabindex=0><code>kubectl label node minikube nodeName=nginxnode
+</code></pre></details></li><li><details><summary>建一个标签为 nginx=dev 的 Pod 并将其部署在此节点上</summary><pre tabindex=0><code>kubectl run nginx --image=nginx --restart=Never --dry-run -o yaml &gt; pod.yaml
+kubectl create -f pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: nginx
+  name: nginx
+spec:
+  nodeSelector:
+    nodeName: nginxnode
+  containers:
+  - image: nginx
+    name: nginx
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Never
+status: {}
+</code></pre></details></li><li><details><summary>使用节点选择器验证已调度的 Pod</summary><pre tabindex=0><code>kubectl describe po nginx | grep Node-Selectors
+</code></pre></details></li><li><details><summary>验证我们刚刚创建的 Pod Nginx 是否具有 nginx=dev 这个标签</summary><pre tabindex=0><code>kubectl describe po nginx | grep Labels
+</code></pre></details></li><li><details><summary>用 name=webapp annotate 上述 Pod</summary><pre tabindex=0><code>kubectl annotate po nginx-dev{1..3} name=webapp
+kubectl annotate po nginx-pro{1..2} name=webapp
+</code></pre></details></li><li><details><summary>验证已正确 annotate 的 Pod</summary><pre tabindex=0><code>kubectl describe po nginx-dev{1..3} | grep -i annotations
+kubectl describe po nginx-pro{1..2} | grep -i annotations
+</code></pre></details></li><li><details><summary>删除 Pod 上的 annotate 并验证</summary><pre tabindex=0><code>kubectl annotate po nginx-dev{1..3} name-
+kubectl annotate po nginx-pro{1..2} name-
+kubectl describe po nginx-dev{1..3} | grep -i annotations
+kubectl describe po nginx-pro{1..2} | grep -i annotations
+</code></pre></details></li><li><details><summary>删除到目前为止我们创建的所有 Pod</summary><pre tabindex=0><code>kubectl delete pod --all
+</code></pre></details></li><li><details><summary>创建一个名为 webapp 的 Deployment，它带有 5 个副本的镜像 Nginx</summary><pre tabindex=0><code>kubectl create deployment  webapp --image=nginx --dry-run -o yaml &gt; webapp-deployment.yaml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: webapp
+  name: webapp
+spec:
+  replicas: 5
+  selector:
+    matchLabels:
+      app: webapp
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - image: nginx
+        name: nginx
+        resources: {}
+status: {}
+</code></pre></details></li><li><details><summary>用标签获取我们刚刚创建的 Deployment</summary><pre tabindex=0><code>kubectl get deploy webapp --show-labels
+</code></pre></details></li><li><details><summary>导出该 Deployment 的 yaml 文件</summary><pre tabindex=0><code>kubectl get deploy webapp -o yaml
+</code></pre></details></li><li><details><summary>获取该 Deployment 的 Pod</summary><pre tabindex=0><code>kubectl get po -l app=webapp
+kubectl get pods -l app=webapp
+</code></pre></details></li><li><details><summary>将该 Deployment 从 5 个副本扩展到 20 个副本并验证</summary><pre tabindex=0><code>kubectl scale deploy webapp --replicas=20
+kubectl get po -l app=webapp
+</code></pre></details></li><li><details><summary>获取该 Deployment 的 rollout 状态</summary><pre tabindex=0><code>kubectl rollout status deploy webapp
+</code></pre></details></li><li><details><summary>获取使用该 Deployment 创建的副本</summary><pre tabindex=0><code>kubectl get rs -l app=webapp
+</code></pre></details></li><li><details><summary>获取使用该 Deployment 创建的 replicaset</summary><pre tabindex=0><code>kubectl get rs -l app=webapp
+</code></pre></details></li><li><details><summary>获取该 Deployment 的 replicaset 和 Pod 的 yaml</summary><pre tabindex=0><code>kubectl get rs -l app=webapp -o yaml
+kubectl get po -l app=webapp -o yaml
+</code></pre></details></li><li><details><summary>删除刚创建的 Deployment，并查看所有 Pod 是否已被删除</summary><pre tabindex=0><code>kubectl delete deploy webapp
+kubectl get po -l app=webapp -w
+</code></pre></details></li><li><details><summary>使用镜像 nginx:1.17.1 和容器端口 80 创建 webapp Deployment，并验证镜像版本</summary><pre tabindex=0><code>kubectl create deploy webapp --image=nginx:1.17.1 --dry-run -o yaml &gt; webapp.yaml
+kubectl create -f webapp.yaml
+kubectl describe deploy webapp | grep Image
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: webapp
+  name: webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapp
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: webapp
+    spec:
+      containers:
+      - image: nginx:1.17.1
+        name: nginx
+        ports:
+        - containerPort: 80
+        resources: {}
+status: {}
+</code></pre></details></li><li><details><summary>检查 rollout 历史记录，并确保更新后一切正常</summary><pre tabindex=0><code>kubectl rollout history deploy webapp
+
+kubectl get deploy webapp --show-labels
+kubectl get rs -l app=webapp
+kubectl get po -l app=webapp
+</code></pre></details></li><li><details><summary>撤消之前使用版本 1.17.1 的 Deployment，并验证镜像是否还有老版本</summary><pre tabindex=0><code>kubectl rollout undo deploy webapp
+kubectl rollout history deploy webapp
+</code></pre></details></li><li><details><summary>使用镜像版本 1.16.1 更新 Deployment，并验证镜像、检查 rollout 历史记录</summary><pre tabindex=0><code>kubectl set image deploy/webapp nginx=nginx:1.16.1
+kubectl describe deploy webapp | grep Image
+kubectl rollout history deploy webapp
+</code></pre></details></li><li><details><summary>将 Deployment 更新到镜像 1.17.1 并确认一切正常</summary><pre tabindex=0><code>kubectl rollout undo deploy webapp --to-revision=3
+kubectl describe deploy webapp | grep Image
+kubectl rollout status deploy webapp
+</code></pre></details></li><li><details><summary>使用错误的镜像版本 1.100 更新 Deployment，并验证有问题</summary><pre tabindex=0><code>kubectl set image deploy/webapp nginx=nginx:1.100
+kubectl rollout status deploy webapp (still pending state)
+kubectl get pods (ImagePullErr)
+</code></pre></details></li><li><details><summary>撤消使用先前版本的 Deployment，并确认一切正常</summary><pre tabindex=0><code>kubectl rollout undo deploy webapp
+kubectl rollout status deploy webapp
+kubectl get pods
+</code></pre></details></li><li><details><summary>检查该 Deployment 的特定修订版本的历史记录</summary><pre tabindex=0><code>kubectl rollout history deploy webapp --revision=7
+</code></pre></details></li><li><details><summary>暂停 Deployment rollout</summary><pre tabindex=0><code>kubectl rollout pause deploy  webapp
+</code></pre></details></li><li><details><summary>用最新版本的镜像更新 Deployment，并检查历史记录</summary><pre tabindex=0><code>kubectl set image deploy/webapp nginx=nginx:latest
+kubectl rollout history deploy webapp
+</code></pre></details></li><li><details><summary>检查 rollout 历史记录，确保是最新版本</summary><pre tabindex=0><code>kubectl rollout history deploy webapp
+kubectl rollout history deploy webapp --revision=9
+</code></pre></details></li><li><details><summary>将自动伸缩应用到该 Deployment 中，最少副本数为 10，最大副本数为 20，目标 CPU 利用率 85%，并验证 hpa 已创建，将副本数从 1 个增加到 10 个</summary><pre tabindex=0><code>kubectl autoscale deploy webapp --min=10 --max=20 --cpu-percent=85
+kubectl get hpa
+kubectl get pod -l app=webapp
+</code></pre></details></li><li><details><summary>通过删除刚刚创建的 Deployment 和 hpa 来清理集群</summary><pre tabindex=0><code>kubectl delete deploy webapp
+kubectl delete hpa webapp
+</code></pre></details></li><li><details><summary>用镜像 node 来创建一个 Job，并验证是否有对应的 Pod 创建</summary><pre tabindex=0><code>kubectl create job nodeversion --image=node -- node v
+kubectl get job -w
+kubectl get pod
+</code></pre></details></li><li><details><summary>获取刚刚创建的 Job 的日志</summary><pre tabindex=0><code>kubectl logs &lt;pod name&gt; // created from the job
+</code></pre></details></li><li><details><summary>用镜像 busybox 输出 Job 的 yaml 文件，并回显“Hello I am from job”</summary><pre tabindex=0><code>kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo &#34;Hello I am from job&#34;
+</code></pre></details></li><li><details><summary>将上面的 yaml 文件复制到 hello-job.yaml 文件并创建 Job</summary><pre tabindex=0><code>kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo &#34;Hello I am from job&#34; &gt; hello-job.yaml
+ 
+kubectl apply -f hello-job.yaml
+</code></pre></details></li><li><details><summary>验证 Job 并创建关联的容器，检查日志</summary><pre tabindex=0><code>kubectl get pod
+kubectl get po
+kubectl logs po pod-name
+</code></pre></details></li><li><details><summary>删除我们刚刚创建的 Job</summary><pre tabindex=0><code>kubectl delete job hello-job
+</code></pre></details></li><li><details><summary>创建一个相同的 Job，并使它一个接一个地运行 10 次</summary><pre tabindex=0><code>kubectl create job hello-job --image=busybox --dry-run -o yaml -- echo &#34;Hello I am from job&#34; &gt; 10-job.yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: null
+  name: hello-job
+spec:
+  completions: 10
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - command:
+        - echo
+        - Hello I am from job
+        image: busybox
+        name: hello-job
+        resources: {}
+      restartPolicy: Never
+status: {}
+</code></pre></details></li><li><details><summary>运行 10 次，确认已创建 10 个 Pod，并在完成后删除它们</summary><pre tabindex=0><code>kubectl delete job hello-job
+</code></pre></details></li><li><details><summary>创建一个带有 busybox 镜像的 Cronjob，每分钟打印一次来自 Kubernetes 集群消息的日期和 hello</summary><pre tabindex=0><code>kubectl create cronjob date-job --image=busybox --schedule=&#34;*/1 * * * *&#34; -- bin/sh -c &#34;date; echo Hello from kubernetes cluster&#34;
+</code></pre></details></li><li><details><summary>输出上述 cronjob 的 yaml 文件</summary><pre tabindex=0><code>kubectl get cj date-job -o yaml
+</code></pre></details></li><li><details><summary>验证 cronJob 为每分钟运行创建一个单独的 Job 和 Pod，并验证 Pod 的日志</summary><pre tabindex=0><code>kubectl get job
+kubectl get po
+kubectl logs date-job-&lt;jobid&gt;-&lt;pod&gt;
+</code></pre></details></li><li><details><summary>删除 cronJob，并验证所有关联的 Job 和 Pod 也都被删除</summary><pre tabindex=0><code>kubectl delete cj date-job
+kubectl get po
+kubectl get job
+</code></pre></details></li></ol><h2 id=状态持久性>状态持久性</h2><p>了解存储的持久卷声明。</p><ol><li><details><summary>列出集群中的持久卷</summary><pre tabindex=0><code>kubectl get pv
+</code></pre></details></li><li><details><summary>创建一个名为 task-pv-volume 的 PersistentVolume，其 storgeClassName 为 manual，storage 为 10Gi，accessModes 为 ReadWriteOnce，hostPath 为 /mnt/data</summary><pre tabindex=0><code>task-pv-volume.yaml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels: 
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  hostPath: 
+    path: &#34;/mnt/data&#34;
+</code></pre></details></li><li><details><summary>创建一个存储至少 3Gi、访问模式为 ReadWriteOnce 的 PersistentVolumeClaim，并确认它的状态是否是绑定的</summary><pre tabindex=0><code>kubectl create -f task-pv-claim.yaml
+kubectl get pvc
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: manual
+</code></pre></details></li><li><details><summary>删除我们刚刚创建的持久卷和 PersistentVolumeClaim</summary><pre tabindex=0><code>kubectl delete pvc task-pv-claim
+kubectl delete pv task-pv-volume
+</code></pre></details></li><li><details><summary>使用镜像 Redis 创建 Pod，并配置一个在 Pod 生命周期内可持续使用的卷</summary><pre tabindex=0><code>redis-storage.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis
+spec:
+  containers:
+  - name: redis
+    image: redis
+    volumeMounts:
+    - name: redis-storage
+      mountPath: /data/redis
+  volumes:
+  - name: redis-storage
+    emptyDir: {}
+</code></pre></details></li><li><details><summary>在上面的 Pod 中执行操作，并在 /data/redis 路径中创建一个名为 file.txt 的文件，其文本为“This is the file”，然后打开另一个选项卡，再次使用同一 Pod 执行，并验证文件是否在同一路径中</summary><pre tabindex=0><code>kubectl exec -it redis /bin/sh
+cd /data/redis
+echo &#34;This is the file&#34; &gt; file.txt
+</code></pre></details></li><li><details><summary>删除上面的 Pod，然后从相同的 yaml 文件再次创建，并验证路径 /data/redis 中是否没有 file.txt</summary><pre tabindex=0><code>kubectl delete po redis
+kubectl apply -f redis-storage.yaml
+kubectl exec -it redis /bin/sh
+cat /data/redis/file.txt
+cat: /data/redis/file.txt: No such file or directory
+</code></pre></details></li><li><details><summary>创建一个名为 task-pv-volume 的 PersistentVolume，其 storgeClassName 为 manual，storage 为 10Gi，accessModes 为 ReadWriteOnce，hostPath 为 /mnt/data；并创建一个存储至少 3Gi、访问模式为 ReadWriteOnce 的 PersistentVolumeClaim，并确认它的状态是否是绑定的</summary><pre tabindex=0><code>kubectl create -f task-pv-volume.yaml
+kubectl create -f task-pv-claim.yaml
+kubectl get pv
+kubectl get pvc
+
+task-pv-volume.yaml：
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: task-pv-volume
+  labels: 
+    type: local
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: manual
+  hostPath: 
+    path: &#34;/mnt/data&#34;
+
+task-pv-claim.yaml：
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: task-pv-claim
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 3Gi
+  storageClassName: manual
+</code></pre></details></li><li><details><summary>用容器端口 80 和 PersistentVolumeClaim task-pv-claim 创建一个 Nginx 容器，且具有路径“/usr/share/nginx/html”</summary><pre tabindex=0><code>ask-pv-pod.yaml
+ 
+apiVersion: v1
+kind: Pod
+metadata:
+  name: task-pv-pod
+spec:
+  containers:
+    - name: task-pv-container
+      image: nginx
+      ports:
+        - containerPort: 80
+          name: &#34;http-server&#34;
+      volumeMounts:
+      - mountPath: &#34;/usr/share/nginx/html&#34;
+        name: task-pv-storage
+  volumes:
+    - name: task-pv-storage
+      persistentVolumeClaim:
+        claimName: task-pv-claim
+</code></pre></details></li></ol><h2 id=配置>配置</h2><p>了解 ConfigMap、了解安全上下文 SecurityContexts、定义应用程序的资源需求、创建和使用 Secrets、了解 ServiceAccounts等。</p><h2 id=可观测性>可观测性</h2><p>了解 LivenessProbe 和 Readiness Probe、了解容器日志记录、了解如何监控 kubernetes 中的应用程序、了解如何调试 Kubernetes。</p><h2 id=服务与网络>服务与网络</h2><p>了解服务、NetworkPolicies 等。</p><h1 id=总结>总结</h1><p>配置、可观测性、服务、网络等示例习题，请参考附录，CKAD 要求在 2 小时内完成 19 个问题。我们需要为此进行大量练习，这 150 个问题提供了足够的考试练习机会。更多内容可以参考 <a href=https://github.com/cncf/curriculum>cncf-curriculum</a>，练习得越多，考试时就会感觉越舒服。</p><p>多练习、多练习、多练习。</p><h1 id=附录>附录</h1><ol><li><a href=https://medium.com/bb-tutorials-and-thoughts/practice-enough-with-these-questions-for-the-ckad-exam-2f42d1228552>https://medium.com/bb-tutorials-and-thoughts/practice-enough-with-these-questions-for-the-ckad-exam-2f42d1228552</a></li><li><a href=https://github.com/cncf/curriculum>https://github.com/cncf/curriculum</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2019-08-18-java-jvm/ data-toggle=tooltip data-placement=top title="浅析 Java JVM">&larr;
+Previous Post</a></li><li class=next><a href=/post/2020-10-06-participate-community/ data-toggle=tooltip data-placement=top title="如何参与 Kubernetes 开源社区">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023<br><a href=https://themes.gohugo.io/hugo-theme-cleanwhite>CleanWhite Hugo Theme</a> by <a href=https://github.com/tanjunchen>tanjunchen</a> |
+<iframe style=margin-left:2px;margin-bottom:-5px frameborder=0 scrolling=0 width=100px height=20px src="https://ghbtns.com/github-btn.html?user=tanjunchen&repo=hugo-theme-cleanwhite&type=star&count=true"></iframe></p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
