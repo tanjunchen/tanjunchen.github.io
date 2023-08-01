@@ -1,0 +1,849 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="深入理解 Cilium 核心原理"><meta property="og:title" content="深入理解 Cilium 核心原理"><meta property="twitter:title" content="深入理解 Cilium 核心原理"><meta name=description content="Cilium 是一个用于容器和微服务网络安全的开源软件项目。它提供了一种基于 Linux 内核的数据平面和一个高级的控制平面，用于实现网络和安全策略的管理。Cilium 的设计理念是通过深度集成到容器和 Kubernetes 中，提供全面的安全和网络功能，同时保持高性能和可扩展性。它使用 Linux 内核的 eBPF (extended Berkeley Packet Filter) 技术来实现高效的数据平面，并使用 Kubernetes API 来管理网络和安全策略。Cilium 还支持多种网络和安全功能，例如应用层负载均衡、服务发现、网络加密和网络策略等。"><meta property="og:description" content="Cilium 是一个用于容器和微服务网络安全的开源软件项目。它提供了一种基于 Linux 内核的数据平面和一个高级的控制平面，用于实现网络和安全策略的管理。Cilium 的设计理念是通过深度集成到容器和 Kubernetes 中，提供全面的安全和网络功能，同时保持高性能和可扩展性。它使用 Linux 内核的 eBPF (extended Berkeley Packet Filter) 技术来实现高效的数据平面，并使用 Kubernetes API 来管理网络和安全策略。Cilium 还支持多种网络和安全功能，例如应用层负载均衡、服务发现、网络加密和网络策略等。"><meta property="twitter:description" content="Cilium 是一个用于容器和微服务网络安全的开源软件项目。它提供了一种基于 Linux 内核的数据平面和一个高级的控制平面，用于实现网络和安全策略的管理。Cilium 的设计理念是通过深度集成到容器和 Kubernetes 中，提供全面的安全和网络功能，同时保持高性能和可扩展性。它使用 Linux 内核的 eBPF (extended Berkeley Packet Filter) 技术来实现高效的数据平面，并使用 Kubernetes API 来管理网络和安全策略。Cilium 还支持多种网络和安全功能，例如应用层负载均衡、服务发现、网络加密和网络策略等。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>深入理解 Cilium 核心原理 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2023-05-01-cilium-learn/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/photos/>PHOTOS</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/ebpf title=ebpf>ebpf</a>
+<a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/cni title=cni>cni</a>
+<a class=tag href=/tags/cilium title=cilium>cilium</a></div><h1>深入理解 Cilium 核心原理</h1><h2 class=subheading>通过 Pod 请求生命周期理解 Cilium 数据路径</h2><span class=meta>Posted by
+陈谭军
+on
+Monday, May 1, 2023</span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=背景>背景</h1><p>传统的基于二层转发（Linux bridge、Netfilter/iptables、OVS 等）和/或三层路由的网络虚拟化方案中，数据包的转发路径通常非常清晰，通过一些常见工具或命令就能判断包的下一跳。当网络出现问题时，例如，一个容器访问另一个容器网络不通，只要沿着这条路径上的设备依次抓包，分析路由表、ARP 表，一般就能定位到问题。但是，如果容器网络使用的是 Cilium，上述网络排查手段是困难的或者失效的。</p><p>本文通过借助常规 Linux 工具来探索 Cilium 的整个转发路径，并分析在每个转发节点分别做了什么事情，深入理解 Cilium 技术原理，提升 Cilium 作为容器网络 CNI 故障排障能力。</p><h1 id=说明>说明</h1><h2 id=环境配置>环境配置</h2><pre tabindex=0><code>➜  cilium-mesh kubectl get pod -owide
+NAME                       READY   STATUS    RESTARTS   AGE   IP             NODE           NOMINATED NODE   READINESS GATES
+network-58bf9867cb-w48k4   1/1     Running   0          45m   10.0.0.250     192.168.1.15   &lt;none&gt;           &lt;none&gt;
+nginx-6d8cfb4ff7-bjqmh     1/1     Running   0          45m   10.0.1.60      192.168.1.13   &lt;none&gt;           &lt;none&gt;
+node-shell-debug-2skzt     1/1     Running   0          45m   192.168.1.15   192.168.1.15   &lt;none&gt;           &lt;none&gt;
+node-shell-debug-mp24n     1/1     Running   0          45m   192.168.1.13   192.168.1.13   &lt;none&gt;           &lt;none&gt;
+➜  cilium-mesh kubectl get svc -owide
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE    SELECTOR
+kubernetes   ClusterIP   172.16.0.1     &lt;none&gt;        443/TCP   18d    &lt;none&gt;
+nginx        ClusterIP   172.16.16.87   &lt;none&gt;        80/TCP    6h1m   app=nginx
+</code></pre><ol><li>Kubernetes：1.22.5</li><li>Cilium：1.13.4
+<img src=/images/2023-05-01-cilium-learn/1.svg alt></li></ol><h2 id=安装-cilium>安装 Cilium</h2><p>创建 Kubernetes 集群后，删除 kube-proxy Daemonset 组件，安装 Cilium。</p><pre tabindex=0><code>CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/master/stable.txt)
+CLI_ARCH=amd64
+if [ &#34;$(uname -m)&#34; = &#34;arm64&#34; ]; then CLI_ARCH=arm64; fi
+curl -L --fail --remote-name-all https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
+shasum -a 256 -c cilium-darwin-${CLI_ARCH}.tar.gz.sha256sum
+sudo tar xzvfC cilium-darwin-${CLI_ARCH}.tar.gz /usr/local/bin
+rm cilium-darwin-${CLI_ARCH}.tar.gz{,.sha256sum}
+
+cilium install
+
+➜  cilium-mesh cilium status
+    /¯¯\
+ /¯¯\__/¯¯\    Cilium:             OK
+ \__/¯¯\__/    Operator:           OK
+ /¯¯\__/¯¯\    Envoy DaemonSet:    disabled (using embedded mode)
+ \__/¯¯\__/    Hubble Relay:       disabled
+    \__/       ClusterMesh:        disabled
+
+DaemonSet              cilium             Desired: 2, Ready: 2/2, Available: 2/2
+Deployment             cilium-operator    Desired: 1, Ready: 1/1, Available: 1/1
+Containers:            cilium             Running: 2
+                       cilium-operator    Running: 1
+Cluster Pods:          12/13 managed by Cilium
+Helm chart version:    1.13.4
+Image versions         cilium             quay.io/cilium/cilium:v1.13.4@sha256:bde8800d61aaad8b8451b10e247ac7bdeb7af187bb698f83d40ad75a38c1ee6b: 2
+                       cilium-operator    quay.io/cilium/operator-generic:v1.13.4@sha256:09ab77d324ef4d31f7d341f97ec5a2a4860910076046d57a2d61494d426c6301: 1
+➜  cilium-mesh kubectl -nkube-system get pod | grep cilium
+cilium-8b6x9                                 1/1     Running   0          10m
+cilium-dpbbn                                 1/1     Running   0          10m
+cilium-operator-798478fc69-w54xz             1/1     Running   0          10m
+</code></pre><h2 id=重点配置>重点配置</h2><p>Node 节点上 Cilium Agent 配置如下所示：</p><pre tabindex=0><code>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/home/cilium# cilium status
+KVStore:                 Ok   Disabled  # 表示 Cilium 的分布式键值存储（KVStore）的状态是正常，但是被禁用。
+Kubernetes:              Ok   1.22 (v1.22.5) [linux/amd64] # 表示与 Kubernetes 的集成状态正常，并且使用的Kubernetes版本是1.22，对应的安全加固补丁版本是v1.22.5，运行的操作系统是Linux/amd64。
+Kubernetes APIs:         [&#34;cilium/v2::CiliumClusterwideNetworkPolicy&#34;, &#34;cilium/v2::CiliumEndpoint&#34;, &#34;cilium/v2::CiliumNetworkPolicy&#34;, &#34;cilium/v2::CiliumNode&#34;, &#34;core/v1::Namespace&#34;, &#34;core/v1::Node&#34;, &#34;core/v1::Pods&#34;, &#34;core/v1::Service&#34;, &#34;discovery/v1::EndpointSlice&#34;, &#34;networking.k8s.io/v1::NetworkPolicy&#34;]
+KubeProxyReplacement:    Strict   [eth0 192.168.1.15]  # 表示Kubernetes的kube-proxy替换模式是严格模式，并且指定了网络接口eth0的IP地址为192.168.1.15。
+Host firewall:           Disabled  # 表示主机的防火墙被禁用。
+CNI Chaining:            none   # 表示CNI（网络配置和接口）的链式配置被禁用。
+CNI Config file:         CNI configuration file management disabled # 表示CNI配置文件的管理被禁用。
+Cilium:                  Ok   1.13.4 (v1.13.4-4061cdfc)
+NodeMonitor:             Listening for events on 42 CPUs with 64x4096 of shared memory
+Cilium health daemon:    Ok
+IPAM:                    IPv4: 8/254 allocated from 10.0.0.0/24, # 表示IP地址分配管理（IPAM）的状态正常，已经分配了8个IPv4地址，并且可用的IPv4地址数是254，分配的起始IP地址是10.0.0.0，掩码是24位。
+IPv6 BIG TCP:            Disabled   # 表示IPv6的BIG TCP功能被禁用。
+BandwidthManager:        Disabled  # 表示带宽管理器被禁用。
+Host Routing:            Legacy  # 表示主机路由使用传统模式。
+Masquerading:            IPTables [IPv4: Enabled, IPv6: Disabled] # 表示伪装（Masquerading）使用IPTables，IPv4被启用，IPv6被禁用。
+Controller Status:       42/42 healthy
+Proxy Status:            OK, ip 10.0.0.175, 0 redirects active on ports 10000-20000
+Global Identity Range:   min 256, max 65535  # 表示全局身份范围的最小值是256，最大值是65535。
+Hubble:                  Ok   Current/Max Flows: 4095/4095 (100.00%), Flows/s: 3.75   Metrics: Disabled
+Encryption:              Disabled  # 表示加密功能被禁用。
+Cluster health:          2/2 reachable   (2023-07-14T02:41:02Z) # 表示集群的健康状态正常，可以访问两个节点。
+</code></pre><ol><li>KubeProxyReplacement：Cilium将尽力替代Kube-Proxy，并尝试实现服务负载均衡和网络代理功能。<ul><li>Disabled：禁用模式，不使用 Cilium eBPF kube-proxy replacement，保留传统的 kube-proxy 运行方式。</li><li>Strict：严格模式，使用 Cilium eBPF kube-proxy replacement 完全替换 kube-proxy 的运行方式。</li><li>Partial：部分模式，同时使用 kube-proxy 和 Cilium eBPF kube-proxy replacement，用户需要手动指定需要替换的功能。</li><li>Probe：自动探测是否启动 Cilium 替换 kube-proxy。</li></ul></li><li>CNI Chaining：允许Cilium与其他容器网络接口（Container Network Interface）插件进行协同工作，以支持网络功能的链式连接和集成。</li><li>Host Routing：通过在主机上配置路由表，将特定的流量路由到Cilium代理，以实现服务发现和网络转发。<ul><li>Legacy 模式：部分网络数据包依然使用主机路由，依赖了iptables 等 Netfilter。</li><li>BPF模式：在BPF模式下，Cilium代理会使用eBPF程序来拦截和重新处理主机相关的IP流量。eBPF程序会对流量进行检查和转发，而不需要创建额外的网络接口，这种模式下，Cilium使用的是Linux内核中的BPF功能来实现路由和过滤。要求：内核 >= 5.10、直接路由配置或隧道、基于 eBPF 的 kube-proxy 替换、基于 eBPF 的 masquerading 等。</li></ul></li><li>Masquerading：用于将出站流量的源IP地址伪装为主机的IP地址，以实现网络地址转换（NAT）功能。</li></ol><p>其他参数可参考附录。</p><h2 id=工具>工具</h2><p>以下脚本是在宿主机上使用 nsenter 根据容器名称或者容器 id 进入容器执行相关网络配置。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4>#/bin/bash</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>CTN</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>$1</span>  <span style=color:#6272a4># container ID or name</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>PID</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>sudo docker inspect --format <span style=color:#f1fa8c>&#34;{{.State.Pid}}&#34;</span> <span style=color:#8be9fd;font-style:italic>$CTN</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>shift</span> <span style=color:#bd93f9>1</span> <span style=color:#6272a4># remove the first argument, shift others to the left</span>
+</span></span><span style=display:flex><span>nsenter -t <span style=color:#8be9fd;font-style:italic>$PID</span> <span style=color:#8be9fd;font-style:italic>$@</span>
+</span></span></code></pre></div><h1 id=核心流程>核心流程</h1><h2 id=步骤-请求数据包路径流程>步骤-请求数据包路径流程</h2><p>Request Traffic path of Pod-to-ServiceIP 数据路径全景图：
+<img src=/images/2023-05-01-cilium-learn/2.svg alt></p><p>具体来说，我们从一个 Pod 访问 ServiceIP 开始，并假设这个 ServiceIP 对应的后端 Pod 位于另一台 node 上，然后探索包所经过的路径和处理过程。</p><h2 id=步骤1-从-pod-network-中向-nginx-发送请求>步骤1 从 Pod network 中向 nginx 发送请求</h2><p><img src=/images/2023-05-01-cilium-learn/3.svg alt></p><h3 id=访问-nginx-service-ip>访问 nginx Service IP</h3><p>从 node1 上的 network 中访问位于 node2 上的 nginx clusterIP。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cilium-mesh kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it network-58bf9867cb-w48k4 -- curl -I 172.16.16.87:80
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#bd93f9>200</span> OK
+</span></span><span style=display:flex><span>Server: nginx/1.14.2
+</span></span><span style=display:flex><span>Date: Tue, <span style=color:#bd93f9>11</span> Jul <span style=color:#bd93f9>2023</span> 12:07:00 GMT
+</span></span><span style=display:flex><span>Content-Type: text/html
+</span></span><span style=display:flex><span>Content-Length: <span style=color:#bd93f9>612</span>
+</span></span><span style=display:flex><span>Last-Modified: Tue, <span style=color:#bd93f9>04</span> Dec <span style=color:#bd93f9>2018</span> 14:44:49 GMT
+</span></span><span style=display:flex><span>Connection: keep-alive
+</span></span><span style=display:flex><span>ETag: <span style=color:#f1fa8c>&#34;5c0692e1-264&#34;</span>
+</span></span><span style=display:flex><span>Ak8spt-Ranges: bytes
+</span></span></code></pre></div><p>在 network 所在的宿主机上抓取网络包，如下所示，发现请求的 clusterIP 变成了 nginx 的 pod IP，Pod 内并无 iptables 规则或 ipvs 规则。
+<img src=/images/2023-05-01-cilium-learn/1.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# docker ps | grep network
+</span></span><span style=display:flex><span>061adb799d0c   registry.xxx.com/csm/network-multitool                      <span style=color:#f1fa8c>&#34;/bin/sh /docker/ent…&#34;</span>   <span style=color:#bd93f9>27</span> minutes ago   Up <span style=color:#bd93f9>27</span> minutes             k8s_network_network-58bf9867cb-w48k4_default_831e9a61-1d51-49b9-8f24-4806edfefb37_0
+</span></span><span style=display:flex><span>099e456f401b   registry.xxx.com/k8s-public/pause:3.1                       <span style=color:#f1fa8c>&#34;/pause&#34;</span>                 <span style=color:#bd93f9>27</span> minutes ago   Up <span style=color:#bd93f9>27</span> minutes             k8s_POD_network-58bf9867cb-w48k4_default_831e9a61-1d51-49b9-8f24-4806edfefb37_3
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# bash nsenter.sh 061adb799d0c -n tcpdump -n -i eth0
+</span></span><span style=display:flex><span>tcpdump: verbose output suppressed, use -v or -vv <span style=color:#ff79c6>for</span> full protocol decode
+</span></span><span style=display:flex><span>listening on eth0, link-type EN10MB <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>, capture size <span style=color:#bd93f9>262144</span> bytes
+</span></span><span style=display:flex><span>20:11:43.981031 IP 10.0.0.250.40418 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>S<span style=color:#ff79c6>]</span>, seq 3978619682, win 64860, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>2911480627</span> ecr 0,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.981444 IP 10.0.1.60.80 &gt; 10.0.0.250.40418: Flags <span style=color:#ff79c6>[</span>S.<span style=color:#ff79c6>]</span>, seq 3647241102, ack 3978619683, win 64308, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>2294711974</span> ecr 2911480627,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.981464 IP 10.0.0.250.40418 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2911480628</span> ecr 2294711974<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.981528 IP 10.0.0.250.40418 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:78, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2911480628</span> ecr 2294711974<span style=color:#ff79c6>]</span>, length 77: HTTP: HEAD / HTTP/1.1
+</span></span><span style=display:flex><span>20:11:43.981685 IP 10.0.1.60.80 &gt; 10.0.0.250.40418: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2294711975</span> ecr 2911480628<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.981797 IP 10.0.1.60.80 &gt; 10.0.0.250.40418: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:239, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2294711975</span> ecr 2911480628<span style=color:#ff79c6>]</span>, length 238: HTTP: HTTP/1.1 <span style=color:#bd93f9>200</span> OK
+</span></span><span style=display:flex><span>20:11:43.981804 IP 10.0.0.250.40418 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2911480628</span> ecr 2294711975<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.981947 IP 10.0.0.250.40418 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 78, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2911480628</span> ecr 2294711975<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.982082 IP 10.0.1.60.80 &gt; 10.0.0.250.40418: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 239, ack 79, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2294711975</span> ecr 2911480628<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:11:43.982088 IP 10.0.0.250.40418 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 240, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2911480629</span> ecr 2294711975<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>现在先不分析如何实现该功能，下文在做原因分析。</p><h3 id=12-确定下一跳目的-mac-地址>1.2 确定下一跳目的 MAC 地址</h3><p>包会从 network 容器的 eth0 虚拟网卡发出去，此时能确定的 IP 和 MAC 地址信息：</p><pre tabindex=0><code>1. src_ip=POD1_IP
+2. src_mac=POD1_MAC
+3. dst_ip=ServiceIP
+</code></pre><p>那么目的 MAC 是如何获取的呢？首先，查看 network 容器中的路由表与 ARP 表，PodCIDR 是由 Cilium agent 启动时自己配置，具体可以参考宿主机上的 ifconfig cilium_host。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# bash nsenter.sh 061adb799d0c -n route -n
+</span></span><span style=display:flex><span>Kernel IP routing table
+</span></span><span style=display:flex><span>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span style=display:flex><span>0.0.0.0         10.0.0.175      0.0.0.0         UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>10.0.0.175      0.0.0.0         255.255.255.255 UH    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# ifconfig cilium_host
+</span></span><span style=display:flex><span>cilium_host: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4291&lt;UP,BROADCAST,RUNNING,NOARP,MULTICAST&gt;  mtu <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>        inet 10.0.0.175  netmask 255.255.255.255  broadcast 0.0.0.0
+</span></span><span style=display:flex><span>        inet6 fe80::f8df:9eff:fea4:e2b9  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x20&lt;link&gt;
+</span></span><span style=display:flex><span>        ether fa:df:9e:a4:e2:b9  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>253</span>  bytes <span style=color:#bd93f9>19455</span> <span style=color:#ff79c6>(</span>19.4 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>19</span>  bytes <span style=color:#bd93f9>1398</span> <span style=color:#ff79c6>(</span>1.3 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>因为 nginx 的 service IP 是 172.16.16.87，下一跳就是网关 10.0.0.175。
+所以，dst_mac 就要填 10.0.0.175 对应的 MAC。MAC 和 IP 的对应关系在 ARP 表里。network 容器中的 ARP 表：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# bash nsenter.sh 061adb799d0c -n arp -n
+</span></span><span style=display:flex><span>Address                  HWtype  HWaddress           Flags Mask            Iface
+</span></span><span style=display:flex><span>10.0.0.175               ether   66:94:e5:1d:37:df   C                     eth0
+</span></span></code></pre></div><p>对应的 MAC 地址是 66:94:e5:1d:37:df，此时网络数据包就可以正常发送出去。
+随着 Linux 网络虚拟化技术的演进，有了若干种虚拟化网络设备，典型的有 Tap/Tun、Veth、Bridge 等。在宿主机上查看该 MAC 地址属于哪个虚拟网络设备。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# ip link | grep 66:94:e5:1d:37:df -C <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>16: lxc7d69da958e9b@if15: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether 3a:ad:aa:56:5c:76 brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>4</span>
+</span></span><span style=display:flex><span>18: lxccc5e68dbcc4a@if17: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether b2:7b:2c:80:75:9e brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>20: lxc84a447e034a3@if19: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether 66:94:e5:1d:37:df brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>6</span>
+</span></span></code></pre></div><p>在容器 network 查看虚拟容器网络设备。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# bash nsenter.sh 061adb799d0c -n ip link
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noqueue state UNKNOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>19: eth0@if20: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether b6:48:79:16:47:7a brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>可以看到，容器的 eth0 index 就是 19，对端是 20。而这个 66:94:e5:1d:37:df MAC 属于 lxc84a447e034a3 设备，并且从 @ 符号判断，它属于某个 veth pair 的一端，另一端的 interface index 是 19。</p><p>我们发现容器将 Pod 流量的下一跳劫持到 veth pair 的主机端。接下来分析网络数据包在 Node1 宿主机上的处理过程。</p><h2 id=步骤2-pod1-eth0对端lxc84a447e034a3虚拟网络流量处理>步骤2 Pod1 eth0对端lxc84a447e034a3虚拟网络流量处理</h2><p><img src=/images/2023-05-01-cilium-learn/4.svg alt></p><h3 id=21-宿主机-lxc84a447e034a3-虚拟网络设备分析>2.1 宿主机 lxc84a447e034a3 虚拟网络设备分析</h3><p>网络数据包到达了 Node1 节点上的 lxc84a447e034a3，此时在宿主机上抓取网络虚拟设备 lxc84a447e034a3 包。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# tcpdump -n -i lxc84a447e034a3
+</span></span><span style=display:flex><span>tcpdump: verbose output suppressed, use -v or -vv <span style=color:#ff79c6>for</span> full protocol decode
+</span></span><span style=display:flex><span>listening on lxc84a447e034a3, link-type EN10MB <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>, capture size <span style=color:#bd93f9>262144</span> bytes
+</span></span><span style=display:flex><span>20:43:23.980960 IP 10.0.0.250.56510 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>S<span style=color:#ff79c6>]</span>, seq 1324573640, win 64860, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>2913380627</span> ecr 0,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:23.981369 IP 10.0.1.60.80 &gt; 10.0.0.250.56510: Flags <span style=color:#ff79c6>[</span>S.<span style=color:#ff79c6>]</span>, seq 3536933088, ack 1324573641, win 64308, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>2296611975</span> ecr 2913380627,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:23.981386 IP 10.0.0.250.56510 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2913380628</span> ecr 2296611975<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:24.080138 IP 10.0.0.250.56510 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:78, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2913380727</span> ecr 2296611975<span style=color:#ff79c6>]</span>, length 77: HTTP: HEAD / HTTP/1.1
+</span></span><span style=display:flex><span>20:43:24.080363 IP 10.0.1.60.80 &gt; 10.0.0.250.56510: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2296612074</span> ecr 2913380727<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:24.080517 IP 10.0.1.60.80 &gt; 10.0.0.250.56510: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:239, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2296612074</span> ecr 2913380727<span style=color:#ff79c6>]</span>, length 238: HTTP: HTTP/1.1 <span style=color:#bd93f9>200</span> OK
+</span></span><span style=display:flex><span>20:43:24.080525 IP 10.0.0.250.56510 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2913380727</span> ecr 2296612074<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:24.080935 IP 10.0.0.250.56510 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 78, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2913380727</span> ecr 2296612074<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:24.081093 IP 10.0.1.60.80 &gt; 10.0.0.250.56510: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 239, ack 79, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2296612075</span> ecr 2913380727<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:24.081103 IP 10.0.0.250.56510 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 240, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2913380728</span> ecr 2296612075<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>20:43:29.150560 ARP, Request who-has 10.0.0.175 tell 10.0.0.250, length <span style=color:#bd93f9>28</span>
+</span></span><span style=display:flex><span>20:43:29.150576 ARP, Reply 10.0.0.175 is-at 66:94:e5:1d:37:df, length <span style=color:#bd93f9>28</span>
+</span></span></code></pre></div><p>如上所述，获取到了请求目的 Pod IP 的报文，查看宿主机 Node1 上的路由规则：
+<img src=/images/2023-05-01-cilium-learn/2.png alt></p><pre tabindex=0><code>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# ip rule
+# 这条规则表示匹配所有来源地址的流量，且满足标记位（fwmark）为0x200的范围（0xf00）的流量。
+# 这些流量将被发送到编号为2004的路由表进行处理。
+9:	from all fwmark 0x200/0xf00 lookup 2004
+# 这条规则表示任何来源地址的流量都将被直接发送到本地路由表进行处理。本地路由表通常包含了与本地主机直接相连的网络。
+100:	from all lookup local
+# 这条规则表示所有来源地址的流量都将通过使用默认的主路由表进行处理。主路由表通常包含了大部分的路由信息。
+32766:	from all lookup main
+# 这条规则表示任何来源地址的流量都将通过使用默认的默认路由表进行处理。默认路由表通常包含了通向外部网络的默认路由。
+32767:	from all lookup default
+root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# ip route
+#这条规则代表默认路由，指定了当目标地址不符合任何其他路由规则时，通过网关192.168.1.1以太网接口eth0转发流量。
+#源IP地址被指定为192.168.1.15，并设置了metric指标为100。
+#也就是说，如果目标地址不在本地子网或其他特定路由表中，则流量将被发送到网关192.168.1.1。
+default via 192.168.1.1 dev eth0 proto dhcp src 192.168.1.15 metric 100
+#这条规则表示目标子网10.0.0.0/24通过网关10.0.0.175和cilium_host接口转发，源IP地址为10.0.0.175。
+10.0.0.0/24 via 10.0.0.175 dev cilium_host src 10.0.0.175
+#这条规则表示目标地址为10.0.0.175的流量将直接在cilium_host接口上进行处理，作用范围仅限于本地链接。
+10.0.0.175 dev cilium_host scope link
+# 这条规则与第二条类似，目标子网为10.0.1.0/24，通过网关10.0.0.175和cilium_host接口转发，
+# 源IP地址为10.0.0.175，并设置最大传输单元（MTU）为1450字节。
+10.0.1.0/24 via 10.0.0.175 dev cilium_host src 10.0.0.175 mtu 1450
+# 这条规则表示目标子网169.254.30.0/28直接在docker0接口上进行处理，由内核协议处理，作用范围仅限于本地链接。
+# 此路由规则的状态是down，可能是因为docker0接口当前不可用。
+169.254.30.0/28 dev docker0 proto kernel scope link src 169.254.30.1 linkdown
+#这条规则表示目标子网192.168.1.0/24直接在eth0接口上进行处理，由内核协议处理，作用范围仅限于本地链接，源IP地址为192.168.1.15。
+192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.15
+从上文中得知 nginx 的 service IP 是 172.16.16.87，下一跳就是网关 10.0.0.175，所以网络数据包从 Node1 上的 dev cilium_host 发送出去。
+问题：Node1 上的网络设备抓取不到 Pod IP 报文？
+Cilium使用VXLAN隧道作为默认的Overlay模式，用于跨节点的容器通信。Cilium的VXLAN隧道模式会将容器之间的通信流量封装在VXLAN头部中，并通过Underlay网络（通常是物理网络）进行传输。
+</code></pre><h3 id=22-查看-bpf-程序>2.2 查看 BPF 程序</h3><p>包从容器 eth0 发出，然后被 lxc84a447e034a3 收进来，因此在 lxc 的 tc ingress hook 能对 容器发出的包 进行拦截和处理。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# tc filter show dev lxc84a447e034a3  ingress
+</span></span><span style=display:flex><span>filter protocol all pref <span style=color:#bd93f9>1</span> bpf chain <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>filter protocol all pref <span style=color:#bd93f9>1</span> bpf chain <span style=color:#bd93f9>0</span> handle 0x1 cil_from_container-lxc84a447e034a3 direct-action not_in_hw id <span style=color:#bd93f9>512</span> tag 0526e3710160da95 jited
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# tc filter show dev lxc84a447e034a3 egress
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# bash nsenter.sh 061adb799d0c -n tc filter show dev eth0 ingress
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# bash nsenter.sh 061adb799d0c -n tc filter show dev eth0 egress
+</span></span></code></pre></div><p>可以看到，在 tc ingress hook 点加载了 cil_from_container-lxc84a447e034a3 BPF 程序。
+在 veth pair 模式中，用上面的 tc 命令分别在容器eth0 的 ingress/egress 以 及 lxc84a447e034a3 的 egress 点查看，
+最后会发现这些地方都没有加载 BPF。没有相应的 BPF，怎么对容器的入向包做拦截和处理呢？我们后面在揭晓，先保留疑问。</p><h3 id=23-理解-cil_from_container-bpf-程序>2.3 理解 cil_from_container BPF 程序</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#ff79c6>#define __section_entry __section(&#34;tc&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>/* Attachment/entry point is ingress for veth.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * It corresponds to packets leaving the container.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> */</span>
+</span></span><span style=display:flex><span>__section_entry
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> <span style=color:#50fa7b>cil_from_container</span>(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	__u16 proto;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	bpf_clear_meta(ctx);
+</span></span><span style=display:flex><span>	reset_queue_mapping(ctx);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	send_trace_notify(ctx, TRACE_FROM_LXC, SECLABEL, <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>,
+</span></span><span style=display:flex><span>			  TRACE_REASON_UNKNOWN, TRACE_PAYLOAD_LEN);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>validate_ethertype(ctx, <span style=color:#ff79c6>&amp;</span>proto)) {
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_UNSUPPORTED_L2;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>goto</span> out;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> (proto) {
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_IPV6
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> bpf_htons(ETH_P_IPV6)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		edt_set_aggregate(ctx, LXC_ID);
+</span></span><span style=display:flex><span>		ep_tail_call(ctx, CILIUM_CALL_IPV6_FROM_LXC);
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_IPV6 */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_IPV4
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> bpf_htons(ETH_P_IP)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		edt_set_aggregate(ctx, LXC_ID);
+</span></span><span style=display:flex><span>		ep_tail_call(ctx, CILIUM_CALL_IPV4_FROM_LXC);
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_ARP_PASSTHROUGH
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> bpf_htons(ETH_P_ARP)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#elif defined(ENABLE_ARP_RESPONDER)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> bpf_htons(ETH_P_ARP)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ep_tail_call(ctx, CILIUM_CALL_ARP);
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_ARP_RESPONDER */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_IPV4 */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>default</span><span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_UNKNOWN_L3;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>out</span>:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify(ctx, SECLABEL, <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>, ret, CTX_ACT_DROP,
+</span></span><span style=display:flex><span>					METRIC_EGRESS);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>declare_tailcall_if(is_defined(ENABLE_PER_PACKET_LB), CILIUM_CALL_IPV4_FROM_LXC_CONT)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> tail_handle_ipv4_cont(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	__u32 dst_sec_identity <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>	__s8 ext_err <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret <span style=color:#ff79c6>=</span> handle_ipv4_from_lxc(ctx, <span style=color:#ff79c6>&amp;</span>dst_sec_identity, <span style=color:#ff79c6>&amp;</span>ext_err);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify_ext(ctx, SECLABEL, dst_sec_identity, <span style=color:#bd93f9>0</span>, ret, ext_err,
+</span></span><span style=display:flex><span>					    CTX_ACT_DROP, METRIC_EGRESS);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_CUSTOM_CALLS
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>encode_custom_prog_meta(ctx, ret, dst_sec_identity)) {
+</span></span><span style=display:flex><span>		tail_call_static(ctx, <span style=color:#ff79c6>&amp;</span>CUSTOM_CALLS_MAP,
+</span></span><span style=display:flex><span>				 CUSTOM_CALLS_IDX_IPV4_EGRESS);
+</span></span><span style=display:flex><span>		update_metrics(ctx_full_len(ctx), METRIC_EGRESS,
+</span></span><span style=display:flex><span>			       REASON_MISSED_CUSTOM_CALL);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>函数比较长，下图保留核心流程。</p><pre tabindex=0><code>static __always_inline int handle_ipv4_from_lxc(struct __ctx_buff *ctx, __u32 *dst_sec_identity,
+						__s8 *ext_err) 
+handle_ipv4_from_lxc
+    ENABLE_XXX
+        ENABLE_ROUTING
+        ENABLE_PER_PACKET_LB
+        ENABLE_L7_LB
+        ENABLE_HOST_FIREWALL
+        ENABLE_EGRESS_GATEWAY
+        ENABLE_VTEP
+        TUNNEL_MODE
+        ENABLE_HIGH_SCALE_IPCACHE
+        ENABLE_CLUSTER_AWARE_ADDRESSING
+    per_packet_lb_svc_xlate_4
+        lb4_local
+            ct_lazy_lookup4
+            lb4_select_backend_id
+            ct_create4
+            lb4_lookup_backend
+            lb4_xlate
+    skip_policy_enforcement # 策略检查
+    lookup_ip4_remote_endpoint  # 确定策略回退的目标类别。
+    # 如果数据包处于建立连接的方向，并且目标地址在集群内部，它必须匹配策略或被丢弃。
+    # 如果它是发送到主机/外部的，执行CIDR策略检查。
+    policy_can_egress4 
+    Cilium 各种模式选择与转发
+    return CTX_ACT_OK
+</code></pre><p>cil_from_container 使用调用栈简化上图流程：</p><pre tabindex=0><code>1. bpf_clear_meta 清理元数据。
+2. reset_queue_mapping 解决GH-18311的问题，其中veth驱动程序可能记录了veth的RX队列映射，而没有将其保留在0上。这可能会导致在物理设备上出现问题，所有流量只会命中单个TX队列（假设veth设备只有一个并且映射被保留为1）。重置以便堆栈选择一个新的队列。
+3. 对包进行验证，并提取出 L3 proto（协议类型）。
+4. 如果 L3 proto 是 IPv4，调用 ep_tail_call进行处理。也支持 ipv6、ARP_PASSTHROUGH等。
+5. ep_tail_call 进一步调用 tail_call_static，然后尾调用 tail_handle_ipv4_cont， 后者完成：
+  a. Service 负载均衡，即从 Service 的后端 Pod 中选择一个合适的，假设选择 Node2 上的 pod2。
+  b. 创建或更新连接跟踪（CT）记录。
+  c. 执行 DNAT，将包的目的 IP 由 ServiceIP 改成 pod2 pod IP。
+  d. 进行容器出向（egress）安全策略验证。
+  e. 对包进行封装，或者通过主机进行路由。
+  f. 在主机转发网络数据包时，在送回协议栈之前，调用 ipv4_l3 设置 TTL、MAC 地址。
+6. BPF 程序最后返回 CTX_ACT_OK，这个包就进入内核协议栈继续处理。
+</code></pre><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>pass_to_stack</span>:
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_ROUTING
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	ret <span style=color:#ff79c6>=</span> ipv4_l3(ctx, ETH_HLEN, <span style=color:#8be9fd;font-style:italic>NULL</span>, (__u8 <span style=color:#ff79c6>*</span>)<span style=color:#ff79c6>&amp;</span>router_mac.addr, ip4);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (unlikely(ret <span style=color:#ff79c6>!=</span> CTX_ACT_OK))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>int</span> <span style=color:#50fa7b>ipv4_l3</span>(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx, <span style=color:#8be9fd>int</span> l3_off,
+</span></span><span style=display:flex><span>				   <span style=color:#ff79c6>const</span> __u8 <span style=color:#ff79c6>*</span>smac, <span style=color:#ff79c6>const</span> __u8 <span style=color:#ff79c6>*</span>dmac,
+</span></span><span style=display:flex><span>				   <span style=color:#ff79c6>struct</span> iphdr <span style=color:#ff79c6>*</span>ip4)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ipv4_dec_ttl(ctx, l3_off, ip4)) {
+</span></span><span style=display:flex><span>		<span style=color:#6272a4>/* FIXME: Send ICMP TTL */</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> DROP_INVALID;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (smac <span style=color:#ff79c6>&amp;&amp;</span> eth_store_saddr(ctx, smac, <span style=color:#bd93f9>0</span>) <span style=color:#ff79c6>&lt;</span> <span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> DROP_WRITE_ERROR;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (dmac <span style=color:#ff79c6>&amp;&amp;</span> eth_store_daddr(ctx, dmac, <span style=color:#bd93f9>0</span>) <span style=color:#ff79c6>&lt;</span> <span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> DROP_WRITE_ERROR;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>int</span> <span style=color:#50fa7b>ipv4_dec_ttl</span>(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx, <span style=color:#8be9fd>int</span> off,
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>const</span> <span style=color:#ff79c6>struct</span> iphdr <span style=color:#ff79c6>*</span>ip4)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	__u8 new_ttl, ttl <span style=color:#ff79c6>=</span> ip4<span style=color:#ff79c6>-&gt;</span>ttl;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ttl <span style=color:#ff79c6>&lt;=</span> <span style=color:#bd93f9>1</span>)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>1</span>;
+</span></span><span style=display:flex><span>	new_ttl <span style=color:#ff79c6>=</span> ttl <span style=color:#ff79c6>-</span> <span style=color:#bd93f9>1</span>;
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>/* l3_csum_replace() takes at min 2 bytes, zero extended. */</span>
+</span></span><span style=display:flex><span>	ipv4_csum_update_by_value(ctx, off, ttl, new_ttl, <span style=color:#bd93f9>2</span>);
+</span></span><span style=display:flex><span>	ctx_store_bytes(ctx, off <span style=color:#ff79c6>+</span> offsetof(<span style=color:#ff79c6>struct</span> iphdr, ttl), <span style=color:#ff79c6>&amp;</span>new_ttl, <span style=color:#ff79c6>sizeof</span>(new_ttl), <span style=color:#bd93f9>0</span>);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=步骤3-node1-物理网卡-egress-bpf-程序处理>步骤3 Node1 物理网卡 egress BPF 程序处理</h2><p><img src=/images/2023-05-01-cilium-learn/5.svg alt></p><h3 id=31-查看-bpf-程序>3.1 查看 BPF 程序</h3><p>查看 eth0 设备上的 egress BPF，这是包出宿主机之前最后的 tc BPF hook 点：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# tc filter show dev eth0 egress
+</span></span><span style=display:flex><span>filter protocol all pref <span style=color:#bd93f9>1</span> bpf chain <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>filter protocol all pref <span style=color:#bd93f9>1</span> bpf chain <span style=color:#bd93f9>0</span> handle 0x1 cil_to_netdev-eth0 direct-action not_in_hw id <span style=color:#bd93f9>500</span> tag e00d90807b2c4cda jited
+</span></span></code></pre></div><h3 id=32-理解-cil_to_netdev-bpf-程序>3.2 理解 cil_to_netdev BPF 程序</h3><p>to-netdev 被附加为 tc egress 过滤器到由Cilium管理的一个或多个物理设备（例如eth0），只有在以下情况才会附加这个程序：</p><ul><li>主机启用防火墙</li><li>启用了 BPF NodePort</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#6272a4>/*
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * to-netdev is attached as a tc egress filter to one or more physical devices
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * managed by Cilium (e.g., eth0). This program is only attached when:
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * - the host firewall is enabled, or
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * - BPF NodePort is enabled
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> */</span>
+</span></span><span style=display:flex><span>__section(<span style=color:#f1fa8c>&#34;to-netdev&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> cil_to_netdev(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx __maybe_unused)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> trace_ctx trace <span style=color:#ff79c6>=</span> {
+</span></span><span style=display:flex><span>		.reason <span style=color:#ff79c6>=</span> TRACE_REASON_UNKNOWN,
+</span></span><span style=display:flex><span>		.monitor <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>,
+</span></span><span style=display:flex><span>	};
+</span></span><span style=display:flex><span>	__u16 __maybe_unused proto <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>	__u32 __maybe_unused vlan_id;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret <span style=color:#ff79c6>=</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_HOST_FIREWALL
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	__s8 ext_err <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>/* Filter allowed vlan id&#39;s and pass them back to kernel.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 */</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ctx<span style=color:#ff79c6>-&gt;</span>vlan_present) {
+</span></span><span style=display:flex><span>		vlan_id <span style=color:#ff79c6>=</span> ctx<span style=color:#ff79c6>-&gt;</span>vlan_tci <span style=color:#ff79c6>&amp;</span> <span style=color:#bd93f9>0xfff</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (vlan_id) {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> (allow_vlan(ctx<span style=color:#ff79c6>-&gt;</span>ifindex, vlan_id))
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>else</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>send_drop_notify_error</span>(ctx, <span style=color:#bd93f9>0</span>, DROP_VLAN_FILTERED,
+</span></span><span style=display:flex><span>							      CTX_ACT_DROP, METRIC_EGRESS);
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if defined(ENABLE_L7_LB)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	{
+</span></span><span style=display:flex><span>		__u32 magic <span style=color:#ff79c6>=</span> ctx<span style=color:#ff79c6>-&gt;</span>mark <span style=color:#ff79c6>&amp;</span> MARK_MAGIC_HOST_MASK;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (magic <span style=color:#ff79c6>==</span> MARK_MAGIC_PROXY_EGRESS_EPID) {
+</span></span><span style=display:flex><span>			__u32 lxc_id <span style=color:#ff79c6>=</span> get_epid(ctx);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			ctx<span style=color:#ff79c6>-&gt;</span>mark <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>			tail_call_dynamic(ctx, <span style=color:#ff79c6>&amp;</span>POLICY_EGRESSCALL_MAP, lxc_id);
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>send_drop_notify_error</span>(ctx, <span style=color:#bd93f9>0</span>, DROP_MISSED_TAIL_CALL,
+</span></span><span style=display:flex><span>						      CTX_ACT_DROP, METRIC_EGRESS);
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_HOST_FIREWALL
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>proto <span style=color:#ff79c6>&amp;&amp;</span> <span style=color:#ff79c6>!</span>validate_ethertype(ctx, <span style=color:#ff79c6>&amp;</span>proto)) {
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_UNSUPPORTED_L2;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>goto</span> out;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	policy_clear_mark(ctx);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> (proto) {
+</span></span><span style=display:flex><span><span style=color:#ff79c6># if defined ENABLE_ARP_PASSTHROUGH || defined ENABLE_ARP_RESPONDER
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> bpf_htons(ETH_P_ARP)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6># endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6># ifdef ENABLE_IPV6
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> <span style=color:#50fa7b>bpf_htons</span>(ETH_P_IPV6)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> handle_to_netdev_ipv6(ctx, <span style=color:#ff79c6>&amp;</span>trace, <span style=color:#ff79c6>&amp;</span>ext_err);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6># endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6># ifdef ENABLE_IPV4
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> <span style=color:#50fa7b>bpf_htons</span>(ETH_P_IP)<span style=color:#ff79c6>:</span> {
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> handle_to_netdev_ipv4(ctx, <span style=color:#ff79c6>&amp;</span>trace, <span style=color:#ff79c6>&amp;</span>ext_err);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6># endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>default</span><span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_UNKNOWN_L3;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>out</span>:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify_error_ext(ctx, <span style=color:#bd93f9>0</span>, ret, ext_err,
+</span></span><span style=display:flex><span>						  CTX_ACT_DROP, METRIC_EGRESS);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_HOST_FIREWALL */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if defined(ENABLE_BANDWIDTH_MANAGER)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	ret <span style=color:#ff79c6>=</span> edt_sched_departure(ctx);
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>/* No send_drop_notify_error() here given we&#39;re rate-limiting. */</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ret <span style=color:#ff79c6>==</span> CTX_ACT_DROP) {
+</span></span><span style=display:flex><span>		update_metrics(ctx_full_len(ctx), METRIC_EGRESS,
+</span></span><span style=display:flex><span>			       <span style=color:#ff79c6>-</span>DROP_EDT_HORIZON);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_SRV6
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	ret <span style=color:#ff79c6>=</span> handle_srv6(ctx);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ret <span style=color:#ff79c6>!=</span> CTX_ACT_OK)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify_error(ctx, <span style=color:#bd93f9>0</span>, ret, CTX_ACT_DROP,
+</span></span><span style=display:flex><span>					      METRIC_EGRESS);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_SRV6 */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_NODEPORT
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>ctx_snat_done(ctx)) {
+</span></span><span style=display:flex><span>		<span style=color:#6272a4>/*
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>		 * handle_nat_fwd tail calls in the majority of cases,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>		 * so control might never return to this program.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>		 */</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> handle_nat_fwd(ctx);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> send_drop_notify_error(ctx, <span style=color:#bd93f9>0</span>, ret,
+</span></span><span style=display:flex><span>						      CTX_ACT_DROP,
+</span></span><span style=display:flex><span>						      METRIC_EGRESS);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_HEALTH_CHECK
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	ret <span style=color:#ff79c6>=</span> lb_handle_health(ctx);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify_error(ctx, <span style=color:#bd93f9>0</span>, ret, CTX_ACT_DROP,
+</span></span><span style=display:flex><span>					      METRIC_EGRESS);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	send_trace_notify(ctx, TRACE_TO_NETWORK, <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>,
+</span></span><span style=display:flex><span>			  <span style=color:#bd93f9>0</span>, trace.reason, trace.monitor);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><pre tabindex=0><code>cil_to_netdev
+    ENABLE_XXX
+        ENABLE_HOST_FIREWALL
+        ENABLE_L7_LB
+        ENABLE_IPV4
+        ENABLE_IPV6
+        ENABLE_SRV6
+        ENABLE_HEALTH_CHECK
+        ENABLE_NODEPORT
+        ENABLE_ARP_PASSTHROUGH
+        ENABLE_ARP_RESPONDER
+    allow_vlan
+    
+policy_clear_mark
+    handle_to_netdev_ipv4
+        resolve_srcid_ipv4
+            lookup_ip4_remote_endpoint
+            srcid_from_ipcache    
+        revalidate_data
+        ipv4_host_policy_egress
+            whitelist_snated_egress_connections
+            revalidate_data
+            policy_can_egress4 # /* Perform policy lookup. */
+            ct_create4
+            send_policy_verdict_notify
+    handle_nat_fwd
+    lb_handle_health
+    return CTX_ACT_OK
+</code></pre><p>cil_to_netdev 调用栈简化上图流程：</p><pre tabindex=0><code>1. allow_vlan 过滤允许的 VLAN ID，并将其传递回内核。
+2. policy_clear_mark  策略初始化。
+3. handle_to_netdev_ipv4 完成主机数据包出主机时对数据包进行处理：
+  a. 当主机需要发出数据包时，to-netdev 程序会拦截这些数据包，并使用 handle_to_netdev_ipv4 方法进行处理。如果数据包符合主机的防火墙策略，或者需要经过 NodePort 的 SNAT 处理，数据包会被允许通过；否则，数据包将被丢弃或者被进行其他处理。
+  b. resolve_srcid_ipv4  解析源自代理的源 ID，并根据配置的映射表和安全策略来确定数据包的真正源 ID，并将其存储在 sec_label指向的内存位置。
+  c. revalidate_data 校验数据的合法性
+  d. ipv4_host_policy_egress  用于在 IPv4 主机出口策略的上下文中处理数据包，并根据配置的策略规则对数据包进行相应的处理操作。
+4. BPF 程序最后返回 CTX_ACT_OK，继续在内核协议栈处理。
+Host Native device 上的 BPF 主要处理南北向流量，即容器和集群外交互的流量 。这包括 LoadBalancer Service 流量、带 externalIPs 的 Service 流量、NodePort Service 流量等。
+</code></pre><h3 id=33-确定源与目的-mac-地址>3.3 确定源与目的 MAC 地址</h3><p>查看宿主机的路由表与ARP表。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# route -n
+</span></span><span style=display:flex><span>Kernel IP routing table
+</span></span><span style=display:flex><span>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span style=display:flex><span>0.0.0.0         192.168.1.1     0.0.0.0         UG    <span style=color:#bd93f9>100</span>    <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>10.0.0.0        10.0.0.175      255.255.255.0   UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>10.0.0.175      0.0.0.0         255.255.255.255 UH    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>10.0.1.0        10.0.0.175      255.255.255.0   UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>169.254.30.0    0.0.0.0         255.255.255.240 U     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> docker0
+</span></span><span style=display:flex><span>192.168.1.0     0.0.0.0         255.255.255.0   U     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# arp -n
+</span></span><span style=display:flex><span>Address                  HWtype  HWaddress           Flags Mask            Iface
+</span></span><span style=display:flex><span>192.168.1.1              ether   fa:28:00:14:3f:94   C                     eth0
+</span></span><span style=display:flex><span>192.168.1.13             ether   fa:28:00:14:3f:94   C                     eth0
+</span></span></code></pre></div><p>命中宿主机默认路由，因此会执行以下操作：</p><ul><li>将 eth0 的 MAC 作为 src_mac：MAC 地址只在二层网络内有效，宿主机和 Pod 属于不同二层网络（Cilium 自己管理了一个 CIDR），宿主机做转发时会将 src_mac 换成自己的 MAC。</li><li>将宿主机网关对应的 MAC 作为 dst_mac：下一跳是宿主机网关。</li></ul><h2 id=步骤4-vpc-网络路由处理>步骤4 VPC 网络路由处理</h2><p><img src=/images/2023-05-01-cilium-learn/6.svg alt></p><h3 id=41-内核转发-pod-网络数据包>4.1 内核转发 Pod 网络数据包</h3><p>查看宿主机 node1 上的路由表，根据目的 pod2 IP 判断网络下一跳，内核路由表如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-fbso3h3g-ffcfq1uq:/# route -n
+</span></span><span style=display:flex><span>Kernel IP routing table
+</span></span><span style=display:flex><span>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span style=display:flex><span>0.0.0.0         192.168.1.1     0.0.0.0         UG    <span style=color:#bd93f9>100</span>    <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>10.0.0.0        10.0.0.175      255.255.255.0   UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>10.0.0.175      0.0.0.0         255.255.255.255 UH    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>10.0.1.0        10.0.0.175      255.255.255.0   UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>169.254.30.0    0.0.0.0         255.255.255.240 U     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> docker0
+</span></span><span style=display:flex><span>192.168.1.0     0.0.0.0         255.255.255.0   U     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span></code></pre></div><p>根据以上路由规则，只要目的 IP 不是本机 PodCIDR 网段的，都会命中默认路由 ，走网络设备 eth0。</p><h3 id=42-node-到-node-网络处理>4.2 Node 到 Node 网络处理</h3><p>从源 Node 到 目的 Node 请求转发由底层 VPC 网络完成，涉及跨主机网络方案，不做过多的阐述。数据中心网络根据 dst_ip 对包进行路由。知识点：</p><ol><li>在二层/大二层网络中，对于同一个包，发送方和接收方看到的 src_mac 是一样的，因为二层转发只修改 dst_mac，不会修改 src_mac。</li><li>三层组网中，src_mac 和 dst_mac 都会变。</li></ol><h2 id=步骤5-node2-物理网卡-ingress-bpf-程序处理>步骤5 Node2 物理网卡 ingress BPF 程序处理</h2><p><img src=/images/2023-05-01-cilium-learn/7.svg alt></p><h3 id=51-查看-node2-上的路由规则>5.1 查看 Node2 上的路由规则</h3><p>查看宿主机 Node2 和 Pod2 nginx 上的路由表、ARP 表。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# ip rule
+</span></span><span style=display:flex><span>9:	from all fwmark 0x200/0xf00 lookup <span style=color:#bd93f9>2004</span>
+</span></span><span style=display:flex><span>100:	from all lookup <span style=color:#8be9fd;font-style:italic>local</span>
+</span></span><span style=display:flex><span>32766:	from all lookup main
+</span></span><span style=display:flex><span>32767:	from all lookup default
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# ip route
+</span></span><span style=display:flex><span>default via 192.168.1.1 dev eth0 proto dhcp src 192.168.1.13 metric <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>10.0.0.0/24 via 10.0.1.172 dev cilium_host src 10.0.1.172 mtu <span style=color:#bd93f9>1450</span>
+</span></span><span style=display:flex><span>10.0.1.0/24 via 10.0.1.172 dev cilium_host src 10.0.1.172
+</span></span><span style=display:flex><span>10.0.1.172 dev cilium_host scope link
+</span></span><span style=display:flex><span>169.254.30.0/28 dev docker0 proto kernel scope link src 169.254.30.1 linkdown
+</span></span><span style=display:flex><span>192.168.1.0/24 dev eth0 proto kernel scope link src 192.168.1.13
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# route -n
+</span></span><span style=display:flex><span>Kernel IP routing table
+</span></span><span style=display:flex><span>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span style=display:flex><span>0.0.0.0         192.168.1.1     0.0.0.0         UG    <span style=color:#bd93f9>100</span>    <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>10.0.0.0        10.0.1.172      255.255.255.0   UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>10.0.1.0        10.0.1.172      255.255.255.0   UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>10.0.1.172      0.0.0.0         255.255.255.255 UH    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> cilium_host
+</span></span><span style=display:flex><span>169.254.30.0    0.0.0.0         255.255.255.240 U     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> docker0
+</span></span><span style=display:flex><span>192.168.1.0     0.0.0.0         255.255.255.0   U     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span></code></pre></div><p>查看 Pod2 在宿主机上的对端网络设备是 lxc493a9120593a。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# bash nsenter.sh 02f75de6e631 -n route -n
+</span></span><span style=display:flex><span>Kernel IP routing table
+</span></span><span style=display:flex><span>Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+</span></span><span style=display:flex><span>0.0.0.0         10.0.1.172      0.0.0.0         UG    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>10.0.1.172      0.0.0.0         255.255.255.255 UH    <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>        <span style=color:#bd93f9>0</span> eth0
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# bash nsenter.sh 02f75de6e631 -n arp -n
+</span></span><span style=display:flex><span>Address                  HWtype  HWaddress           Flags Mask            Iface
+</span></span><span style=display:flex><span>10.0.1.172               ether   fa:fb:bb:ab:82:72   C                     eth0
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# ip link | grep -C2 fa:fb:bb:ab:82:72
+</span></span><span style=display:flex><span>16: lxc493a9120593a@if15: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether fa:fb:bb:ab:82:72 brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>6</span>
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# bash nsenter.sh 02f75de6e631 -n ip link
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noqueue state UNKNOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>15: eth0@if16: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether 86:62:55:e0:8a:5e brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>我们分别对 lxc493a9120593a 和容器内 eth0 抓包，lxc493a9120593a 网络设备抓包结果如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# tcpdump -n -e  -i lxc493a9120593a
+</span></span><span style=display:flex><span>tcpdump: verbose output suppressed, use -v or -vv <span style=color:#ff79c6>for</span> full protocol decode
+</span></span><span style=display:flex><span>listening on lxc493a9120593a, link-type EN10MB <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>, capture size <span style=color:#bd93f9>262144</span> bytes
+</span></span><span style=display:flex><span>16:55:19.281201 fa:fb:bb:ab:82:72 &gt; 86:62:55:e0:8a:5e, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 74: 10.0.0.250.52724 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>S<span style=color:#ff79c6>]</span>, seq 289137642, win 64860, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>3072495928</span> ecr 0,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.281236 86:62:55:e0:8a:5e &gt; fa:fb:bb:ab:82:72, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 74: 10.0.1.60.80 &gt; 10.0.0.250.52724: Flags <span style=color:#ff79c6>[</span>S.<span style=color:#ff79c6>]</span>, seq 3924940845, ack 289137643, win 64308, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>2455727274</span> ecr 3072495928,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.281544 fa:fb:bb:ab:82:72 &gt; 86:62:55:e0:8a:5e, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.52724 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072495928</span> ecr 2455727274<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.480019 fa:fb:bb:ab:82:72 &gt; 86:62:55:e0:8a:5e, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 143: 10.0.0.250.52724 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:78, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072496127</span> ecr 2455727274<span style=color:#ff79c6>]</span>, length 77: HTTP: HEAD / HTTP/1.1
+</span></span><span style=display:flex><span>16:55:19.480053 86:62:55:e0:8a:5e &gt; fa:fb:bb:ab:82:72, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.1.60.80 &gt; 10.0.0.250.52724: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2455727473</span> ecr 3072496127<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.480197 86:62:55:e0:8a:5e &gt; fa:fb:bb:ab:82:72, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 304: 10.0.1.60.80 &gt; 10.0.0.250.52724: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:239, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2455727473</span> ecr 3072496127<span style=color:#ff79c6>]</span>, length 238: HTTP: HTTP/1.1 <span style=color:#bd93f9>200</span> OK
+</span></span><span style=display:flex><span>16:55:19.480311 fa:fb:bb:ab:82:72 &gt; 86:62:55:e0:8a:5e, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.52724 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072496127</span> ecr 2455727473<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.480658 fa:fb:bb:ab:82:72 &gt; 86:62:55:e0:8a:5e, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.52724 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 78, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072496127</span> ecr 2455727473<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.480734 86:62:55:e0:8a:5e &gt; fa:fb:bb:ab:82:72, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.1.60.80 &gt; 10.0.0.250.52724: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 239, ack 79, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2455727474</span> ecr 3072496127<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:55:19.480879 fa:fb:bb:ab:82:72 &gt; 86:62:55:e0:8a:5e, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.52724 &gt; 10.0.1.60.80: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 240, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072496128</span> ecr 2455727474<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>Pod2 容器中的网络设备 eth0 抓包结果如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# bash nsenter.sh 02f75de6e631 -n tcpdump -e  -i eth0
+</span></span><span style=display:flex><span>tcpdump: verbose output suppressed, use -v or -vv <span style=color:#ff79c6>for</span> full protocol decode
+</span></span><span style=display:flex><span>listening on eth0, link-type EN10MB <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>, capture size <span style=color:#bd93f9>262144</span> bytes
+</span></span><span style=display:flex><span>16:53:22.180816 fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 74: 10.0.0.250.41026 &gt; 10.0.1.60.http: Flags <span style=color:#ff79c6>[</span>S<span style=color:#ff79c6>]</span>, seq 2364019483, win 64860, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>3072378827</span> ecr 0,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.180850 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 74: 10.0.1.60.http &gt; 10.0.0.250.41026: Flags <span style=color:#ff79c6>[</span>S.<span style=color:#ff79c6>]</span>, seq 1674396123, ack 2364019484, win 64308, options <span style=color:#ff79c6>[</span>mss 1410,sackOK,TS val <span style=color:#bd93f9>2455610174</span> ecr 3072378827,nop,wscale 7<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.181107 fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.41026 &gt; 10.0.1.60.http: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072378828</span> ecr 2455610174<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.181162 fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 143: 10.0.0.250.41026 &gt; 10.0.1.60.http: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:78, ack 1, win 507, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072378828</span> ecr 2455610174<span style=color:#ff79c6>]</span>, length 77: HTTP: HEAD / HTTP/1.1
+</span></span><span style=display:flex><span>16:53:22.181169 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.1.60.http &gt; 10.0.0.250.41026: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2455610174</span> ecr 3072378828<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.181272 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 304: 10.0.1.60.http &gt; 10.0.0.250.41026: Flags <span style=color:#ff79c6>[</span>P.<span style=color:#ff79c6>]</span>, seq 1:239, ack 78, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2455610174</span> ecr 3072378828<span style=color:#ff79c6>]</span>, length 238: HTTP: HTTP/1.1 <span style=color:#bd93f9>200</span> OK
+</span></span><span style=display:flex><span>16:53:22.181392 fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.41026 &gt; 10.0.1.60.http: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072378828</span> ecr 2455610174<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.181500 fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.41026 &gt; 10.0.1.60.http: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 78, ack 239, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072378828</span> ecr 2455610174<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.181599 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.1.60.http &gt; 10.0.0.250.41026: Flags <span style=color:#ff79c6>[</span>F.<span style=color:#ff79c6>]</span>, seq 239, ack 79, win 502, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>2455610175</span> ecr 3072378828<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>16:53:22.181732 fa:fb:bb:ab:82:72 <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span> &gt; 86:62:55:e0:8a:5e <span style=color:#ff79c6>(</span>oui Unknown<span style=color:#ff79c6>)</span>, ethertype IPv4 <span style=color:#ff79c6>(</span>0x0800<span style=color:#ff79c6>)</span>, length 66: 10.0.0.250.41026 &gt; 10.0.1.60.http: Flags <span style=color:#ff79c6>[</span>.<span style=color:#ff79c6>]</span>, ack 240, win 506, options <span style=color:#ff79c6>[</span>nop,nop,TS val <span style=color:#bd93f9>3072378828</span> ecr 2455610175<span style=color:#ff79c6>]</span>, length <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>我们发现网络数据包一直都是 Pod IP 通信，Pod IP 得以保留。</p><h3 id=52-查看-bpf-程序>5.2 查看 BPF 程序</h3><p>网络数据包从网卡到 Pod 虚拟网卡经历过哪些流程，请参考网络数据平面是 ipvs/iptables 或者 Cilium 网卡到 Pod 的数据路径。初识容器网络与eBPF。接着，查看在 Node2 宿主机上 dev eth0 查看 TC Hook 程序。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# tc filter show dev eth0 ingress
+</span></span><span style=display:flex><span>filter protocol all pref <span style=color:#bd93f9>1</span> bpf chain <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>filter protocol all pref <span style=color:#bd93f9>1</span> bpf chain <span style=color:#bd93f9>0</span> handle 0x1 cil_from_netdev-eth0 direct-action not_in_hw id <span style=color:#bd93f9>487</span> tag ced9b57550cd8ef8 jited
+</span></span></code></pre></div><h3 id=53-理解-cil_from_netdev-bpf-程序>5.3 理解 cil_from_netdev BPF 程序</h3><p>上述程序中 BPF 会对进入 dev eth0 的网络数据包进行处理。from-netdev 作为 tc 的 ingress 过滤器
+附加到由 Cilium 管理的一个或多个物理设备（例如eth0）上。只有在以下情况下才附加此程序：启用主机防火墙或者启用了 BPF NodePort。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span>__section(<span style=color:#f1fa8c>&#34;from-netdev&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> cil_from_netdev(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	__u32 __maybe_unused vlan_id;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_NODEPORT_Ak8sLERATION
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef HAVE_ENCAP
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	__u32 flags <span style=color:#ff79c6>=</span> ctx_get_xfer(ctx, XFER_FLAGS);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> trace_ctx trace <span style=color:#ff79c6>=</span> {
+</span></span><span style=display:flex><span>		.reason <span style=color:#ff79c6>=</span> TRACE_REASON_UNKNOWN,
+</span></span><span style=display:flex><span>		.monitor <span style=color:#ff79c6>=</span> TRACE_PAYLOAD_LEN,
+</span></span><span style=display:flex><span>	};
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (flags <span style=color:#ff79c6>&amp;</span> XFER_PKT_SNAT_DONE)
+</span></span><span style=display:flex><span>		ctx_snat_done_set(ctx);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (flags <span style=color:#ff79c6>&amp;</span> XFER_PKT_ENCAP) {
+</span></span><span style=display:flex><span>		edt_set_aggregate(ctx, <span style=color:#bd93f9>0</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> __encap_and_redirect_with_nodeid(ctx, ctx_get_xfer(ctx, XFER_ENCAP_NODEID),
+</span></span><span style=display:flex><span>							ctx_get_xfer(ctx, XFER_ENCAP_SECLABEL),
+</span></span><span style=display:flex><span>							ctx_get_xfer(ctx, XFER_ENCAP_DSTID),
+</span></span><span style=display:flex><span>							NOT_VTEP_DST, <span style=color:#ff79c6>&amp;</span>trace);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>goto</span> drop_err;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#6272a4>/* Filter allowed vlan id&#39;s and pass them back to kernel.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 */</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ctx<span style=color:#ff79c6>-&gt;</span>vlan_present) {
+</span></span><span style=display:flex><span>		vlan_id <span style=color:#ff79c6>=</span> ctx<span style=color:#ff79c6>-&gt;</span>vlan_tci <span style=color:#ff79c6>&amp;</span> <span style=color:#bd93f9>0xfff</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (vlan_id) {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> (allow_vlan(ctx<span style=color:#ff79c6>-&gt;</span>ifindex, vlan_id))
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			ret <span style=color:#ff79c6>=</span> DROP_VLAN_FILTERED;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>goto</span> drop_err;
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> handle_netdev(ctx, <span style=color:#8be9fd;font-style:italic>false</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>drop_err</span>:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> send_drop_notify_error(ctx, <span style=color:#bd93f9>0</span>, ret, CTX_ACT_DROP, METRIC_INGRESS);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>__section_tail(CILIUM_MAP_CALLS, CILIUM_CALL_IPV4_FROM_LXC)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> tail_handle_ipv4(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret <span style=color:#ff79c6>=</span> __tail_handle_ipv4(ctx);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify_error(ctx, SECLABEL, ret,
+</span></span><span style=display:flex><span>		    CTX_ACT_DROP, METRIC_EGRESS);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>declare_tailcall_if(is_defined(ENABLE_PER_PACKET_LB), CILIUM_CALL_IPV4_FROM_LXC_CONT)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> tail_handle_ipv4_cont(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	__u32 dst_id <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>	__s8 ext_err <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret <span style=color:#ff79c6>=</span> handle_ipv4_from_lxc(ctx, <span style=color:#ff79c6>&amp;</span>dst_id, <span style=color:#ff79c6>&amp;</span>ext_err);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify_ext(ctx, SECLABEL, dst_id, <span style=color:#bd93f9>0</span>, ret, ext_err,
+</span></span><span style=display:flex><span>					    CTX_ACT_DROP, METRIC_EGRESS);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_CUSTOM_CALLS
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>encode_custom_prog_meta(ctx, ret, dst_id)) {
+</span></span><span style=display:flex><span>		tail_call_static(ctx, <span style=color:#ff79c6>&amp;</span>CUSTOM_CALLS_MAP,
+</span></span><span style=display:flex><span>				 CUSTOM_CALLS_IDX_IPV4_EGRESS);
+</span></span><span style=display:flex><span>		update_metrics(ctx_full_len(ctx), METRIC_EGRESS,
+</span></span><span style=display:flex><span>			       REASON_MISSED_CUSTOM_CALL);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><pre tabindex=0><code>cil_from_netdev
+    ENABLE_XXX
+        ENABLE_NODEPORT_Ak8sLERATION
+        HAVE_ENCAP
+    HAVE_ENCAP 
+        ctx_snat_done_set
+        __encap_and_redirect_with_nodeid
+    allow_vlan
+    handle_netdev
+        validate_ethertype
+        do_netdev
+            ENABLE_L7_LB
+                lxc_id = get_epid(ctx)
+                tail_call_dynamic
+            ENABLE_IPSEC
+                do_decrypt
+                CTX_ACT_OK
+            bpf_clear_meta
+            proto-ipv4
+                identity = resolve_srcid_ipv4
+                ctx_store_meta
+                ep_tail_call(CILIUM_CALL_IPV4_FROM_NETDEV / CILIUM_CALL_IPV4_FROM_LXC) // 尾调用
+    tail_handle_ipv4_from_netdev
+        tail_handle_ipv4 // CILIUM_CALL_IPV4_FROM_LXC
+            __tail_handle_ipv4
+                ENABLE_IPV4_FRAGMENTS
+                ENABLE_PER_PACKET_LB
+                    ret = lb4_extract_tuple
+                    svc = lb4_lookup_service
+                    ret = lb4_local
+                    lb4_ctx_store_state
+                invoke_tailcall_if(is_defined(ENABLE_PER_PACKET_LB),CILIUM_CALL_IPV4_CT_EGRESS, tail_ipv4_ct_egress) // 尾调用
+                CILIUM_CALL_IPV4_FROM_LXC_CONT // 尾调用
+                    tail_handle_ipv4_cont
+                        handle_ipv4_from_lxc
+                            ENABLE_WIREGUARD
+                            ENABLE_PER_PACKET_LB
+                            HAVE_DIRECT_Ak8sSS_TO_MAP_VALUES
+                            ENABLE_L7_LB
+                            ENABLE_NODEPORT
+                            ...
+                            verdict = policy_can_egress4
+                            ep = lookup_ip4_endpoint
+                            policy_clear_mark
+                            ipv4_local_delivery
+                                tail_call_static(ctx, &amp;POLICY_CALL_MAP, HOST_EP_ID) // 尾调用
+    return CTX_ACT_OK
+</code></pre><p>cil_from_netdev 调用栈简化上图流程：</p><pre tabindex=0><code>1. 如果开启 HAVE_ENCAP
+  a. ctx_snat_done_set  确保 Cilium 在处理流量时已经正确地设置了 SNAT 上下文，从而保证流量的正确转发和路由。
+  b.  __encap_and_redirect_with_nodeid 该函数的作用是根据指定的节点 ID 将流量数据包进行封装，并将其重定向到目标节点。
+2. allow_vlan 过滤允许的 VLAN ID，并将其传递回内核。
+3. handle_netdev  处理从宿主机到 Cilium 管理的网络数据包：
+  a. 解析这个包所属的 identity（Cilium 依赖 identity 做安全策略），并存储到包的结构体中。
+  b. 尾调用到 CILIUM_CALL_IPV4_FROM_NETDEV tail_handle_ipv4_from_netdev。
+4. 继续尾调用 CILIUM_CALL_IPV4_FROM_LXC_CONT，进行以下主要流程：
+  a. 查找 dst_ip 对应的 endpoint（即 Pod2）。
+  b. 调用 ipv4_local_delivery 执行处理，这个函数会根据 endpoint id 直接尾调用到 endpoint (POD4) 的 BPF 程序。
+</code></pre><h2 id=步骤6-pod2-eth0-网卡对端的-lxc493a9120593a-bpf-程序处理>步骤6 Pod2 eth0 网卡对端的 lxc493a9120593a BPF 程序处理</h2><p><img src=/images/2023-05-01-cilium-learn/8.svg alt></p><h3 id=61-查看-bpf-程序>6.1 查看 BPF 程序</h3><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/# tc filter show dev lxc493a9120593a  egress
+</span></span><span style=display:flex><span>root@k8s-ig-m6f5hd49-2ie613z6-ffcfq1uq:/#
+</span></span></code></pre></div><p>解答问题：没有相应的 BPF，怎么对容器的入向包做拦截和处理呢？对于网络数据包，直接从上文中的 eth0 BPF 程序尾调用 tail_call_static(ctx, &POLICY_CALL_MAP, HOST_EP_ID) ，不需要通过 tc 加载到 lxc 设备，极大缩短了物理网卡到容器的路径，提升了网络性能。</p><h3 id=62-to-container-bpf-程序分析>6.2 to-container BPF 程序分析</h3><p>当 endpoint 路由被启用时，连接到容器的 lxc 设备。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span>__section(<span style=color:#f1fa8c>&#34;to-container&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> cil_to_container(<span style=color:#ff79c6>struct</span> __ctx_buff <span style=color:#ff79c6>*</span>ctx)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>enum</span> trace_point trace <span style=color:#ff79c6>=</span> TRACE_FROM_STACK;
+</span></span><span style=display:flex><span>	__u32 magic, identity <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>	__u16 proto;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>validate_ethertype(ctx, <span style=color:#ff79c6>&amp;</span>proto)) {
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_UNSUPPORTED_L2;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>goto</span> out;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	bpf_clear_meta(ctx);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	magic <span style=color:#ff79c6>=</span> inherit_identity_from_host(ctx, <span style=color:#ff79c6>&amp;</span>identity);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (magic <span style=color:#ff79c6>==</span> MARK_MAGIC_PROXY_INGRESS <span style=color:#ff79c6>||</span> magic <span style=color:#ff79c6>==</span> MARK_MAGIC_PROXY_EGRESS)
+</span></span><span style=display:flex><span>		trace <span style=color:#ff79c6>=</span> TRACE_FROM_PROXY;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if defined(ENABLE_L7_LB)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>else</span> <span style=color:#50fa7b>if</span> (magic <span style=color:#ff79c6>==</span> MARK_MAGIC_PROXY_EGRESS_EPID) {
+</span></span><span style=display:flex><span>		tail_call_dynamic(ctx, <span style=color:#ff79c6>&amp;</span>POLICY_EGRESSCALL_MAP, identity);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span>	send_trace_notify(ctx, trace, identity, <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>, ctx<span style=color:#ff79c6>-&gt;</span>ingress_ifindex,
+</span></span><span style=display:flex><span>			  TRACE_REASON_UNKNOWN, TRACE_PAYLOAD_LEN);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if defined(ENABLE_HOST_FIREWALL) &amp;&amp; !defined(ENABLE_ROUTING)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#6272a4>/* If the packet comes from the hostns and per-endpoint routes are enabled,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 * jump to bpf_host to enforce egress host policies before anything else.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 *
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 * We will jump back to bpf_lxc once host policies are enforced. Whenever
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 * we call inherit_identity_from_host, the packet mark is cleared. Thus,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 * when we jump back, the packet mark will have been cleared and the
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 * identity won&#39;t match HOST_ID anymore.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>	 */</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (identity <span style=color:#ff79c6>==</span> HOST_ID) {
+</span></span><span style=display:flex><span>		ctx_store_meta(ctx, CB_FROM_HOST, <span style=color:#bd93f9>1</span>);
+</span></span><span style=display:flex><span>		ctx_store_meta(ctx, CB_DST_ENDPOINT_ID, LXC_ID);
+</span></span><span style=display:flex><span>		tail_call_static(ctx, <span style=color:#ff79c6>&amp;</span>POLICY_CALL_MAP, HOST_EP_ID);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_HOST_FIREWALL &amp;&amp; !ENABLE_ROUTING */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span>	ctx_store_meta(ctx, CB_SRC_LABEL, identity);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> (proto) {
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if defined(ENABLE_ARP_PASSTHROUGH) || defined(ENABLE_ARP_RESPONDER)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> bpf_htons(ETH_P_ARP)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> CTX_ACT_OK;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_IPV6
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> <span style=color:#50fa7b>bpf_htons</span>(ETH_P_IPV6)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ep_tail_call(ctx, CILIUM_CALL_IPV6_CT_INGRESS);
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_IPV6 */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef ENABLE_IPV4
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>case</span> <span style=color:#50fa7b>bpf_htons</span>(ETH_P_IP)<span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ep_tail_call(ctx, CILIUM_CALL_IPV4_CT_INGRESS);
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_MISSED_TAIL_CALL;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* ENABLE_IPV4 */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>default</span><span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>		ret <span style=color:#ff79c6>=</span> DROP_UNKNOWN_L3;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>out</span>:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (IS_ERR(ret))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> send_drop_notify(ctx, identity, SECLABEL, LXC_ID,
+</span></span><span style=display:flex><span>					ret, CTX_ACT_DROP, METRIC_INGRESS);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><pre tabindex=0><code>cil_to_container
+    validate_ethertype
+    bpf_clear_meta
+    inherit_identity_from_host
+    ep_tail_call(ctx, CILIUM_CALL_IPV4_CT_INGRESS)
+        __section_tail(CILIUM_MAP_POLICY, TEMPLATE_LXC_ID)
+            handle_policy
+            validate_ethertype
+            invoke_tailcall_if(__and(is_defined(ENABLE_IPV4), is_defined(ENABLE_IPV6)),
+                CILIUM_CALL_IPV4_CT_INGRESS_POLICY_ONLY, tail_ipv4_ct_ingress_policy_only)
+                policy_can_ak8sss_ingress
+                    __policy_can_ak8sss
+                    	id/proto/port  (L3/L4)
+                    	ANY/proto/port (L4-only)
+                    	id/proto/ANY   (L3-proto)
+                    	ANY/proto/ANY  (Proto-only)
+                    	id/ANY/ANY     (L3-only)
+                    	ANY/ANY/ANY    (All)
+                        return CTX_ACT_OK
+    return CTX_ACT_OK
+</code></pre><p>to-container 调用栈简化上图流程：</p><ol><li>inherit_identity_from_host 从元数据中获取 src identity 信息。</li><li>尾调用 ep_tail_call(ctx, CILIUM_CALL_IPV4_CT_INGRESS)，执行容器入向（ingress）安全策略检查。</li></ol><h3 id=步骤7-pod2-eth0-网络数据包处理>步骤7 Pod2 eth0 网络数据包处理</h3><p><img src=/images/2023-05-01-cilium-learn/9.svg alt>
+网络数据包到达容器的虚拟网卡，接下来就会被更上层处理。</p><h1 id=总结>总结</h1><h2 id=步骤-请求与响应数据包路径流程>步骤-请求与响应数据包路径流程</h2><p>Request/Reponse Traffic path of Pod-to-ServiceIP 数据路径全景图
+<img src=/images/2023-05-01-cilium-learn/10.svg alt></p><p>Cilium 是一个用于容器网络加速的开源项目，它提供高性能、安全性和可观察性的容器网络解决方案。总的来说，Cilium 是一个强大的容器网络加速工具，通过利用 eBPF 技术提供高性能、安全性和可观察性。它为容器网络提供了一个可扩展、灵活且易于管理的解决方案，适用于各种容器环境和工作负载。</p><ol><li>高性能：Cilium 使用 Linux 内核功能如 eBPF 来实现数据包过滤和转发，以提供卓越的网络性能。它支持透明的负载均衡、快速的请求转发和响应处理，从而提高容器网络的吞吐量和响应性能。</li><li>安全性：Cilium 充分利用了 eBPF 技术的安全特性，可实现高度可扩展且具有细粒度的网络安全策略。它提供了基于标签的访问控制列表（ACL）和网络策略，用于保护容器之间的通信，并允许定义细粒度的网络过滤规则。此外，Cilium 可与基于身份验证和授权的系统（如 Kubernetes）集成，以实现更强大的网络安全性。</li><li>可观察性：Cilium 提供了强大的监控和可观察性功能，使用户能够深入了解容器网络的行为和性能。它可以生成详细的网络流量日志，允许用户对流量进行分析和故障排除。另外，Cilium 还集成了 Prometheus 和 Grafana，以便用户可以轻松地收集和可视化网络指标数据。</li><li>灵活性：Cilium 可与各种容器和编排平台集成，包括 Kubernetes、Docker 和纯裸机环境。它能够适应不同的网络拓扑和部署环境，并提供了丰富的配置选项，以满足各种需求。</li></ol><h1 id=附录>附录</h1><h2 id=cilium-agent-节点-node-配置>Cilium Agent 节点 Node 配置</h2><ol><li>KubeProxyReplacement：Cilium将尽力替代Kube-Proxy，并尝试实现服务负载均衡和网络代理功能。<ul><li>Disabled：禁用模式，不使用 Cilium eBPF kube-proxy replacement，保留传统的 kube-proxy 运行方式。</li><li>Strict：严格模式，使用 Cilium eBPF kube-proxy replacement 完全替换 kube-proxy 的运行方式。</li><li>Partial：部分模式，同时使用 kube-proxy 和 Cilium eBPF kube-proxy replacement，用户需要手动指定需要替换的功能。</li><li>Probe：自动探测是否启动 Cilium 替换 kube-proxy。</li></ul></li><li>KVStore：通过与 KVStore 进行交互，Cilium 可以读取和写入网络安全和网络配置相关的数据，从而实现更高效的网络管理和更强大的安全功能。</li><li>Cilium Host firewall：用于保护和控制主机上的网络流量，并基于Cilium的网络策略来过滤和管理流入和流出主机的数据包。</li><li>CNI Chaining：允许Cilium与其他容器网络接口（Container Network Interface）插件进行协同工作，以支持网络功能的链式连接和集成。</li><li>NodeMonitor：通过监控集群中的节点和它们的状态，用于检测节点的上线和下线，并相应地调整网络拓扑和负载均衡。</li><li>IPAM：负责为Cilium网络中的容器分配和管理IP地址，确保每个容器都有唯一的IP地址，并提供与主机网络的连接。</li><li>IPv6 BIG TCP：支持IPv6网络中的大连接TCP流量，通过对TCP流量进行片段重排和负载均衡，提高网络性能和可靠性。</li><li>BandwidthManager：用于在Cilium网络中实现带宽控制和限制，以确保每个容器或服务所使用的带宽不超过其指定的限制。</li><li>Host Routing：通过在主机上配置路由表，将特定的流量路由到 Cilium 代理，以实现服务发现和网络转发。<ul><li>Legacy 模式：部分网络数据包依然使用主机路由，依赖了iptables 等 Netfilter。</li><li>BPF模式：在BPF模式下，Cilium代理会使用eBPF程序来拦截和重新处理主机相关的IP流量。eBPF程序会对流量进行检查和转发，而不需要创建额外的网络接口，这种模式下，Cilium使用的是Linux内核中的BPF功能来实现路由和过滤。要求：内核 >= 5.10、直接路由配置或隧道、基于 eBPF 的 kube-proxy 替换、基于 eBPF 的 masquerading 等。</li></ul></li><li>Masquerading：用于将出站流量的源IP地址伪装为主机的IP地址，以实现网络地址转换（NAT）功能。</li><li>Global Identity Range：定义了Cilium网络中可用的全局身份范围，确保分配给每个容器和服务的身份和标识是唯一和全局唯一的。</li><li>Hubble：提供了网络观测和监控的解决方案，可以捕获、分析和可视化Cilium网络中的流量和性能数据。</li><li>Encryption：针对Cilium通信提供加密功能，以保护网络通信的机密性和安全性。可以使用传输层安全协议（TLS）实现加密。</li></ol><h2 id=cilium-config-configmap-配置>Cilium-Config ConfigMap 配置</h2><ol><li>agent-not-ready-taint-key: Cilium代理标记节点为不可用的键。</li><li>arping-refresh-period: ARP刷新周期。</li><li>auto-direct-node-routes: 是否自动将节点路由直接发送到它们的目标。</li><li>bpf-lb-external-clusterip: 是否启用使用外部网络负载均衡器的ClusterIP。</li><li>bpf-lb-map-max: BPF负载均衡器映射的最大数量。</li><li>bpf-lb-sock: 是否启用 BPF 负载均衡器套接字。</li><li>bpf-map-dynamic-size-ratio: BPF 映射的动态分配比率。</li><li>bpf-policy-map-max: BPF策略映射的最大数量。</li><li>bpf-root: BPF根路径。</li><li>cgroup-root: Cilium使用的Cgroup根路径。</li><li>cilium-endpoint-gc-interval: 清理未启动的Cilium终端的间隔。</li><li>cluster-id: 集群ID。</li><li>cluster-name: 集群名称。</li><li>cluster-pool-ipv4-cidr: IPv4集群CIDR。</li><li>cluster-pool-ipv4-mask-size: IPv4集群掩码大小。</li><li>cni-uninstall: 是否卸载CNI配置。</li><li>custom-cni-conf: 是否使用自定义CNI配置。</li><li>debug: 是否启用调试模式。</li><li>debug-verbose: 调试模式的详细级别。</li><li>disable-cnp-status-updates: 是否禁用CNP状态更新。</li><li>disable-endpoint-crd: 是否禁用终端自定义资源定义。</li><li>enable-auto-protect-node-port-range: 是否启用自动保护节点端口范围。</li><li>enable-bgp-control-plane: 是否启用BGP控制平面。</li><li>enable-bpf-clock-probe: 是否启用BPF时钟探针。</li><li>enable-endpoint-health-checking: 是否启用终端健康检查。</li><li>enable-health-check-nodeport: 是否启用健康检查的NodePort。</li><li>enable-health-checking: 是否启用健康检查。</li><li>enable-hubble: 是否启用Hubble。</li><li>enable-ipv4: 是否启用IPv4。</li><li>enable-ipv4-masquerade: 是否启用IPv4伪装。</li><li>enable-ipv6: 是否启用IPv6。</li><li>enable-ipv6-big-tcp: 是否启用IPv6的Big TCP。</li><li>enable-ipv6-masquerade: 是否启用IPv6伪装。</li><li>enable-k8s-terminating-endpoint: 是否启用Kubernetes终端。</li><li>enable-l2-neigh-discovery: 是否启用L2邻居发现。</li><li>enable-l7-proxy: 是否启用L7代理。</li><li>enable-local-redirect-policy: 是否启用本地重定向策略。</li><li>enable-policy: 是否启用策略，默认为"default"。</li><li>enable-remote-node-identity: 是否启用远程节点标识。</li><li>enable-sctp: 是否启用SCTP协议。</li><li>enable-svc-source-range-check: 是否启用服务源范围检查。</li><li>enable-vtep: 是否启用VTEP（VXLAN隧道封装协议）。</li><li>enable-well-known-identities: 是否启用众所周知的标识。</li><li>enable-xt-socket-fallback: 是否启用XT套接字回退。</li><li>hubble-disable-tls: 是否禁用Hubble的TLS。</li><li>hubble-listen-address: Hubble监听地址。</li><li>hubble-socket-path: Hubble套接字路径。</li><li>hubble-tls-cert-file: Hubble的TLS证书文件路径。</li><li>hubble-tls-client-ca-files: Hubble的TLS客户端CA文件路径。</li><li>hubble-tls-key-file: Hubble的TLS密钥文件路径。</li><li>identity-allocation-mode: 用于分配标识的模式。</li><li>identity-gc-interval: 清理未使用的标识的间隔。</li><li>identity-heartbeat-timeout: 标识心跳超时时间。</li><li>install-no-conntrack-iptables-rules: 是否跳过安装无连接跟踪的iptables规则。</li><li>ipam: IP地址管理模式。</li><li>kube-proxy-replacement: Kubernetes代理替换模式。</li><li>kube-proxy-replacement-healthz-bind-address: 用于健康检查绑定的地址。</li><li>monitor-aggregation: 监控聚合级别。</li><li>monitor-aggregation-flags: 监控聚合标志。</li><li>monitor-aggregation-interval: 监控聚合间隔。</li><li>node-port-bind-protection: 是否启用节点端口绑定保护。</li><li>nodes-gc-interval: 清理未连接的节点的间隔。</li><li>operator-api-serve-addr: Operator API的服务地址。</li><li>preallocate-bpf-maps: 是否预分配BPF映射。</li><li>procfs: Proc文件系统的路径。</li><li>remove-cilium-node-taints: 是否移除Cilium节点的污点。</li><li>set-cilium-is-up-condition: 是否设置Cilium节点状态为启动状态。</li><li>sidecar-istio-proxy-image: 用于Istio代理的Cilium镜像。</li><li>skip-cnp-status-startup-clean: 是否跳过CNP启动时的清理。</li><li>synchronize-k8s-nodes: 是否同步Kubernetes节点。</li><li>tofqdns-dns-reject-response-code: 拒绝DNS请求的响应码。</li><li>tofqdns-enable-dns-compression: 是否启用TOFQDNS的DNS压缩。</li><li>tofqdns-endpoint-max-ip-per-hostname: 每个主机名的最大IP数量。</li><li>tofqdns-idle-connection-grace-period: 空闲连接的处理时间。</li><li>tofqdns-max-deferred-connection-deletes: 最大延迟删除连接数。</li><li>tofqdns-min-ttl: 最小TTL（Time To Live）。</li><li>tofqdns-proxy-response-max-delay: 代理响应的最大延迟。</li><li>tunnel: 使用的隧道类型。</li><li>unmanaged-pod-watcher-interval: 未管理的Pod的观察间隔。</li><li>vtep-cidr: VTEP的CIDR。</li><li>vtep-endpoint: VTEP的终端。</li><li>vtep-mac: VTEP的MAC地址。</li><li>vtep-mask: VTEP的掩码。</li></ol><hr><ul class=pager><li class=previous><a href=/post/2023-01-01-chatgpt-article/ data-toggle=tooltip data-placement=top title=程序员技术：探索创新的编码之道>&larr;
+Previous Post</a></li><li class=next><a href=/post/2023-06-25-caretta-ebpf/ data-toggle=tooltip data-placement=top title="Caretta 利用 eBPF 实现 Kubernetes 应用网络拓扑图">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023<br><a href=https://themes.gohugo.io/hugo-theme-cleanwhite>CleanWhite Hugo Theme</a> by <a href=https://github.com/tanjunchen>tanjunchen</a> |
+<iframe style=margin-left:2px;margin-bottom:-5px frameborder=0 scrolling=0 width=100px height=20px src="https://ghbtns.com/github-btn.html?user=tanjunchen&repo=hugo-theme-cleanwhite&type=star&count=true"></iframe></p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
