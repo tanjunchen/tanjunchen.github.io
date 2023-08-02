@@ -1,0 +1,125 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="istio 1.8.0 支持 VM 虚拟机验证"><meta property="og:title" content="istio 1.8.0 支持 VM 虚拟机验证"><meta property="twitter:title" content="istio 1.8.0 支持 VM 虚拟机验证"><meta name=description content="Istio 集群通过 workloadentry 将虚拟机中的服务集成到网格中，从而使虚拟机中的服务可以享受 Mesh 的红利。"><meta property="og:description" content="Istio 集群通过 workloadentry 将虚拟机中的服务集成到网格中，从而使虚拟机中的服务可以享受 Mesh 的红利。"><meta property="twitter:description" content="Istio 集群通过 workloadentry 将虚拟机中的服务集成到网格中，从而使虚拟机中的服务可以享受 Mesh 的红利。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>istio 1.8.0 支持 VM 虚拟机验证 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2020-11-30-istio-support-vm/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/photos/>PHOTOS</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/istio title=istio>istio</a></div><h1>istio 1.8.0 支持 VM 虚拟机验证</h1><h2 class=subheading></h2><span class=meta>Posted by
+陈谭军
+on
+Monday, November 30, 2020</span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=环境>环境</h1><ul><li>K8s 版本：1.17.2</li><li>Istio 版本：1.8.0</li><li>CentOS 版本：8.0（要求Glibc大于等于 2.18）</li></ul><p>查看机器的 glibc 版本：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ldd --version
+</span></span><span style=display:flex><span>ldd <span style=color:#ff79c6>(</span>GNU libc<span style=color:#ff79c6>)</span> 2.18
+</span></span><span style=display:flex><span>Copyright <span style=color:#ff79c6>(</span>C<span style=color:#ff79c6>)</span> <span style=color:#bd93f9>2013</span> Free Software Foundation, Inc.
+</span></span><span style=display:flex><span>This is free software; see the <span style=color:#8be9fd;font-style:italic>source</span> <span style=color:#ff79c6>for</span> copying conditions.  There is NO
+</span></span><span style=display:flex><span>warranty; not even <span style=color:#ff79c6>for</span> MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+</span></span><span style=display:flex><span>Written by Roland McGrath and Ulrich Drepper.
+</span></span></code></pre></div><h1 id=常见问题>常见问题</h1><ol><li>Libc 版本过低，虚拟机启动 envoy 进程会报错。</li></ol><pre tabindex=0><code>/usr/local/bin/envoy: /lib64/libc.so.6: version `GLIBC_2.18&#39; not found (required by /usr/local/bin/envoy) 
+</code></pre><ol start=2><li>确认 k8s 是够支持 TokenRequest，具体详情参见 <a href=https://istio.io/latest/docs/ops/best-practices/security/#configure-third-party-service-account-tokens>configure-third-party-service-account-tokens</a>。如果不支持，在生成 sa 时报错，<em>could not create a token under service account %s in namespace %s: %v</em>。</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl get --raw /api/v1 | jq <span style=color:#f1fa8c>&#39;.resources[] | select(.name | index(&#34;serviceaccounts/token&#34;))&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;serviceaccounts/token&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;singularName&#34;</span>: <span style=color:#f1fa8c>&#34;&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;namespaced&#34;</span>: true,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;group&#34;</span>: <span style=color:#f1fa8c>&#34;authentication.k8s.io&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;version&#34;</span>: <span style=color:#f1fa8c>&#34;v1&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;kind&#34;</span>: <span style=color:#f1fa8c>&#34;TokenRequest&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;verbs&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;create&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><h1 id=步骤>步骤</h1><p><strong>搭建 k8s 集群</strong></p><p>我本地 k8s 环境是 kubeadm 搭建的，需要支持 <em>TokenRequest</em>。开启上述特性，案例参考如下所示：</p><pre tabindex=0><code>/etc/kubernetes/manifests/kube-apiserver.yaml 添加以下文件：
+- --service-account-api-audiences=api,istio-ca
+- --service-account-issuer=kubernetes.default.svc
+- --service-account-signing-key-file=/etc/kubernetes/pki/sa.key
+</code></pre><p><img src=/images/2020-11-30-istio-support-vm/1.png alt></p><p><strong>设置环境变量</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>vm.env
+</span></span><span style=display:flex><span><span style=color:#6272a4>#VM_APP: 该虚拟机将运行的服务名称</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>#VM_NAMESPACE: 服务命名空间名称</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>#WORK_DIR：工作目录</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>#SERVICE_ACCOUNT 用于该虚拟机的k8s serviceaccount名称</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>VM_APP</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>test</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>VM_NAMESPACE</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>test</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>WORK_DIR</span><span style=color:#ff79c6>=</span>./test
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>SERVICE_ACCOUNT</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>test</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>#在虚拟机上使 vm.env 环境变量生效。</span>
+</span></span></code></pre></div><p><strong>创建目录</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mkdir -p <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>WORK_DIR</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span></code></pre></div><p><strong>安装 Istio 集群</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>istioctl install
+</span></span></code></pre></div><p><strong>生成虚拟机配置</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 生成东西向网关</span>
+</span></span><span style=display:flex><span>samples/multicluster/gen-eastwest-gateway.sh --single-cluster | istioctl install -y -f -
+</span></span><span style=display:flex><span><span style=color:#6272a4># 配置路由</span>
+</span></span><span style=display:flex><span>kubectl apply -f samples/multicluster/expose-istiod.yaml
+</span></span><span style=display:flex><span><span style=color:#6272a4># 变更服务类型 更改 istio-system 下服务的类型为 NodePort</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 创建命名空间、sa、workloadentry</span>
+</span></span><span style=display:flex><span>kubectl create namespace <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>VM_NAMESPACE</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>kubectl create serviceaccount <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>SERVICE_ACCOUNT</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> -n <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>VM_NAMESPACE</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>istioctl x workload group create --name <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>VM_APP</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> --namespace <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>VM_NAMESPACE</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> --labels <span style=color:#8be9fd;font-style:italic>app</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>VM_APP</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> --serviceAccount <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>SERVICE_ACCOUNT</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> &gt; workloadgroup.yaml
+</span></span><span style=display:flex><span><span style=color:#6272a4># 生成cluster.env、istio-token、mesh.yaml、root-cert.pem、hosts等虚拟机需要使用的文件，注意在 cluster.env 文件中添加 ISTIO_PILOT_PORT=&#39;32600&#39; 32600是 gw 15012 对应的端口。</span>
+</span></span><span style=display:flex><span>istioctl x workload entry configure -f workloadgroup.yaml -o <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>WORK_DIR</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span></code></pre></div><p><img src=/images/2020-11-30-istio-support-vm/2.png alt></p><p><img src=/images/2020-11-30-istio-support-vm/3.png alt></p><p><strong>在虚拟机上安装 Istio 进程</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 将 &#34;${WORK_DIR}&#34; 目录下的所有的文件拷贝到虚拟机 test 目录下</span>
+</span></span><span style=display:flex><span>sudo mkdir -p /etc/certs
+</span></span><span style=display:flex><span>sudo cp test/root-cert.pem /etc/certs/root-cert.pem
+</span></span><span style=display:flex><span><span style=color:#6272a4># 复制 token</span>
+</span></span><span style=display:flex><span>sudo  mkdir -p /var/run/secrets/tokens
+</span></span><span style=display:flex><span>sudo cp test/istio-token /var/run/secrets/tokens/istio-token
+</span></span><span style=display:flex><span><span style=color:#6272a4># 服务 rpm 包</span>
+</span></span><span style=display:flex><span>curl -LO https://storage.googleapis.com/istio-release/releases/1.8.1/rpm/istio-sidecar.rpm
+</span></span><span style=display:flex><span>sudo rpm -i istio-sidecar.rpm
+</span></span><span style=display:flex><span><span style=color:#6272a4># 复制 envoy 加载的环境变量</span>
+</span></span><span style=display:flex><span>sudo cp test/cluster.env /var/lib/istio/envoy/cluster.env
+</span></span><span style=display:flex><span><span style=color:#6272a4># 复制 mesh 模板 yaml 文件</span>
+</span></span><span style=display:flex><span>sudo cp test/mesh.yaml /etc/istio/config/mesh
+</span></span><span style=display:flex><span><span style=color:#6272a4># 增加域名解析 /etc/hosts</span>
+</span></span><span style=display:flex><span>10.20.11.190 istiod.istio-system.svc 其中 10.20.11.190 是 istiod 所在节点的 IP 地址
+</span></span><span style=display:flex><span><span style=color:#6272a4># 增加用户组</span>
+</span></span><span style=display:flex><span>sudo mkdir -p /etc/istio/proxy
+</span></span><span style=display:flex><span>sudo chown -R istio-proxy /var/lib/istio /etc/certs /etc/istio/proxy /etc/istio/config /var/run/secrets /etc/certs/root-cert.pem
+</span></span></code></pre></div><p><strong>启用 istio 进程</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sudo systemctl start istio
+</span></span></code></pre></div><p><strong>查看启动日志</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>tail -f /var/log/istio/istio.log
+</span></span></code></pre></div><p><img src=/images/2020-11-30-istio-support-vm/4.png alt></p><p><strong>虚拟机开启一个 HTTP 服务</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>python -m SimpleHTTPServer <span style=color:#bd93f9>8080</span>
+</span></span></code></pre></div><p><strong>添加虚拟机服务到 mesh 中</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span>cat &lt;&lt;EOF | kubectl -n &lt;vm-namespace&gt; apply -f -
+</span></span><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Service
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: cloud-vm
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: cloud-vm
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: http-vm
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>targetPort</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: cloud-vm
+</span></span><span style=display:flex><span>EOF
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span>cat &lt;&lt;EOF | kubectl -n &lt;vm-namespace&gt; apply -f -
+</span></span><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: WorkloadEntry
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;cloud-vm&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: <span style=color:#f1fa8c>&#34;&lt;vm-namespace&gt;&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>address</span>: <span style=color:#f1fa8c>&#34;${VM_IP}&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: cloud-vm
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>serviceAccount</span>: <span style=color:#f1fa8c>&#34;&lt;service-account&gt;&#34;</span>
+</span></span><span style=display:flex><span>EOF
+</span></span><span style=display:flex><span><span style=color:#6272a4>#VM_IP 表示虚拟机的IP 地址</span>
+</span></span></code></pre></div><p><strong>在 Istio 集群中部署 sleep 服务</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl label ns <span style=color:#8be9fd;font-style:italic>test</span> istio-injection<span style=color:#ff79c6>=</span>enabled
+</span></span></code></pre></div><p><img src=/images/2020-11-30-istio-support-vm/5.png alt></p><p><strong>通过 sleep 服务访问虚拟机上的 http 服务验证 k8s -> vm 是否正确</strong></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it sleep-f8cbf5b76-hhll2  -n <span style=color:#8be9fd;font-style:italic>test</span> -c sleep -- curl cloud-vm.<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>VM_NAMESPACE</span><span style=color:#f1fa8c>}</span>.svc.cluster.local:8080
+</span></span></code></pre></div><p><img src=/images/2020-11-30-istio-support-vm/6.png alt></p><p>虚拟机 istio 进程的日志
+<img src=/images/2020-11-30-istio-support-vm/7.png alt></p><p>http 服务的日志
+<img src=/images/2020-11-30-istio-support-vm/8.png alt></p><p>sleep 服务的日志
+<img src=/images/2020-11-30-istio-support-vm/9.png alt></p><p>Istio 集群中的服务成功访问虚拟机上的 http 服务。</p><h1 id=总结>总结</h1><p>Istio 集群通过 workloadentry 将虚拟机中的服务集成到网格中，从而使虚拟机中的服务可以享受 Mesh 的红利。</p><h1 id=附录>附录</h1><ol><li><a href=https://github.com/istio/istio/issues/30020>https://github.com/istio/istio/issues/30020</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2020-11-19-istio-1.8/ data-toggle=tooltip data-placement=top title="istio 1.8 解读报告 - 用户至上">&larr;
+Previous Post</a></li><li class=next><a href=/post/2021-07-01-istio-1.9/ data-toggle=tooltip data-placement=top title="istio 1.9 解读报告 - day2 操作">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023<br><a href=https://themes.gohugo.io/hugo-theme-cleanwhite>CleanWhite Hugo Theme</a> by <a href=https://github.com/tanjunchen>tanjunchen</a> |
+<iframe style=margin-left:2px;margin-bottom:-5px frameborder=0 scrolling=0 width=100px height=20px src="https://ghbtns.com/github-btn.html?user=tanjunchen&repo=hugo-theme-cleanwhite&type=star&count=true"></iframe></p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
