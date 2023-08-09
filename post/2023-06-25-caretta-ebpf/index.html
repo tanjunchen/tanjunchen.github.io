@@ -10,7 +10,14 @@
 <a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>Caretta 利用 eBPF 实现 Kubernetes 应用网络拓扑图</h1><h2 class=subheading>eBPF 探测 Kubernetes 网络的世界</h2><span class=meta>Posted by
 陈谭军
 on
-Sunday, June 25, 2023</span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+Sunday, June 25, 2023
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2023-06-25-caretta-ebpf/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 2641 字</span>，阅读约 <span class=more-meta>6 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
 col-md-10 col-md-offset-1
 post-container"><h1 id=前言>前言</h1><p>为啥 eBPF 卸载之后，使用 bpftool 还能看到相关 map、prog 等？具体可以参考<a href=https://arthurchiao.art/blog/lifetime-of-bpf-objects-zh>文章</a>。</p><h1 id=介绍>介绍</h1><p>Caretta 是一种轻量级的独立工具，快速展示集群中运行的服务可视化网络图。
 Caretta 利用 eBPF 有效地展示 K8s 集群中的服务网络交互图，并利用 Grafana 查询和可视化收集的数据。
