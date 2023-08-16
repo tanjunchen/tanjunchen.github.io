@@ -1,0 +1,456 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="Cilium Mesh 常见场景与示例"><meta property="og:title" content="Cilium Mesh 常见场景与示例"><meta property="twitter:title" content="Cilium Mesh 常见场景与示例"><meta name=description content="从早期开始，Cilium 就通过网络和应用程序协议层来提供连接、负载平衡、安全性和可观察性，从而与服务网格概念保持良好一致。对于所有网络处理，包括 IP、TCP 和 UDP 等协议，Cilium 使用 eBPF 作为高效的内核数据路径。HTTP、Kafka、gRPC、DNS 等应用层协议通过 Envoy 等代理进行解析。"><meta property="og:description" content="从早期开始，Cilium 就通过网络和应用程序协议层来提供连接、负载平衡、安全性和可观察性，从而与服务网格概念保持良好一致。对于所有网络处理，包括 IP、TCP 和 UDP 等协议，Cilium 使用 eBPF 作为高效的内核数据路径。HTTP、Kafka、gRPC、DNS 等应用层协议通过 Envoy 等代理进行解析。"><meta property="twitter:description" content="从早期开始，Cilium 就通过网络和应用程序协议层来提供连接、负载平衡、安全性和可观察性，从而与服务网格概念保持良好一致。对于所有网络处理，包括 IP、TCP 和 UDP 等协议，Cilium 使用 eBPF 作为高效的内核数据路径。HTTP、Kafka、gRPC、DNS 等应用层协议通过 Envoy 等代理进行解析。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>Cilium Mesh 常见场景与示例 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2023-08-12-cilium-mesh-example/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/ebpf title=eBPF>eBPF</a>
+<a class=tag href=/tags/cilium title=cilium>cilium</a>
+<a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>Cilium Mesh 常见场景与示例</h1><h2 class=subheading></h2><span class=meta>Posted by
+陈谭军
+on
+Saturday, August 12, 2023
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2023-08-12-cilium-mesh-example/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 2755 字</span>，阅读约 <span class=more-meta>6 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>Cilium 官方版本给出的 Service Mesh 全景图，不同于其它 Service Mesh 开源项目设计了很多 CRD 概念，Cilium Service Mesh 当前专注实现了 mesh data plane，通过开放、包容的设计，能够对接其它 control plane，当前版本已实现了对 Envoy CRD、Kubernetes ingress、Istio、Spiffe、Gateway API 的支持。</p><p><img src=/images/2023-08-12-cilium-mesh-example/1.png alt></p><h1 id=前言>前言</h1><p>Cilium Service Mesh 与其它 ServiceMesh 显著对比：</p><ul><li>当前 Service Mesh 领域中， per-pod proxy (即 sidecar) 大行其道，Cilium 走出了 per-node proxy 路线的项目，其规避了 sidecar 资源开销多、网络延时高等弊端。</li><li>其它 Service Mesh 项目几乎都是借助 Linux 内核网络协议栈劫持流量，而 Cilium Service Mesh 基于 eBPF datapath，有着天生的加速效果。</li><li>Cilium Service Mesh 承载于 Cilium CNI 的底座能力，Cilium CNI 本身提供的网络 policy、多集群 cluster mesh、eBPF 加速、观察性 hubble 等能力，其功能非常丰富。</li></ul><p>Cilium 实现了 2个新的 CRD，CiliumEnvoyConfig 和 CiliumClusterwideEnvoyConfig，两者的写法和作用几乎相同，唯一区别是，CiliumEnvoyConfig 是 namespace scope，而 CiliumClusterwideEnvoyConfig 是 cluster scope。</p><p>本篇文章通过 Cilium Mesh 示例来了解如何配置 CiliumEnvoyConfig、CiliumClusterwideEnvoyConfig。</p><h1 id=搭建-kubernetes-集群>搭建 Kubernetes 集群</h1><p>使用 Kind 构建 k8s 集群，具体如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kind create cluster  --image<span style=color:#ff79c6>=</span>kindest/node:v1.22.17 --name  tanjunchen
+</span></span><span style=display:flex><span>Creating cluster <span style=color:#f1fa8c>&#34;tanjunchen&#34;</span> ...
+</span></span><span style=display:flex><span>⢀⡱ Ensuring node image <span style=color:#ff79c6>(</span>kindest/node:v1.22.17<span style=color:#ff79c6>)</span> 🖼
+</span></span><span style=display:flex><span>⢎⡀ Ensuring node image <span style=color:#ff79c6>(</span>kindest/node:v1.22.17<span style=color:#ff79c6>)</span> 🖼
+</span></span><span style=display:flex><span>⠎⠁ Ensuring node image <span style=color:#ff79c6>(</span>kindest/node:v1.22.17<span style=color:#ff79c6>)</span> 🖼
+</span></span><span style=display:flex><span> ✓ Ensuring node image <span style=color:#ff79c6>(</span>kindest/node:v1.22.17<span style=color:#ff79c6>)</span> 🖼
+</span></span><span style=display:flex><span> ✓ Preparing nodes 📦
+</span></span><span style=display:flex><span> ✓ Writing configuration 📜
+</span></span><span style=display:flex><span> ✓ Starting control-plane 🕹️
+</span></span><span style=display:flex><span> ✓ Installing CNI 🔌
+</span></span><span style=display:flex><span> ✓ Installing StorageClass 💾
+</span></span><span style=display:flex><span>Set kubectl context to <span style=color:#f1fa8c>&#34;kind-tanjunchen&#34;</span>
+</span></span><span style=display:flex><span>You can now use your cluster with:
+</span></span><span style=display:flex><span>kubectl cluster-info --context kind-tanjunchen
+</span></span><span style=display:flex><span>Thanks <span style=color:#ff79c6>for</span> using kind! 😊
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-00qqerhq:~/cilium-mesh# kubectl get nodes
+</span></span><span style=display:flex><span>NAME                       STATUS   ROLES                  AGE   VERSION
+</span></span><span style=display:flex><span>tanjunchen-control-plane   Ready    control-plane,master   61s   v1.22.17
+</span></span><span style=display:flex><span>root@instance-00qqerhq:~/cilium-mesh# kubectl version --short
+</span></span><span style=display:flex><span>Flag --short has been deprecated, and will be removed in the future. The --short output will become the default.
+</span></span><span style=display:flex><span>Client Version: v1.27.2
+</span></span><span style=display:flex><span>Kustomize Version: v5.0.1
+</span></span><span style=display:flex><span>Server Version: v1.22.17
+</span></span><span style=display:flex><span>WARNING: version difference between client <span style=color:#ff79c6>(</span>1.27<span style=color:#ff79c6>)</span> and server <span style=color:#ff79c6>(</span>1.22<span style=color:#ff79c6>)</span> exceeds the supported minor version skew of +/-1
+</span></span></code></pre></div><h1 id=部署测试应用>部署测试应用</h1><p>部署测试应用 wrk 与 nginx，具体如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-00qqerhq:~/cilium-mesh# kubectl apply -f wrk-nginx.yaml
+</span></span><span style=display:flex><span>deployment.apps/wrk unchanged
+</span></span><span style=display:flex><span>service/nginx unchanged
+</span></span><span style=display:flex><span>deployment.apps/nginx configured
+</span></span><span style=display:flex><span>root@instance-00qqerhq:~/cilium-mesh# kubectl get pod
+</span></span><span style=display:flex><span>NAME                     READY   STATUS    RESTARTS   AGE
+</span></span><span style=display:flex><span>nginx-699bb76bb4-p26v7   1/1     Running   <span style=color:#bd93f9>0</span>          2m16s
+</span></span><span style=display:flex><span>wrk-64884c57d7-vpml8     1/1     Running   <span style=color:#bd93f9>0</span>          2m16s
+</span></span></code></pre></div><h1 id=cilium-mesh>Cilium Mesh</h1><h2 id=前提条件>前提条件</h2><ul><li>Cilium 必须使用 kubeProxyReplacement 模式为 partial 或 strict。</li><li>支持的最低 Kubernetes 版本是 1.19。</li></ul><h2 id=安装>安装</h2><p>安装 Cilium Mesh</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>helm repo add cilium https://helm.cilium.io/
+</span></span><span style=display:flex><span>helm install cilium cilium/cilium --version 1.14.0  --namespace kube-system --set <span style=color:#8be9fd;font-style:italic>kubeProxyReplacement</span><span style=color:#ff79c6>=</span>strict --set-string extraConfig.enable-envoy-config<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span>  --set envoy.enabled<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span> --set hubble.relay.enabled<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span> --set hubble.ui.enabled<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span>
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/2.png alt></p><p><img src=/images/2023-08-12-cilium-mesh-example/3.png alt></p><h2 id=envoy-配置>Envoy 配置</h2><p>目前仅支持 Envoy API v3。Cilium 节点部署 Envoy 来支持 Cilium HTTP 网络策略和可观察性。Cilium Mesh 中使用的 Envoy 已经针对 Cilium Agent 的需求进行了优化，并且不包含 Envoy 代码库中可用的许多 Envoy 扩展。Envoy 文档中引用的标准类型（type.googleapis.com/envoy.config.listener.v3.Listener 和 type.googleapis.com/envoy.config.route.v3.RouteConfiguration）始终可用。具体拓展如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>envoy.clusters.dynamic_forward_proxy
+</span></span><span style=display:flex><span>envoy.filters.http.dynamic_forward_proxy
+</span></span><span style=display:flex><span>envoy.filters.http.ext_authz
+</span></span><span style=display:flex><span>envoy.filters.http.jwt_authn
+</span></span><span style=display:flex><span>envoy.filters.http.local_ratelimit
+</span></span><span style=display:flex><span>envoy.filters.http.oauth2
+</span></span><span style=display:flex><span>envoy.filters.http.ratelimit
+</span></span><span style=display:flex><span>envoy.filters.http.router
+</span></span><span style=display:flex><span>envoy.filters.http.set_metadata
+</span></span><span style=display:flex><span>envoy.filters.listener.tls_inspector
+</span></span><span style=display:flex><span>envoy.filters.network.connection_limit
+</span></span><span style=display:flex><span>envoy.filters.network.ext_authz
+</span></span><span style=display:flex><span>envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>envoy.filters.network.local_ratelimit
+</span></span><span style=display:flex><span>envoy.filters.network.mongo_proxy
+</span></span><span style=display:flex><span>envoy.filters.network.mysql_proxy
+</span></span><span style=display:flex><span>envoy.filters.network.ratelimit
+</span></span><span style=display:flex><span>envoy.filters.network.tcp_proxy
+</span></span><span style=display:flex><span>envoy.filters.network.sni_cluster
+</span></span><span style=display:flex><span>envoy.filters.network.sni_dynamic_forward_proxy
+</span></span><span style=display:flex><span>envoy.stat_sinks.metrics_service
+</span></span><span style=display:flex><span>envoy.transport_sockets.raw_buffer
+</span></span><span style=display:flex><span>envoy.upstreams.http.http
+</span></span><span style=display:flex><span>envoy.upstreams.http.tcp
+</span></span></code></pre></div><h1 id=场景>场景</h1><p>Cilium 提供了通过 CRD CiliumEnvoyConfig 和 CiliumClusterwideEnvoyConfig 控制 L7 流量。</p><p><strong>这些 Envoy CRD 配置根本没有经过 K8s 验证，因此 Envoy 资源中的任何错误只会在 Cilium Agent 看到。kubectl apply 将报告成功，而解析和/或安装节点本地 Envoy 实例的资源可能会失败。目前验证这一点的唯一方法是观察 Cilium Agent 日志中的错误和警告。</strong></p><h2 id=配置-admin>配置 Admin</h2><p>给 envoy 下发 admin 配置，使其暴露 admin 管理界面。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: cilium.io/v2
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: CiliumClusterwideEnvoyConfig
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: envoy-admin-listener
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.listener.v3.Listener
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: envoy-admin-listener
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>address</span>: <span style=color:#f1fa8c>&#34;::&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ipv4_compat</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>9901</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>stat_prefix</span>: envoy-admin-listener
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>route_config</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: admin_route
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;admin_route&#34;</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>domains</span>: [<span style=color:#f1fa8c>&#34;*&#34;</span>]
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>              - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>cluster</span>: <span style=color:#f1fa8c>&#34;envoy-admin&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>use_remote_address</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>skip_xff_append</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span></code></pre></div><p>查看 envoy 的 config_dump 接口，如下所示：</p><p><img src=/images/2023-08-12-cilium-mesh-example/4.png alt></p><h2 id=重写>重写</h2><p>部署应用</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl apply -f https://raw.githubusercontent.com/cilium/cilium/1.14.0/examples/kubernetes/servicemesh/envoy/test-application.yaml
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/5.png alt></p><p>测试应用工作负载包括：两个客户端 client 和 client2，两个服务 echo-service-1 和 echo-service-2。</p><p><img src=/images/2023-08-12-cilium-mesh-example/6.png alt></p><p>配置环境变量</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>CLIENT2</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>kubectl get pods -l <span style=color:#8be9fd;font-style:italic>name</span><span style=color:#ff79c6>=</span>client2 -o <span style=color:#8be9fd;font-style:italic>jsonpath</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;{.items[0].metadata.name}&#39;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>CLIENT</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>kubectl get pods -l <span style=color:#8be9fd;font-style:italic>name</span><span style=color:#ff79c6>=</span>client -o <span style=color:#8be9fd;font-style:italic>jsonpath</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;{.items[0].metadata.name}&#39;</span><span style=color:#ff79c6>)</span>
+</span></span></code></pre></div><p>我们将使用 Envoy 配置来请求服务 echo-service-1 和 echo-service-2。我们可以请求 /，但是请求 /foo 路径，就会报 404。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it <span style=color:#8be9fd;font-style:italic>$CLIENT2</span> -- curl -I echo-service-1:8080/foo
+</span></span><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it <span style=color:#8be9fd;font-style:italic>$CLIENT2</span> -- curl -I echo-service-1:8080
+</span></span><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it <span style=color:#8be9fd;font-style:italic>$CLIENT2</span> -- curl -I echo-service-2:8080
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/7.png alt></p><p>部署 envoy-lb-listener.yaml ，该文件定义了 CiliumClusterwideEnvoyConfig，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: cilium.io/v2
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: CiliumClusterwideEnvoyConfig
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: envoy-lb-listener
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>services</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>name</span>: echo-service-1
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>namespace</span>: default
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>name</span>: echo-service-2
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>namespace</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.listener.v3.Listener
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: envoy-lb-listener
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>stat_prefix</span>: envoy-lb-listener
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>rds</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>route_config_name</span>: lb_route
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>use_remote_address</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>skip_xff_append</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>                  - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: lb_route
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;lb_route&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>domains</span>: [ <span style=color:#f1fa8c>&#34;*&#34;</span> ]
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>weighted_clusters</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>                    - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-1&#34;</span>
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>weight</span>: <span style=color:#bd93f9>50</span>
+</span></span><span style=display:flex><span>                    - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-2&#34;</span>
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>weight</span>: <span style=color:#bd93f9>50</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>retry_policy</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>retry_on</span>: 5xx
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>num_retries</span>: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>per_try_timeout</span>: 1s
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>regex_rewrite</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>pattern</span>:
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>google_re2</span>: { }
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>regex</span>: <span style=color:#f1fa8c>&#34;^/foo.*$&#34;</span>
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>substitution</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.cluster.v3.Cluster
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-1&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>connect_timeout</span>: 5s
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>type</span>: EDS
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>outlier_detection</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>split_external_local_origin_errors</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>consecutive_local_origin_failure</span>: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.cluster.v3.Cluster
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-2&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>connect_timeout</span>: 3s
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>type</span>: EDS
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>outlier_detection</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>split_external_local_origin_errors</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>consecutive_local_origin_failure</span>: <span style=color:#bd93f9>2</span>
+</span></span></code></pre></div><p>上述配置两个后端 echo 服务之间的请求比例为 50/50，并且将路径 /foo 重写为 /，由于路径重写，对 /foo 的请求现在应该会成功。我们发现服务重写成功，原本 /foo 是请求响应 404，配置策略后是可以成功的，如下所示：</p><p><img src=/images/2023-08-12-cilium-mesh-example/8.png alt></p><h2 id=限流>限流</h2><p>针对 echo-service-1 配置 CiliumClusterwideEnvoyConfig 限流策略，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: cilium.io/v2
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: CiliumClusterwideEnvoyConfig
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: envoy-lb-listener
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>services</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>name</span>: echo-service-1
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>namespace</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.listener.v3.Listener
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: envoy-lb-listener
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>stat_prefix</span>: envoy-ratelimit
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>rds</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>route_config_name</span>: lb_route
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>use_remote_address</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>skip_xff_append</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>                - <span style=color:#ff79c6>name</span>: envoy.filters.http.local_ratelimit
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>stat_prefix</span>: http_local_rate_limiter
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>token_bucket</span>:
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>max_tokens</span>: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>tokens_per_fill</span>: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>fill_interval</span>: 5s
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>filter_enabled</span>:
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>runtime_key</span>: local_rate_limit_enabled
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>default_value</span>:
+</span></span><span style=display:flex><span>                        <span style=color:#ff79c6>numerator</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>                        <span style=color:#ff79c6>denominator</span>: HUNDRED
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>filter_enforced</span>:
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>runtime_key</span>: local_rate_limit_enforced
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>default_value</span>:
+</span></span><span style=display:flex><span>                        <span style=color:#ff79c6>numerator</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>                        <span style=color:#ff79c6>denominator</span>: HUNDRED
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>response_headers_to_add</span>:
+</span></span><span style=display:flex><span>                    - <span style=color:#ff79c6>append_action</span>: OVERWRITE_IF_EXISTS_OR_ADD
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>header</span>:
+</span></span><span style=display:flex><span>                        <span style=color:#ff79c6>key</span>: x-local-rate-limit
+</span></span><span style=display:flex><span>                        <span style=color:#ff79c6>value</span>: <span style=color:#f1fa8c>&#39;true&#39;</span>
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>local_rate_limit_per_downstream_connection</span>: <span style=color:#ff79c6>false</span>
+</span></span><span style=display:flex><span>                - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: lb_route
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;lb_route&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>domains</span>: [ <span style=color:#f1fa8c>&#34;*&#34;</span> ]
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>weighted_clusters</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>                    - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-1&#34;</span>
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>weight</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>retry_policy</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>retry_on</span>: 5xx
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>num_retries</span>: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>per_try_timeout</span>: 1s
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.cluster.v3.Cluster
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-1&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>connect_timeout</span>: 5s
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>type</span>: EDS
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>outlier_detection</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>split_external_local_origin_errors</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>consecutive_local_origin_failure</span>: <span style=color:#bd93f9>2</span>
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/9.png alt></p><p>执行以下操作，触发限流。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>CLIENT2</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>kubectl get pods -l <span style=color:#8be9fd;font-style:italic>name</span><span style=color:#ff79c6>=</span>client2 -o <span style=color:#8be9fd;font-style:italic>jsonpath</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;{.items[0].metadata.name}&#39;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>for</span> i in <span style=color:#ff79c6>{</span>1..5<span style=color:#ff79c6>}</span>; <span style=color:#ff79c6>do</span>  kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it <span style=color:#8be9fd;font-style:italic>$CLIENT2</span> -- curl -I echo-service-1:8080 | grep -E <span style=color:#f1fa8c>&#34;x-local-rate-limit|429|local_rate_limited&#34;</span>; <span style=color:#ff79c6>done</span>
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/10.png alt></p><p><img src=/images/2023-08-12-cilium-mesh-example/11.png alt></p><p>因为 echo-service-2 没有配置限流策略，所以请求 echo-service-2 没有触发限流。</p><p><img src=/images/2023-08-12-cilium-mesh-example/12.png alt></p><h2 id=熔断>熔断</h2><p>部署 fortio 压测工具。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Service
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: fortio
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: fortio
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>service</span>: fortio
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: http
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: fortio
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: fortio-deploy
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: fortio
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: fortio
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: fortio
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>image</span>: fortio/fortio:latest_release
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: http-fortio
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>8079</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: grpc-ping
+</span></span></code></pre></div><p>给 echo-service-1 配置 CiliumClusterwideEnvoyConfig 或者 CiliumEnvoyConfig 熔断策略。
+<img src=/images/2023-08-12-cilium-mesh-example/13.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: cilium.io/v2
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: CiliumEnvoyConfig
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: envoy-circuit-breaker
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>services</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>name</span>: echo-service-1
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>namespace</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.listener.v3.Listener
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: envoy-lb-listener
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>stat_prefix</span>: envoy-lb-listener
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>rds</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>route_config_name</span>: lb_route
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>use_remote_address</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>skip_xff_append</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>                  - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: lb_route
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;lb_route&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>domains</span>: [ <span style=color:#f1fa8c>&#34;*&#34;</span> ]
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>weighted_clusters</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>                    - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-1&#34;</span>
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>weight</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.cluster.v3.Cluster
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;default/echo-service-1&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>connect_timeout</span>: 5s
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>type</span>: EDS
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>circuit_breakers</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>thresholds</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>priority</span>: <span style=color:#f1fa8c>&#34;DEFAULT&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>max_requests</span>: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>max_pending_requests</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>outlier_detection</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>split_external_local_origin_errors</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>consecutive_local_origin_failure</span>: <span style=color:#bd93f9>2</span>
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/14.png alt></p><p>使用两个并发连接 (-c 2) 调用服务并发送 20 个请求 (-n 20)。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#f1fa8c>&#34;</span><span style=color:#8be9fd;font-style:italic>$FORTIO_POD</span><span style=color:#f1fa8c>&#34;</span> -c fortio -- /usr/bin/fortio load -c <span style=color:#bd93f9>2</span> -qps <span style=color:#bd93f9>0</span> -n <span style=color:#bd93f9>20</span> http://echo-service-1:8080 
+</span></span></code></pre></div><p>如下所示，当并发请求 echo-service-1 压力较大时，会触发熔断策略。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-00qqerhq:~/cilium-mesh/strateges# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#f1fa8c>&#34;</span><span style=color:#8be9fd;font-style:italic>$FORTIO_POD</span><span style=color:#f1fa8c>&#34;</span> -c fortio -- /usr/bin/fortio load -c <span style=color:#bd93f9>2</span> -qps <span style=color:#bd93f9>0</span> -n <span style=color:#bd93f9>20</span> http://echo-service-1:8080
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;ts&#34;</span>:1691997950.946896,<span style=color:#f1fa8c>&#34;level&#34;</span>:<span style=color:#f1fa8c>&#34;info&#34;</span>,<span style=color:#f1fa8c>&#34;file&#34;</span>:<span style=color:#f1fa8c>&#34;scli.go&#34;</span>,<span style=color:#f1fa8c>&#34;line&#34;</span>:107,<span style=color:#f1fa8c>&#34;msg&#34;</span>:<span style=color:#f1fa8c>&#34;Starting Φορτίο 1.57.3 h1:kdPlBiws3cFsLcssZxCt2opFmHj14C3yPBokFhMWzmg= go1.20.6 amd64 linux&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>Fortio 1.57.3 running at <span style=color:#bd93f9>0</span> queries per second, 4-&gt;4 procs, <span style=color:#ff79c6>for</span> <span style=color:#bd93f9>20</span> calls: http://echo-service-1:8080
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;ts&#34;</span>:1691997950.947488,<span style=color:#f1fa8c>&#34;level&#34;</span>:<span style=color:#f1fa8c>&#34;info&#34;</span>,<span style=color:#f1fa8c>&#34;file&#34;</span>:<span style=color:#f1fa8c>&#34;httprunner.go&#34;</span>,<span style=color:#f1fa8c>&#34;line&#34;</span>:100,<span style=color:#f1fa8c>&#34;msg&#34;</span>:<span style=color:#f1fa8c>&#34;Starting http test&#34;</span>,<span style=color:#f1fa8c>&#34;run&#34;</span>:<span style=color:#f1fa8c>&#34;0&#34;</span>,<span style=color:#f1fa8c>&#34;url&#34;</span>:<span style=color:#f1fa8c>&#34;http://echo-service-1:8080&#34;</span>,<span style=color:#f1fa8c>&#34;threads&#34;</span>:<span style=color:#f1fa8c>&#34;2&#34;</span>,<span style=color:#f1fa8c>&#34;qps&#34;</span>:<span style=color:#f1fa8c>&#34;-1.0&#34;</span>,<span style=color:#f1fa8c>&#34;warmup&#34;</span>:<span style=color:#f1fa8c>&#34;parallel&#34;</span>,<span style=color:#f1fa8c>&#34;conn-reuse&#34;</span>:<span style=color:#f1fa8c>&#34;&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>Starting at max qps with <span style=color:#bd93f9>2</span> thread<span style=color:#ff79c6>(</span>s<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>[</span>gomax 4<span style=color:#ff79c6>]</span> <span style=color:#ff79c6>for</span> exactly <span style=color:#bd93f9>20</span> calls <span style=color:#ff79c6>(</span><span style=color:#bd93f9>10</span> per thread + 0<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;ts&#34;</span>:1691997950.950205,<span style=color:#f1fa8c>&#34;level&#34;</span>:<span style=color:#f1fa8c>&#34;warn&#34;</span>,<span style=color:#f1fa8c>&#34;file&#34;</span>:<span style=color:#f1fa8c>&#34;http_client.go&#34;</span>,<span style=color:#f1fa8c>&#34;line&#34;</span>:1104,<span style=color:#f1fa8c>&#34;msg&#34;</span>:<span style=color:#f1fa8c>&#34;Non ok http code&#34;</span>,<span style=color:#f1fa8c>&#34;code&#34;</span>:<span style=color:#f1fa8c>&#34;503&#34;</span>,<span style=color:#f1fa8c>&#34;status&#34;</span>:<span style=color:#f1fa8c>&#34;HTTP/1.1 503&#34;</span>,<span style=color:#f1fa8c>&#34;thread&#34;</span>:<span style=color:#f1fa8c>&#34;0&#34;</span>,<span style=color:#f1fa8c>&#34;run&#34;</span>:<span style=color:#f1fa8c>&#34;0&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;ts&#34;</span>:1691997950.976027,<span style=color:#f1fa8c>&#34;level&#34;</span>:<span style=color:#f1fa8c>&#34;info&#34;</span>,<span style=color:#f1fa8c>&#34;file&#34;</span>:<span style=color:#f1fa8c>&#34;periodic.go&#34;</span>,<span style=color:#f1fa8c>&#34;line&#34;</span>:832,<span style=color:#f1fa8c>&#34;msg&#34;</span>:<span style=color:#f1fa8c>&#34;T001 ended after 27.10868ms : 10 calls. qps=368.8855377687147&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;ts&#34;</span>:1691997950.976465,<span style=color:#f1fa8c>&#34;level&#34;</span>:<span style=color:#f1fa8c>&#34;info&#34;</span>,<span style=color:#f1fa8c>&#34;file&#34;</span>:<span style=color:#f1fa8c>&#34;periodic.go&#34;</span>,<span style=color:#f1fa8c>&#34;line&#34;</span>:832,<span style=color:#f1fa8c>&#34;msg&#34;</span>:<span style=color:#f1fa8c>&#34;T000 ended after 27.547964ms : 10 calls. qps=363.0032331971974&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>Ended after 27.591205ms : <span style=color:#bd93f9>20</span> calls. <span style=color:#8be9fd;font-style:italic>qps</span><span style=color:#ff79c6>=</span>724.87
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;ts&#34;</span>:1691997950.976519,<span style=color:#f1fa8c>&#34;level&#34;</span>:<span style=color:#f1fa8c>&#34;info&#34;</span>,<span style=color:#f1fa8c>&#34;file&#34;</span>:<span style=color:#f1fa8c>&#34;periodic.go&#34;</span>,<span style=color:#f1fa8c>&#34;line&#34;</span>:564,<span style=color:#f1fa8c>&#34;msg&#34;</span>:<span style=color:#f1fa8c>&#34;Run ended&#34;</span>,<span style=color:#f1fa8c>&#34;run&#34;</span>:<span style=color:#f1fa8c>&#34;0&#34;</span>,<span style=color:#f1fa8c>&#34;elapsed&#34;</span>:<span style=color:#f1fa8c>&#34;27.591205ms&#34;</span>,<span style=color:#f1fa8c>&#34;calls&#34;</span>:<span style=color:#f1fa8c>&#34;20&#34;</span>,<span style=color:#f1fa8c>&#34;qps&#34;</span>:<span style=color:#f1fa8c>&#34;724.8686673887566&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>Aggregated Function Time : count <span style=color:#bd93f9>20</span> avg 0.0027248375 +/- 0.002902 min 0.001064346 max 0.010990329 sum 0.05449675
+</span></span><span style=display:flex><span><span style=color:#6272a4># range, mid point, percentile, count</span>
+</span></span><span style=display:flex><span>&gt;<span style=color:#ff79c6>=</span> 0.00106435 &lt;<span style=color:#ff79c6>=</span> 0.002 , 0.00153217 , 70.00, <span style=color:#bd93f9>14</span>
+</span></span><span style=display:flex><span>&gt; 0.002 &lt;<span style=color:#ff79c6>=</span> 0.003 , 0.0025 , 80.00, <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>&gt; 0.003 &lt;<span style=color:#ff79c6>=</span> 0.004 , 0.0035 , 85.00, <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>&gt; 0.006 &lt;<span style=color:#ff79c6>=</span> 0.007 , 0.0065 , 90.00, <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>&gt; 0.01 &lt;<span style=color:#ff79c6>=</span> 0.0109903 , 0.0104952 , 100.00, <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 50% 0.00171211</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 75% 0.0025</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 90% 0.007</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 99% 0.0108913</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 99.9% 0.0109804</span>
+</span></span><span style=display:flex><span>Error cases : count <span style=color:#bd93f9>1</span> avg 0.001306888 +/- <span style=color:#bd93f9>0</span> min 0.001306888 max 0.001306888 sum 0.001306888
+</span></span><span style=display:flex><span><span style=color:#6272a4># range, mid point, percentile, count</span>
+</span></span><span style=display:flex><span>&gt;<span style=color:#ff79c6>=</span> 0.00130689 &lt;<span style=color:#ff79c6>=</span> 0.00130689 , 0.00130689 , 100.00, <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 50% 0.00130689</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 75% 0.00130689</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 90% 0.00130689</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 99% 0.00130689</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 99.9% 0.00130689</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># Socket and IP used for each connection:</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>0<span style=color:#ff79c6>]</span>   <span style=color:#bd93f9>2</span> socket used, resolved to 10.96.39.34:8080, connection timing : count <span style=color:#bd93f9>2</span> avg 0.0002502065 +/- 6.296e-05 min 0.000187245 max 0.000313168 sum 0.000500413
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>1<span style=color:#ff79c6>]</span>   <span style=color:#bd93f9>1</span> socket used, resolved to 10.96.39.34:8080, connection timing : count <span style=color:#bd93f9>1</span> avg 0.00018792 +/- <span style=color:#bd93f9>0</span> min 0.00018792 max 0.00018792 sum 0.00018792
+</span></span><span style=display:flex><span>Connection <span style=color:#8be9fd;font-style:italic>time</span> histogram <span style=color:#ff79c6>(</span>s<span style=color:#ff79c6>)</span> : count <span style=color:#bd93f9>3</span> avg 0.00022944433 +/- 5.92e-05 min 0.000187245 max 0.000313168 sum 0.000688333
+</span></span><span style=display:flex><span><span style=color:#6272a4># range, mid point, percentile, count</span>
+</span></span><span style=display:flex><span>&gt;<span style=color:#ff79c6>=</span> 0.000187245 &lt;<span style=color:#ff79c6>=</span> 0.000313168 , 0.000250207 , 100.00, <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 50% 0.000218726</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 75% 0.000265947</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 90% 0.00029428</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 99% 0.000311279</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># target 99.9% 0.000312979</span>
+</span></span><span style=display:flex><span>Sockets used: <span style=color:#bd93f9>3</span> <span style=color:#ff79c6>(</span><span style=color:#ff79c6>for</span> perfect keepalive, would be 2<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>Uniform: false, Jitter: false, Catchup allowed: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>IP addresses distribution:
+</span></span><span style=display:flex><span>10.96.39.34:8080: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>Code <span style=color:#bd93f9>200</span> : <span style=color:#bd93f9>19</span> <span style=color:#ff79c6>(</span>95.0 %<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>Code <span style=color:#bd93f9>503</span> : <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>(</span>5.0 %<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>Response Header Sizes : count <span style=color:#bd93f9>20</span> avg 370.55 +/- 85.01 min <span style=color:#bd93f9>0</span> max <span style=color:#bd93f9>391</span> sum <span style=color:#bd93f9>7411</span>
+</span></span><span style=display:flex><span>Response Body/Total Sizes : count <span style=color:#bd93f9>20</span> avg 2336.75 +/- 480.8 min <span style=color:#bd93f9>241</span> max <span style=color:#bd93f9>2448</span> sum <span style=color:#bd93f9>46735</span>
+</span></span><span style=display:flex><span>All <span style=color:#ff79c6>done</span> <span style=color:#bd93f9>20</span> calls <span style=color:#ff79c6>(</span>plus <span style=color:#bd93f9>0</span> warmup<span style=color:#ff79c6>)</span> 2.725 ms avg, 724.9 qps
+</span></span><span style=display:flex><span>root@instance-00qqerhq:~/cilium-mesh/strateges#
+</span></span></code></pre></div><h2 id=metric>Metric</h2><p>给 envoy 下发 Prometheus 配置，使其暴露 Metric 指标。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: cilium.io/v2
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: CiliumClusterwideEnvoyConfig
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: envoy-prometheus-metrics-listener
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.listener.v3.Listener
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: envoy-prometheus-metrics-listener
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>address</span>: <span style=color:#f1fa8c>&#34;::&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ipv4_compat</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>9090</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>stat_prefix</span>: envoy-prometheus-metrics-listener
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>rds</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>route_config_name</span>: prometheus_route
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>use_remote_address</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>skip_xff_append</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.route.v3.RouteConfiguration
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: prometheus_route
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;prometheus_metrics_route&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>domains</span>: [<span style=color:#f1fa8c>&#34;*&#34;</span>]
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>path</span>: <span style=color:#f1fa8c>&#34;/metrics&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cluster</span>: <span style=color:#f1fa8c>&#34;envoy-admin&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>prefix_rewrite</span>: <span style=color:#f1fa8c>&#34;/stats/prometheus&#34;</span>
+</span></span></code></pre></div><p>查看指标</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>http://xxx/stats/prometheus
+</span></span></code></pre></div><p><img src=/images/2023-08-12-cilium-mesh-example/15.png alt></p><h1 id=总结>总结</h1><p>本文我带你部署了 Cilium Mesh，并通过功能示例，带你体验了 Cilium Mesh。总之，这种方式能带来一定的便利性，但是流量治理配置主要依靠于 CiliumEnvoyConfig 或者 CiliumClusterwideEnvoyConfig，对于使用者而言不太友好。</p><hr><ul class=pager><li class=previous><a href=/post/2023-06-25-caretta-ebpf/ data-toggle=tooltip data-placement=top title="Caretta 利用 eBPF 实现 Kubernetes 应用网络拓扑图">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023<br><a href=https://themes.gohugo.io/hugo-theme-cleanwhite>CleanWhite Hugo Theme</a> by <a href=https://github.com/tanjunchen>tanjunchen</a> |
+<iframe style=margin-left:2px;margin-bottom:-5px frameborder=0 scrolling=0 width=100px height=20px src="https://ghbtns.com/github-btn.html?user=tanjunchen&repo=hugo-theme-cleanwhite&type=star&count=true"></iframe></p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
