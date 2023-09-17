@@ -1,0 +1,252 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="初识 kube-proxy（入门篇）"><meta property="og:title" content="初识 kube-proxy（入门篇）"><meta property="twitter:title" content="初识 kube-proxy（入门篇）"><meta name=description content="摘要：在 Kubernetes 中，Service 是一个 L4(TCP/UDP/SCTP) 负载均衡器，它使用 DNAT 将入站流量重定向到后端 Pod。重定向操作由位于每个节点上的 kube-proxy 执行。"><meta property="og:description" content="摘要：在 Kubernetes 中，Service 是一个 L4(TCP/UDP/SCTP) 负载均衡器，它使用 DNAT 将入站流量重定向到后端 Pod。重定向操作由位于每个节点上的 kube-proxy 执行。"><meta property="twitter:description" content="摘要：在 Kubernetes 中，Service 是一个 L4(TCP/UDP/SCTP) 负载均衡器，它使用 DNAT 将入站流量重定向到后端 Pod。重定向操作由位于每个节点上的 kube-proxy 执行。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>初识 kube-proxy（入门篇） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2020-10-02-kube-proxy-01/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/iptables title=iptables>iptables</a>
+<a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>初识 kube-proxy（入门篇）</h1><h2 class=subheading>在这篇文章中，我们将介绍在 iptables 模式下，kube-proxy 是如何处理流量转发的。</h2><span class=meta>Posted by
+陈谭军
+on
+Friday, October 2, 2020
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2020-10-02-kube-proxy-01/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 3345 字</span>，阅读约 <span class=more-meta>7 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>摘要：在 Kubernetes 中，Service 是一个 L4(TCP/UDP/SCTP) 负载均衡器，它使用 DNAT 将入站流量重定向到后端 Pod。
+重定向操作由位于每个节点上的 kube-proxy 执行。<br>在这篇文章中，我们将介绍在 iptables 模式下，kube-proxy 是如何处理流量转发的。</p><h1 id=mode-模式>mode 模式</h1><p>kube-proxy 通过监听 kube-apiserver 添加和删除 Service 和 Endpoints 事件来触发路由规则的配置，目前支持三种不同的操作模式：userspace、iptables、ipvs。</p><h2 id=userspace>userspace</h2><p>在 userspace 模式下，对于每个服务，它在本地节点上打开一个端口（随机选择）。与此“代理端口”的任何连接都会被代理到服务的后端 Pod。因为它速度慢且过时，它不常用。</p><p><img src=/images/2020-10-02-kube-proxy-01/1.png alt></p><h2 id=iptables>iptables</h2><p>基于 Netfilter 构建。对于每个服务，它都会在节点上配置 iptables 规则，这些规则捕获到服务的 clusterIP 和端口的流量，并将该流量重定向到服务的后端 Pod，这是大多数平台的默认模式。</p><p><img src=/images/2020-10-02-kube-proxy-01/2.png alt></p><h2 id=ipvs>ipvs</h2><p>ipvs 模式调用 netlink 接口相应地创建 IPVS 规则，并定期将 IPVS 规则与 Kubernetes 服务和 Endpoint 同步，它要求 Linux 内核加载 IPVS 模块。</p><p><img src=/images/2020-10-02-kube-proxy-01/3.png alt></p><h1 id=externaltrafficpolicy>externalTrafficPolicy</h1><p>externalTrafficPolicy 表示服务是否希望将外部流量路由到节点本地或集群范围的 Endpoint，有两个可用选项：集群（默认）和本地。</p><h2 id=cluster>Cluster</h2><p>Cluster 是默认选项，并具有以下属性：</p><ul><li>发送到类型是 NodePort 或 LoadBalancer 服务的数据包由节点的 IP 进行 SNAT。</li><li>如果外部数据包被路由到没有 pod 的节点，代理会将其转发到另一台主机上的 pod，这可能会导致额外的消耗。</li><li>kubernetes 在集群内部进行均衡，这意味着在进行均衡时会考虑 pod 的数量，因此具有良好的整体负载均衡能力。</li></ul><p><img src=/images/2020-10-02-kube-proxy-01/4.png alt></p><h2 id=local>Local</h2><p>Local 具有以下属性：</p><ul><li>仅适用于服务类型是 NodePort 和 LoadBalancer。</li><li>数据包不会针对集群间或外部流量进行 SNAT。</li><li>当数据包到达没有对应 Pod 的节点时，它会被丢弃，这避免了节点之间的额外消耗。</li><li>kubernetes 执行节点内的平衡，这意味着代理仅将负载分配给本地节点上的 pod，由外部负载来解决负载不平衡问题。</li></ul><p><img src=/images/2020-10-02-kube-proxy-01/5.png alt></p><h1 id=iptables-规则>iptables 规则</h1><p>以下是某个节点 Node 上的 iptables。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@tanjunchen-worker:/# iptables-save
+</span></span><span style=display:flex><span>*mangle
+</span></span><span style=display:flex><span>:PREROUTING ACCEPT <span style=color:#ff79c6>[</span>58400:81718346<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:INPUT ACCEPT <span style=color:#ff79c6>[</span>58400:81718346<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:FORWARD ACCEPT <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:OUTPUT ACCEPT <span style=color:#ff79c6>[</span>46534:3716583<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:POSTROUTING ACCEPT <span style=color:#ff79c6>[</span>46534:3716583<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-IPTABLES-HINT - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-KUBELET-CANARY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-PROXY-CANARY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>COMMIT
+</span></span><span style=display:flex><span>*filter
+</span></span><span style=display:flex><span>:INPUT ACCEPT <span style=color:#ff79c6>[</span>219:37830<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:FORWARD ACCEPT <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:OUTPUT ACCEPT <span style=color:#ff79c6>[</span>199:14977<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-EXTERNAL-SERVICES - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-FIREWALL - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-FORWARD - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-KUBELET-CANARY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-NODEPORTS - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-PROXY-CANARY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-PROXY-FIREWALL - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SERVICES - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>-A INPUT -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes load balancer firewall&#34;</span> -j KUBE-PROXY-FIREWALL
+</span></span><span style=display:flex><span>-A INPUT -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes health check service ports&#34;</span> -j KUBE-NODEPORTS
+</span></span><span style=display:flex><span>-A INPUT -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes externally-visible service portals&#34;</span> -j KUBE-EXTERNAL-SERVICES
+</span></span><span style=display:flex><span>-A INPUT -j KUBE-FIREWALL
+</span></span><span style=display:flex><span>-A FORWARD -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes load balancer firewall&#34;</span> -j KUBE-PROXY-FIREWALL
+</span></span><span style=display:flex><span>-A FORWARD -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes forwarding rules&#34;</span> -j KUBE-FORWARD
+</span></span><span style=display:flex><span>-A FORWARD -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes service portals&#34;</span> -j KUBE-SERVICES
+</span></span><span style=display:flex><span>-A FORWARD -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes externally-visible service portals&#34;</span> -j KUBE-EXTERNAL-SERVICES
+</span></span><span style=display:flex><span>-A OUTPUT -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes load balancer firewall&#34;</span> -j KUBE-PROXY-FIREWALL
+</span></span><span style=display:flex><span>-A OUTPUT -m conntrack --ctstate NEW -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes service portals&#34;</span> -j KUBE-SERVICES
+</span></span><span style=display:flex><span>-A OUTPUT -j KUBE-FIREWALL
+</span></span><span style=display:flex><span>-A KUBE-FIREWALL ! -s 127.0.0.0/8 -d 127.0.0.0/8 -m comment --comment <span style=color:#f1fa8c>&#34;block incoming localnet connections&#34;</span> -m conntrack ! --ctstate RELATED,ESTABLISHED,DNAT -j DROP
+</span></span><span style=display:flex><span>-A KUBE-FIREWALL -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes firewall for dropping marked packets&#34;</span> -m mark --mark 0x8000/0x8000 -j DROP
+</span></span><span style=display:flex><span>-A KUBE-FORWARD -m conntrack --ctstate INVALID -j DROP
+</span></span><span style=display:flex><span>-A KUBE-FORWARD -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes forwarding rules&#34;</span> -m mark --mark 0x4000/0x4000 -j ACCEPT
+</span></span><span style=display:flex><span>-A KUBE-FORWARD -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes forwarding conntrack rule&#34;</span> -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
+</span></span><span style=display:flex><span>COMMIT
+</span></span><span style=display:flex><span>*nat
+</span></span><span style=display:flex><span>:PREROUTING ACCEPT <span style=color:#ff79c6>[</span>1:60<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:INPUT ACCEPT <span style=color:#ff79c6>[</span>1:60<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:OUTPUT ACCEPT <span style=color:#ff79c6>[</span>1:60<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:POSTROUTING ACCEPT <span style=color:#ff79c6>[</span>1:60<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:DOCKER_OUTPUT - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:DOCKER_POSTROUTING - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KIND-MASQ-AGENT - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-KUBELET-CANARY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-MARK-DROP - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-MARK-MASQ - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-NODEPORTS - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-POSTROUTING - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-PROXY-CANARY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-6E7XQMQ4RAYOWTTM - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-PUHFDAMRBZWCPADU - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-QKX4QX54UKWK6JIY - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-SF3LG62VAE5ALYDV - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-WXWGHGKZOCNYRYI7 - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-ZP3FB6NMPNCO4VBJ - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SEP-ZXMNUKOKXUTL2MK2 - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SERVICES - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SVC-ERIFXISQEP7F7OF4 - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SVC-JD5MR3NA4I4DYORP - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SVC-NPX46M4PTMTKRN6Y - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>:KUBE-SVC-TCOU7JCQXEZGVUNU - <span style=color:#ff79c6>[</span>0:0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>-A PREROUTING -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes service portals&#34;</span> -j KUBE-SERVICES
+</span></span><span style=display:flex><span>-A PREROUTING -d 172.18.0.1/32 -j DOCKER_OUTPUT
+</span></span><span style=display:flex><span>-A OUTPUT -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes service portals&#34;</span> -j KUBE-SERVICES
+</span></span><span style=display:flex><span>-A OUTPUT -d 172.18.0.1/32 -j DOCKER_OUTPUT
+</span></span><span style=display:flex><span>-A POSTROUTING -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes postrouting rules&#34;</span> -j KUBE-POSTROUTING
+</span></span><span style=display:flex><span>-A POSTROUTING -d 172.18.0.1/32 -j DOCKER_POSTROUTING
+</span></span><span style=display:flex><span>-A POSTROUTING -m addrtype ! --dst-type LOCAL -m comment --comment <span style=color:#f1fa8c>&#34;kind-masq-agent: ensure nat POSTROUTING directs all non-LOCAL destination traffic to our custom KIND-MASQ-AGENT chain&#34;</span> -j KIND-MASQ-AGENT
+</span></span><span style=display:flex><span>-A DOCKER_OUTPUT -d 172.18.0.1/32 -p tcp -m tcp --dport <span style=color:#bd93f9>53</span> -j DNAT --to-destination 127.0.0.11:44591
+</span></span><span style=display:flex><span>-A DOCKER_OUTPUT -d 172.18.0.1/32 -p udp -m udp --dport <span style=color:#bd93f9>53</span> -j DNAT --to-destination 127.0.0.11:58922
+</span></span><span style=display:flex><span>-A DOCKER_POSTROUTING -s 127.0.0.11/32 -p tcp -m tcp --sport <span style=color:#bd93f9>44591</span> -j SNAT --to-source 172.18.0.1:53
+</span></span><span style=display:flex><span>-A DOCKER_POSTROUTING -s 127.0.0.11/32 -p udp -m udp --sport <span style=color:#bd93f9>58922</span> -j SNAT --to-source 172.18.0.1:53
+</span></span><span style=display:flex><span>-A KIND-MASQ-AGENT -d 10.244.0.0/16 -m comment --comment <span style=color:#f1fa8c>&#34;kind-masq-agent: local traffic is not subject to MASQUERADE&#34;</span> -j RETURN
+</span></span><span style=display:flex><span>-A KIND-MASQ-AGENT -m comment --comment <span style=color:#f1fa8c>&#34;kind-masq-agent: outbound traffic is subject to MASQUERADE (must be last in chain)&#34;</span> -j MASQUERADE
+</span></span><span style=display:flex><span>-A KUBE-MARK-DROP -j MARK --set-xmark 0x8000/0x8000
+</span></span><span style=display:flex><span>-A KUBE-MARK-MASQ -j MARK --set-xmark 0x4000/0x4000
+</span></span><span style=display:flex><span>-A KUBE-POSTROUTING -m mark ! --mark 0x4000/0x4000 -j RETURN
+</span></span><span style=display:flex><span>-A KUBE-POSTROUTING -j MARK --set-xmark 0x4000/0x0
+</span></span><span style=display:flex><span>-A KUBE-POSTROUTING -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes service traffic requiring SNAT&#34;</span> -j MASQUERADE --random-fully
+</span></span><span style=display:flex><span>-A KUBE-SEP-6E7XQMQ4RAYOWTTM -s 10.244.0.3/32 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-6E7XQMQ4RAYOWTTM -p udp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns&#34;</span> -m udp -j DNAT --to-destination 10.244.0.3:53
+</span></span><span style=display:flex><span>-A KUBE-SEP-PUHFDAMRBZWCPADU -s 10.244.0.4/32 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-PUHFDAMRBZWCPADU -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics&#34;</span> -m tcp -j DNAT --to-destination 10.244.0.4:9153
+</span></span><span style=display:flex><span>-A KUBE-SEP-QKX4QX54UKWK6JIY -s 172.18.0.3/32 -m comment --comment <span style=color:#f1fa8c>&#34;default/kubernetes:https&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-QKX4QX54UKWK6JIY -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;default/kubernetes:https&#34;</span> -m tcp -j DNAT --to-destination 172.18.0.3:6443
+</span></span><span style=display:flex><span>-A KUBE-SEP-SF3LG62VAE5ALYDV -s 10.244.0.4/32 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-SF3LG62VAE5ALYDV -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp&#34;</span> -m tcp -j DNAT --to-destination 10.244.0.4:53
+</span></span><span style=display:flex><span>-A KUBE-SEP-WXWGHGKZOCNYRYI7 -s 10.244.0.4/32 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-WXWGHGKZOCNYRYI7 -p udp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns&#34;</span> -m udp -j DNAT --to-destination 10.244.0.4:53
+</span></span><span style=display:flex><span>-A KUBE-SEP-ZP3FB6NMPNCO4VBJ -s 10.244.0.3/32 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-ZP3FB6NMPNCO4VBJ -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics&#34;</span> -m tcp -j DNAT --to-destination 10.244.0.3:9153
+</span></span><span style=display:flex><span>-A KUBE-SEP-ZXMNUKOKXUTL2MK2 -s 10.244.0.3/32 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp&#34;</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SEP-ZXMNUKOKXUTL2MK2 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp&#34;</span> -m tcp -j DNAT --to-destination 10.244.0.3:53
+</span></span><span style=display:flex><span>-A KUBE-SERVICES -d 10.96.0.10/32 -p udp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns cluster IP&#34;</span> -m udp --dport <span style=color:#bd93f9>53</span> -j KUBE-SVC-TCOU7JCQXEZGVUNU
+</span></span><span style=display:flex><span>-A KUBE-SERVICES -d 10.96.0.10/32 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp cluster IP&#34;</span> -m tcp --dport <span style=color:#bd93f9>53</span> -j KUBE-SVC-ERIFXISQEP7F7OF4
+</span></span><span style=display:flex><span>-A KUBE-SERVICES -d 10.96.0.10/32 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics cluster IP&#34;</span> -m tcp --dport <span style=color:#bd93f9>9153</span> -j KUBE-SVC-JD5MR3NA4I4DYORP
+</span></span><span style=display:flex><span>-A KUBE-SERVICES -d 10.96.0.1/32 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;default/kubernetes:https cluster IP&#34;</span> -m tcp --dport <span style=color:#bd93f9>443</span> -j KUBE-SVC-NPX46M4PTMTKRN6Y
+</span></span><span style=display:flex><span>-A KUBE-SERVICES -m comment --comment <span style=color:#f1fa8c>&#34;kubernetes service nodeports; NOTE: this must be the last rule in this chain&#34;</span> -m addrtype --dst-type LOCAL -j KUBE-NODEPORTS
+</span></span><span style=display:flex><span>-A KUBE-SVC-ERIFXISQEP7F7OF4 ! -s 10.244.0.0/16 -d 10.96.0.10/32 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp cluster IP&#34;</span> -m tcp --dport <span style=color:#bd93f9>53</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SVC-ERIFXISQEP7F7OF4 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp -&gt; 10.244.0.3:53&#34;</span> -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-ZXMNUKOKXUTL2MK2
+</span></span><span style=display:flex><span>-A KUBE-SVC-ERIFXISQEP7F7OF4 -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns-tcp -&gt; 10.244.0.4:53&#34;</span> -j KUBE-SEP-SF3LG62VAE5ALYDV
+</span></span><span style=display:flex><span>-A KUBE-SVC-JD5MR3NA4I4DYORP ! -s 10.244.0.0/16 -d 10.96.0.10/32 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics cluster IP&#34;</span> -m tcp --dport <span style=color:#bd93f9>9153</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SVC-JD5MR3NA4I4DYORP -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics -&gt; 10.244.0.3:9153&#34;</span> -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-ZP3FB6NMPNCO4VBJ
+</span></span><span style=display:flex><span>-A KUBE-SVC-JD5MR3NA4I4DYORP -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:metrics -&gt; 10.244.0.4:9153&#34;</span> -j KUBE-SEP-PUHFDAMRBZWCPADU
+</span></span><span style=display:flex><span>-A KUBE-SVC-NPX46M4PTMTKRN6Y ! -s 10.244.0.0/16 -d 10.96.0.1/32 -p tcp -m comment --comment <span style=color:#f1fa8c>&#34;default/kubernetes:https cluster IP&#34;</span> -m tcp --dport <span style=color:#bd93f9>443</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SVC-NPX46M4PTMTKRN6Y -m comment --comment <span style=color:#f1fa8c>&#34;default/kubernetes:https -&gt; 172.18.0.3:6443&#34;</span> -j KUBE-SEP-QKX4QX54UKWK6JIY
+</span></span><span style=display:flex><span>-A KUBE-SVC-TCOU7JCQXEZGVUNU ! -s 10.244.0.0/16 -d 10.96.0.10/32 -p udp -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns cluster IP&#34;</span> -m udp --dport <span style=color:#bd93f9>53</span> -j KUBE-MARK-MASQ
+</span></span><span style=display:flex><span>-A KUBE-SVC-TCOU7JCQXEZGVUNU -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns -&gt; 10.244.0.3:53&#34;</span> -m statistic --mode random --probability 0.50000000000 -j KUBE-SEP-6E7XQMQ4RAYOWTTM
+</span></span><span style=display:flex><span>-A KUBE-SVC-TCOU7JCQXEZGVUNU -m comment --comment <span style=color:#f1fa8c>&#34;kube-system/kube-dns:dns -&gt; 10.244.0.4:53&#34;</span> -j KUBE-SEP-WXWGHGKZOCNYRYI7
+</span></span><span style=display:flex><span>COMMIT
+</span></span></code></pre></div><p>当创建 Service 或 Endpoint 时，iptables 链会对 pod 和服务之间执行各种过滤和 NAT 操作，具体的 iptables 链如下所示：</p><ul><li>KUBE-SERVICES 是服务数据包的入口点，它的作用是匹配目标 IP:Port 并将数据包分派到相应的 KUBE-SVC-* 链。</li><li>KUBE-SVC-* 充当负载均衡器，将数据包分发到 KUBE-SEP-* 链。KUBE-SEP-* 的数量等于 service 后面的 endpoint 数量，选择哪个 KUBE-SEP-* 是随机确定的。</li><li>KUBE-SEP-* 代表服务 endpoint，它只是进行 DNAT，将服务 IP:Port 替换为 pod 的 endpoint IP:Port。</li><li>KUBE-MARK-MASQ 向源自集群外部、发往服务的数据包添加 Netfilter 标记，带有此标记的数据包将在 POSTROUTING 规则中进行更改，以使用源网络地址转换 (SNAT)，并将节点的 IP 地址作为其源 IP 地址。</li><li>KUBE-MARK-DROP 向此时尚未启用目标 NAT 的数据包添加 Netfilter 标记，这些数据包将在 KUBE-FIREWALL 链中被丢弃。</li><li>KUBE-FIREWALL 链对 LoadBalancer 服务生效，它将目标 IP 与服务的负载均衡器 IP 进行匹配，并将数据包分发到相应的 KUBE-SVC-* 链（externalTrafficPolicy: Cluster）或 KUBE-XLB-* 链（externalTrafficPolicy：Local）。</li><li>KUBE-NODEPORTS 链对 NodePort 和 LoadBalancer 服务生效，外部源可以通过节点端口访问服务。它匹配节点端口，并将数据包分发到相应的 KUBE-SVC-* 链（externalTrafficPolicy：Cluster）或 KUBE-XLB-* 链（externalTrafficPolicy：Local）。</li><li>当 externalTrafficPolicy 设置为 Local 时，KUBE-XLB-* 链可以正常工作，如果节点没有保留相关 endpoint，则数据包将被丢弃。</li></ul><p>Kubernetes 上的 kube-proxy 总体流程如下所示：</p><p><img src=/images/2020-10-02-kube-proxy-01/6.png alt></p><h1 id=案例>案例</h1><p>现在我们已经了解了 kube-proxy 的基本概念，让我们在实践中认识一下它们。</p><h2 id=环境准备>环境准备</h2><p>测试 demo 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: echo
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: echo
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: echoserver
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: echoserver
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>image</span>: ealen/echo-server:latest
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: echoserver
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>env</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: PORT
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>value</span>: <span style=color:#f1fa8c>&#34;80&#34;</span>
+</span></span></code></pre></div><p>登录到 node 上进行调试的工具，Yaml 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DaemonSet
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: node-shell-debug
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: node-shell-debug
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: node-shell-debug
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>sidecar.istio.io/inject</span>: <span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>args</span>:
+</span></span><span style=display:flex><span>        - -t
+</span></span><span style=display:flex><span>        - <span style=color:#f1fa8c>&#34;1&#34;</span>
+</span></span><span style=display:flex><span>        - -m
+</span></span><span style=display:flex><span>        - -u
+</span></span><span style=display:flex><span>        - -i
+</span></span><span style=display:flex><span>        - -<span style=color:#ff79c6>n</span>
+</span></span><span style=display:flex><span>        - sleep
+</span></span><span style=display:flex><span>        - <span style=color:#f1fa8c>&#34;140000000&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>command</span>:
+</span></span><span style=display:flex><span>        - nsenter
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/node-shell:dev
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: shell
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>securityContext</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>privileged</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hostIPC</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hostNetwork</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hostPID</span>: <span style=color:#ff79c6>true</span>
+</span></span></code></pre></div><p>环境如下所示：</p><p><img src=/images/2020-10-02-kube-proxy-01/7.png alt></p><h2 id=nodeport>NodePort</h2><p>Kubernetes 通过部署 NodePort 类型的服务以 nodeIP:nodePort 的方式暴露服务，kubernetes 创建了一个 ClusterIP 服务，NodePort 服务将路由到该 ClusterIP 服务，同时在所有 Node 上打开特定端口（节点端口），以及任何来自该服务的流量发送到此端口的数据将被转发到目标 pod。<br>用于执行 NodePort 流量的 iptables 规则的入口点是 &lsquo;-A KUBE-SERVICES -m comment &ndash;comment “kubernetes service nodeports; this must be the last rule in this chain”-m addrtype –dst-type LOCAL -j KUBE-NODEPORTS&rsquo;，这条规则是 KUBE-SERVICES 链中的最后一条，它表明如果访问数据包不匹配之前的规则链，都会被转发到 KUBE-NODEPORTS 链中进行进一步处理，登录到节点上查看 iptables 规则，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it node-shell-debug-hqx8g bash
+</span></span><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#ff79c6>[</span>POD<span style=color:#ff79c6>]</span> <span style=color:#ff79c6>[</span>COMMAND<span style=color:#ff79c6>]</span> is DEPRECATED and will be removed in a future version. Use kubectl <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#ff79c6>[</span>POD<span style=color:#ff79c6>]</span> -- <span style=color:#ff79c6>[</span>COMMAND<span style=color:#ff79c6>]</span> instead.
+</span></span><span style=display:flex><span>groups: cannot find name <span style=color:#ff79c6>for</span> group ID <span style=color:#bd93f9>11</span>
+</span></span><span style=display:flex><span>To run a <span style=color:#8be9fd;font-style:italic>command</span> as administrator <span style=color:#ff79c6>(</span>user <span style=color:#f1fa8c>&#34;root&#34;</span><span style=color:#ff79c6>)</span>, use <span style=color:#f1fa8c>&#34;sudo &lt;command&gt;&#34;</span>.
+</span></span><span style=display:flex><span>See <span style=color:#f1fa8c>&#34;man sudo_root&#34;</span> <span style=color:#ff79c6>for</span> details.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@ig-m6f5hd49-2ie613z6-ffcfq1uq:/# iptables -t nat -L KUBE-SERVICES
+</span></span><span style=display:flex><span>Chain KUBE-SERVICES <span style=color:#ff79c6>(</span><span style=color:#bd93f9>2</span> references<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>target     prot opt <span style=color:#8be9fd;font-style:italic>source</span>               destination
+</span></span><span style=display:flex><span>KUBE-MARK-MASQ  all  -- !10.0.0.0/16          anywhere             /* Kubernetes service cluster ip + port <span style=color:#ff79c6>for</span> masquerade purpose */ match-set KUBE-CLUSTER-IP dst,dst
+</span></span><span style=display:flex><span>KUBE-NODE-PORT  all  --  anywhere             anywhere             ADDRTYPE match dst-type LOCAL
+</span></span><span style=display:flex><span>ACCEPT     all  --  anywhere             anywhere             match-set KUBE-CLUSTER-IP dst,dst
+</span></span></code></pre></div><p>在下面的小节中，我们将讨论两种类型的 NodePort 服务（externalTrafficPolicy）：Cluster、Local。
+没有自定义的 NodePort 服务将创建一个 externalTrafficPolicy: Cluster 服务，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Service
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: echo-np
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>type</span>: NodePort
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>8711</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>targetPort</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: echoserver
+</span></span></code></pre></div><p>创建服务，如下所示：</p><p><img src=/images/2020-10-02-kube-proxy-01/8.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@ig-m6f5hd49-2ie613z6-ffcfq1uq:/# ps aux | grep kube-proxy
+</span></span><span style=display:flex><span>root       <span style=color:#bd93f9>22228</span>  0.1  0.5 <span style=color:#bd93f9>746608</span> <span style=color:#bd93f9>43004</span> ?        Ssl  Sep15   3:01 /usr/local/bin/kube-proxy --config<span style=color:#ff79c6>=</span>/etc/kubernetes/proxy.yaml --logtostderr<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span> --v<span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>root      <span style=color:#bd93f9>683881</span>  0.0  0.0   <span style=color:#bd93f9>3436</span>   <span style=color:#bd93f9>720</span> pts/0    S+   17:15   0:00 grep --color<span style=color:#ff79c6>=</span>auto kube-proxy
+</span></span></code></pre></div><p>从上面我们可以看到，端口 30642 被分配给服务 “echo-np”，在每个节点上，kube-proxy 为其分配一个监听端口。<br>从 iptables 的角度来看，每两组链和规则分别添加到链 KUBE-SERVICES 和 KUBE-NODE-PORT 中：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>iptables -t nat -L KUBE-SERVICES
+</span></span><span style=display:flex><span>Chain KUBE-SERVICES <span style=color:#ff79c6>(</span><span style=color:#bd93f9>2</span> references<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>target     prot opt <span style=color:#8be9fd;font-style:italic>source</span>               destination
+</span></span><span style=display:flex><span>KUBE-MARK-MASQ  all  -- !10.0.0.0/16          anywhere             /* Kubernetes service cluster ip + port <span style=color:#ff79c6>for</span> masquerade purpose */ match-set KUBE-CLUSTER-IP dst,dst
+</span></span><span style=display:flex><span>KUBE-NODE-PORT  all  --  anywhere             anywhere             ADDRTYPE match dst-type LOCAL
+</span></span><span style=display:flex><span>ACCEPT     all  --  anywhere             anywhere             match-set KUBE-CLUSTER-IP dst,dst
+</span></span></code></pre></div><p>使用 “externalTrafficPolicy: Local” 将保留源 IP 并丢弃来自没有本地端点的节点的数据包，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Service
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: echo-local
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>8711</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>targetPort</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: echo
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>type</span>: NodePort
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>externalTrafficPolicy</span>: Local
+</span></span></code></pre></div><p>KUBE-NODEPORTS 的链在具有本地端点和没有本地端点的节点之间是不同的。</p><h2 id=clusterip>ClusterIP</h2><p>通过不同的配置，Service ClusterIP 服务可以分为 5 中类型：<strong>normal、not headless、session affinity、external ip、no endpoints、headless</strong>。<br>具体流量转发规则跟上述类似，在此不在重复，有兴趣的可以继续探索 kube-proxy 中的 iptables 奥秘！</p><h1 id=参考>参考</h1><ol><li><a href=https://ealenn.github.io/Echo-Server/pages/quick-start/kubernetes.html>https://ealenn.github.io/Echo-Server/pages/quick-start/kubernetes.html</a></li><li><a href=https://msazure.club/kubernetes-services-and-iptables/>https://msazure.club/kubernetes-services-and-iptables/</a></li><li><a href=https://serenafeng.github.io/2020/03/26/kube-proxy-in-iptables-mode/>https://serenafeng.github.io/2020/03/26/kube-proxy-in-iptables-mode/</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2020-05-01-istio-1.6-compile/ data-toggle=tooltip data-placement=top title="编译与构建 istio-1.6.14 镜像">&larr;
+Previous Post</a></li><li class=next><a href=/post/2020-10-06-participate-community/ data-toggle=tooltip data-placement=top title="如何参与 Kubernetes 开源社区">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
