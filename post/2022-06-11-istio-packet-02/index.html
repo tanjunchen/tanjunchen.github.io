@@ -1,0 +1,487 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="Istio 中数据包的生命周期 - 下篇"><meta property="og:title" content="Istio 中数据包的生命周期 - 下篇"><meta property="twitter:title" content="Istio 中数据包的生命周期 - 下篇"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>Istio 中数据包的生命周期 - 下篇 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2022-06-11-istio-packet-02/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/istio title=istio>istio</a></div><h1>Istio 中数据包的生命周期 - 下篇</h1><h2 class=subheading>在这篇文章中，我们将深入了解 Envoy 配置，探讨组成 Envoy 配置文件的不同组件，以及它们如何协同工作。我们还将演示如何为不同用例配置 Envoy 以实现服务发现、路由、Tracing、UDP 等功能。</h2><span class=meta>Posted by
+陈谭军
+on
+Saturday, June 11, 2022
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2022-06-11-istio-packet-02/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 5928 字</span>，阅读约 <span class=more-meta>12 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>在《Istio 中数据包的生命周期 - 上篇》文章中，我们学习了服务网格和 Istio 相关概念，Istio 提供流量管理、可观察性、安全性等功能。然后，我们深入研究了 Istio 数据平面中的流量拦截工作机制，该数据平面由一组代理服务组成，这些代理服务使用扩展的 Envoy 在每个 Kubernetes Pod 中作为 sidecar 容器。接着，我们讨论了 sidecar 注入以及 istio-proxy 和 istio-init 作用。最后，我们介绍了入站和出站的流量劫持工作流程。</p><h1 id=前言>前言</h1><p>在服务网格的世界里，Envoy 已经成为最受欢迎的代理之一，用于处理服务之间的流量。Envoy 由 Lyft 开发，现在是云原生计算基金会（CNCF）的一个毕业项目，它为处理服务之间的网络流量提供了一个可扩展、高性能和可扩展的解决方案。<br>在这篇文章中，我们将深入了解 Envoy 配置，探讨组成 Envoy 配置文件的不同组件，以及它们如何协同工作。我们还将演示如何为不同用例配置 Envoy 以实现服务发现、路由、Tracing、UDP 等功能。</p><h1 id=envoy-proxy-介绍>Envoy Proxy 介绍</h1><p>Envoy 被设计成一个 sidecar 代理，与服务网格中的每个服务实例一起运行。它拦截服务之间的所有流量，提供负载均衡、流量路由、流量管理和安全性等功能。Envoy 是一个强大的工具，可以通过多种不同的方式进行配置，以满足服务网格的特定需求。<br>以下是 Envoy 在 Istio 中的一些重要功能：</p><ul><li>流量管理：Envoy 的动态路由功能允许 Istio 在服务网格级别管理流量。这使 Istio 能够在不需要更改应用程序代码的情况下执行流量路由、负载均衡和服务发现。Istio 使用 Envoy 的高级路由功能，包括基于路径的路由、基于 header 的路由和故障注入，来实现高级流量管理策略。</li><li>安全性：Envoy 为 Istio 提供了强大的安全功能，包括加密和身份验证。Istio 使用 Envoy 的 TLS 和 mTLS 支持来保护服务网格中服务之间的通信。Envoy 还支持包括速率限制和 RBAC，允许 Istio 在服务网格中实施细粒度的安全策略等高级访问控制功能。</li><li>可观察性：Envoy 的可观察性功能使 Istio 能够监控服务网格并对其进行故障排除。Envoy 丰富的遥测数据，包括详细的指标和日志，可用于诊断问题和优化性能。Istio 使用 Envoy 的分布式跟踪功能在服务网格中提供端到端跟踪，让用户了解请求如何在网格中流动，并识别性能瓶颈。</li><li>可扩展性：Envoy 的模块化架构允许 Istio 轻松地向服务网格添加新功能。Istio 可以添加新的 Envoy 过滤器或配置现有过滤器来实现自定义逻辑，使用户可以根据需要扩展 Istio 的功能。</li></ul><p>总体而言，Envoy 丰富的功能使其成为 Istio 服务网格平台的最佳选择。Envoy 的高级流量管理、安全性、可观察性和可扩展性使 Istio 能够提供一个强大而灵活的平台来大规模管理微服务。</p><h1 id=envoy-处理-packet-过程>Envoy 处理 Packet 过程</h1><p><img src=/images/2022-06-11-istio-packet-02/1.svg alt></p><p>当数据包到达 Envoy 时，它在到达最终目的地之前会经过一系列步骤，这些步骤包括以下内容：</p><ul><li>在 ingress 阶段，Envoy listener 组件通过特定端口和协议（如TCP、HTTP或HTTPS）接受来自下游客户端的连接。Envoy listener filter 提供 SNI 和其他进入 TLS 之前的详细信息，并基于目的地 IP CIDR 范围、SNI、ALPN、源端口等匹配 Envoy network filter。传输套接字（如 TLS 传输套接字）与 filter 链相关联，用于安全通信。</li><li>Envoy network filter 链在网络读取时使用 TLS 传输套接字解密 TCP 连接中的数据，HTTP 连接管理器（HTTP connection manager）过滤器是最后一个过滤链。HTTP 连接管理器中的 HTTP/2 编解码器将来自 TLS 连接的解密数据流解帧并解复用为独立的流，处理每个请求和响应。</li><li>对于每个 HTTP 流，都会创建并运行相应的 HTTP 过滤器链。请求通过可以读取和修改请求的自定义筛选器，路由器过滤器是最重要的 HTTP 过滤器，位于链的末尾，它根据传入请求的 header 选择路由（router）和集群（cluster）。然后将 header 转发到该集群中的上游端点（endpoint）。路由过滤器从匹配集群的集群管理器中获取 HTTP 连接池，以处理此请求。</li><li>执行特定集群的负载均衡（load balancer）来找到端点（endpoint），并检查熔断器确定是否允许该请求通过。如果端点（endpoint）的连接池为空或容量不足，则会创建与端点（endpoint）的新连接。上游端点（endpoint）连接的 HTTP/2 编解码器将请求的流与通过单个 TCP 连接到达该上游的任何其他流多路复用并成帧。上游端点（endpoint）连接的 TLS 传输套接字对这些字节进行加密，并将它们写入上游连接的 TCP 套接字。</li><li>由 headers、可选 body 和 trailers 组成的请求在上游代理，响应在下游代理。响应以与请求相反的顺序通过 HTTP 过滤器，从路由过滤器开始，在发送到下游之前通过自定义过滤器，当响应完成时，流将被销毁，并且完成其他其他操作，包括更新统计信息、写入访问日志等。</li><li>最后，egress 配置为下游客户端指定端点（endpoint）信息，包括传输协议、加密和其他设置。Envoy 可以配置为使用适当的协议和传输机制将响应转发到下游客户端，允许配置过滤器来处理来自上游服务的响应、添加响应 header、设置 cookie、执行缓存等，还可以配置访问日志过滤器来记录响应。</li></ul><p>总体而言，通过配置数据包生命周期的每个阶段，我们可以为现代应用程序实现高级流量管理、可观察性和安全等功能，Envoy 代理配置是高度可定制的，可以根据应用程序架构的特定需求进行定制。</p><h1 id=envoy-示例>Envoy 示例</h1><h2 id=envoy-front-proxy>Envoy front proxy</h2><p><img src=/images/2022-06-11-istio-packet-02/2.svg alt></p><p>让我们看一个使用 Envoy 代理的示例，在本例中，我们将侦听器配置为接受端口 8000 上的 ingress 流量，并使用 round-robin load balancing 策略将其转发到名为 “service” 的集群，集群被定义为 strict DNS 类型，有 2 个端点（endpoint），每个端点的地址为 version_v1、version_v2，所有端点都监听 9000 端口。
+连接管理器（HTTP connection manager）被配置为生成请求 ID，使用自动编解码器类型检测，并使用 “ingress_http” 前缀统计信息。它还指定了一个名为 “service” 的 virtual_hosts，该主机接受任何域的流量，以及一个与前缀为 “/version” 请求匹配路由。然后，该路由被转发到 “service” 集群。<br>为了确保 Envoy 与其客户端之间的通信安全，我们使用自签名证书对进行传输层安全性（TLS）身份验证。证书对作为内联字符串提供给 Envoy，但也可以作为文件提供，或者在动态配置场景中通过秘密发现服务（SDS）远程获取。</p><p>总体而言，上述案例演示了如何将 Envoy 用作代理来处理 ingress 流量，并将其转发到具有负载均衡和安全功能的后端服务。Envoy 的配置文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>static_resources</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>listeners</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>address</span>: <span style=color:#bd93f9>0.0.0.0</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>8000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>generate_request_id</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>codec_type</span>: AUTO
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>stat_prefix</span>: ingress_http
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>route_config</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: local_route
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: version
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>domains</span>:
+</span></span><span style=display:flex><span>              - <span style=color:#f1fa8c>&#34;*&#34;</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>              - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/version&#34;</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>cluster</span>: version
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>transport_socket</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: envoy.transport_sockets.tls
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.DownstreamTlsContext
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>common_tls_context</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>tls_certificates</span>:
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># The following self-signed certificate pair is generated using:</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># $ openssl req -x509 -newkey rsa:2048 -keyout a/front-proxy-key.pem -out  a/front-proxy-crt.pem -days 3650 -nodes -subj &#39;/CN=front-envoy&#39;</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>#</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># Instead of feeding it as an inline_string, certificate pair can also be fed to Envoy</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># via filename. Reference: https://envoyproxy.io/docs/envoy/latest/api-v3/config/core/v3/base.proto#config-core-v3-datasource.</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>#</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># Or in a dynamic configuration scenario, certificate pair can be fetched remotely via</span>
+</span></span><span style=display:flex><span>            <span style=color:#6272a4># Secret Discovery Service (SDS). Reference: https://envoyproxy.io/docs/envoy/latest/configuration/security/secret.</span>
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>certificate_chain</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>inline_string</span>: |<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  -----BEGIN CERTIFICATE-----
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  MIICqDCCAZACCQCquzpHNpqBcDANBgkqhkiG9w0BAQsFADAWMRQwEgYDVQQDDAtm
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  cm9udC1lbnZveTAeFw0yMDA3MDgwMTMxNDZaFw0zMDA3MDYwMTMxNDZaMBYxFDAS
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  BgNVBAMMC2Zyb250LWVudm95MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  AQEAthnYkqVQBX+Wg7aQWyCCb87hBce1hAFhbRM8Y9dQTqxoMXZiA2n8G089hUou
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  oQpEdJgitXVS6YMFPFUUWfwcqxYAynLK4X5im26Yfa1eO8La8sZUS+4Bjao1gF5/
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  VJxSEo2yZ7fFBo8M4E44ZehIIocipCRS+YZehFs6dmHoq/MGvh2eAHIa+O9xssPt
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  ofFcQMR8rwBHVbKy484O10tNCouX4yUkyQXqCRy6HRu7kSjOjNKSGtjfG+h5M8bh
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  10W7ZrsJ1hWhzBulSaMZaUY3vh5ngpws1JATQVSK1Jm/dmMRciwlTK7KfzgxHlSX
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  58ENpS7yPTISkEICcLbXkkKGEQIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQCmj6Hg
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  vwOxWz0xu+6fSfRL6PGJUGq6wghCfUvjfwZ7zppDUqU47fk+yqPIOzuGZMdAqi7N
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  v1DXkeO4A3hnMD22Rlqt25vfogAaZVToBeQxCPd/ALBLFrvLUFYuSlS3zXSBpQqQ
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  Ny2IKFYsMllz5RSROONHBjaJOn5OwqenJ91MPmTAG7ujXKN6INSBM0PjX9Jy4Xb9
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  zT+I85jRDQHnTFce1WICBDCYidTIvJtdSSokGSuy4/xyxAAc/BpZAfOjBQ4G1QRe
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  9XwOi790LyNUYFJVyeOvNJwveloWuPLHb9idmY5YABwikUY6QNcXwyHTbRCkPB2I
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  m+/R4XnmL4cKQ+5Z
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  -----END CERTIFICATE-----</span>                  
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>private_key</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>inline_string</span>: |<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  -----BEGIN PRIVATE KEY-----
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC2GdiSpVAFf5aD
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  tpBbIIJvzuEFx7WEAWFtEzxj11BOrGgxdmIDafwbTz2FSi6hCkR0mCK1dVLpgwU8
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  VRRZ/ByrFgDKcsrhfmKbbph9rV47wtryxlRL7gGNqjWAXn9UnFISjbJnt8UGjwzg
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  Tjhl6EgihyKkJFL5hl6EWzp2Yeir8wa+HZ4Achr473Gyw+2h8VxAxHyvAEdVsrLj
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  zg7XS00Ki5fjJSTJBeoJHLodG7uRKM6M0pIa2N8b6HkzxuHXRbtmuwnWFaHMG6VJ
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  oxlpRje+HmeCnCzUkBNBVIrUmb92YxFyLCVMrsp/ODEeVJfnwQ2lLvI9MhKQQgJw
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  tteSQoYRAgMBAAECggEAeDGdEkYNCGQLe8pvg8Z0ccoSGpeTxpqGrNEKhjfi6NrB
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  NwyVav10iq4FxEmPd3nobzDPkAftfvWc6hKaCT7vyTkPspCMOsQJ39/ixOk+jqFx
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  lNa1YxyoZ9IV2DIHR1iaj2Z5gB367PZUoGTgstrbafbaNY9IOSyojCIO935ubbcx
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  DWwL24XAf51ez6sXnI8V5tXmrFlNXhbhJdH8iIxNyM45HrnlUlOk0lCK4gmLJjy9
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  10IS2H2Wh3M5zsTpihH1JvM56oAH1ahrhMXs/rVFXXkg50yD1KV+HQiEbglYKUxO
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  eMYtfaY9i2CuLwhDnWp3oxP3HfgQQhD09OEN3e0IlQKBgQDZ/3poG9TiMZSjfKqL
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  xnCABMXGVQsfFWNC8THoW6RRx5Rqi8q08yJrmhCu32YKvccsOljDQJQQJdQO1g09
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  e/adJmCnTrqxNtjPkX9txV23Lp6Ak7emjiQ5ICu7iWxrcO3zf7hmKtj7z+av8sjO
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  mDI7NkX5vnlE74nztBEjp3eC0wKBgQDV2GeJV028RW3b/QyP3Gwmax2+cKLR9PKR
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  nJnmO5bxAT0nQ3xuJEAqMIss/Rfb/macWc2N/6CWJCRT6a2vgy6xBW+bqG6RdQMB
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  xEZXFZl+sSKhXPkc5Wjb4lQ14YWyRPrTjMlwez3k4UolIJhJmwl+D7OkMRrOUERO
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  EtUvc7odCwKBgBi+nhdZKWXveM7B5N3uzXBKmmRz3MpPdC/yDtcwJ8u8msUpTv4R
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  JxQNrd0bsIqBli0YBmFLYEMg+BwjAee7vXeDFq+HCTv6XMva2RsNryCO4yD3I359
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  XfE6DJzB8ZOUgv4Dvluie3TB2Y6ZQV/p+LGt7G13yG4hvofyJYvlg3RPAoGAcjDg
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  +OH5zLN2eqah8qBN0CYa9/rFt0AJ19+7/smLTJ7QvQq4g0gwS1couplcCEnNGWiK
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  72y1n/ckvvplmPeAE19HveMvR9UoCeV5ej86fACy8V/oVpnaaLBvL2aCMjPLjPP9
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  DWeCIZp8MV86cvOrGfngf6kJG2qZTueXl4NAuwkCgYEArKkhlZVXjwBoVvtHYmN2
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  o+F6cGMlRJTLhNc391WApsgDZfTZSdeJsBsvvzS/Nc0burrufJg0wYioTlpReSy4
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  ohhtprnQQAddfjHP7rh2LGt+irFzhdXXQ1ybGaGM9D764KUNCXLuwdly0vzXU4HU
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  q5sGxGrC1RECGB5Zwx2S2ZY=
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                  -----END PRIVATE KEY-----</span>                  
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: version
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>type</span>: STRICT_DNS
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>load_assignment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cluster_name</span>: version
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>endpoints</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>lb_endpoints</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>endpoint</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>address</span>: version_v1
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>endpoint</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>address</span>: version_v2
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>admin</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>address</span>: <span style=color:#bd93f9>0.0.0.0</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>8001</span>
+</span></span></code></pre></div><p>我们通过下述案例来演示 Envoy Proxy 转发流量功能，从 <a href=https://github.com/tanjunchen/cloud-native-travel>https://github.com/tanjunchen/cloud-native-travel</a> 仓库中克隆源码。</p><p>步骤1：通过在终端中运行以下命令克隆代码库：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git clone https://github.com/tanjunchen/cloud-native-travel
+</span></span></code></pre></div><p>步骤2：通过运行以下命令进入到 envoy 目录：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> envoy/front-proxy
+</span></span></code></pre></div><p>步骤3：通过运行以下命令，执行 docker compose 启动容器：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  front-proxy git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker compose up -d
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>➜  front-proxy git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                           COMMAND                   CREATED          STATUS          PORTS                                         NAMES
+</span></span><span style=display:flex><span>2fbd74958af8   tanjunchen/version:v1           <span style=color:#f1fa8c>&#34;./goapp&#34;</span>                 <span style=color:#bd93f9>16</span> seconds ago   Up <span style=color:#bd93f9>14</span> seconds   9000/tcp                                      front-proxy-version_v1-1
+</span></span><span style=display:flex><span>f1f60cce7a87   envoyproxy/envoy:v1.26.4        <span style=color:#f1fa8c>&#34;/docker-entrypoint.…&#34;</span>   <span style=color:#bd93f9>16</span> seconds ago   Up <span style=color:#bd93f9>14</span> seconds   0.0.0.0:8000-8001-&gt;8000-8001/tcp, 10000/tcp   front-proxy-front-envoy-1
+</span></span><span style=display:flex><span>b70aafcac384   tanjunchen/version:v2           <span style=color:#f1fa8c>&#34;./goapp&#34;</span>                 <span style=color:#bd93f9>16</span> seconds ago   Up <span style=color:#bd93f9>14</span> seconds   9000/tcp                                      front-proxy-version_v2-1
+</span></span></code></pre></div><p>步骤4：等待容器启动并就绪后，执行以下命令，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  front-proxy git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -k https://localhost:8000/version
+</span></span><span style=display:flex><span>v1
+</span></span><span style=display:flex><span>➜  front-proxy git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -k https://localhost:8000/version
+</span></span><span style=display:flex><span>v2
+</span></span><span style=display:flex><span>➜  front-proxy git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -k https://localhost:8000/version
+</span></span><span style=display:flex><span>v1
+</span></span><span style=display:flex><span>➜  front-proxy git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -k https://localhost:8000/version
+</span></span><span style=display:flex><span>v2
+</span></span></code></pre></div><p>步骤5：查看上述响应值，Envoy 轮询随机返回 v1 与 v2，符合预期。</p><h2 id=envoy-jaeger-tracing>Envoy Jaeger Tracing</h2><p>当应用程序是分布式，并且请求可能跨越多个服务，这时很难理解网络中发生了什么。此刻，Tracing 是帮助开发人员了解不同服务如何相互通信的一个重要功能。我们本次示例演示 Envoy Tracing 功能，Envoy 配置如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>static_resources</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>listeners</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>address</span>: <span style=color:#bd93f9>0.0.0.0</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>8000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>traffic_direction</span>: OUTBOUND
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>filter_chains</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>generate_request_id</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>tracing</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>provider</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>name</span>: envoy.tracers.zipkin
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.config.trace.v3.ZipkinConfig
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>collector_cluster</span>: jaeger
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>collector_endpoint</span>: <span style=color:#f1fa8c>&#34;/api/v2/spans&#34;</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>shared_span_context</span>: <span style=color:#ff79c6>false</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>collector_endpoint_version</span>: HTTP_JSON
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>codec_type</span>: AUTO
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>stat_prefix</span>: ingress_http
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>route_config</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: local_route
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>virtual_hosts</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: backend
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>domains</span>:
+</span></span><span style=display:flex><span>              - <span style=color:#f1fa8c>&#34;*&#34;</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>              - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>cluster</span>: service1
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>decorator</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>operation</span>: checkAvailability
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>http_filters</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>use_remote_address</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: service1
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>type</span>: STRICT_DNS
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>load_assignment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cluster_name</span>: service1
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>endpoints</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>lb_endpoints</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>endpoint</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>address</span>: service1
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>8000</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: jaeger
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>type</span>: STRICT_DNS
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>load_assignment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cluster_name</span>: jaeger
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>endpoints</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>lb_endpoints</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>endpoint</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>address</span>: jaeger
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>9411</span>
+</span></span></code></pre></div><p>本案例提供的配置文件演示了如何在 Envoy 中启用 Zipkin 跟踪器。在该示例中，Envoy 充当前端代理并侦听端口 8000。traffic_direction 字段表示它是一个出站侦听器。tracing 字段已启用，并且将使用收集器的配置信息启用 Zipkin 跟踪器。收集器集群指定为 “jaeger”，收集器端点（endpoint）指定为 “/api/v2/span”，shared_span_context 字段设置为 false，表示 span 上下文不会在服务之间传播。在 virtual_hosts 下指定路由配置，decorator 字段用于设置跨度中的操作名称，在本例中，decorator 设置为 “checkAvailability”。use_remote_address 字段设置为 true，表示 Envoy 应该使用客户端的 IP 地址来确定请求的源地址。
+集群（cluster）中定义了不同的后端服务及其关联的（endpoint）。在本例中，只有一个名为 service1 的后端服务，load_assignment 字段设置了（endpoint），端点被定义为 service1:8000。</p><p>总体而言，该配置文件使 Envoy 能够使用 Zipkin 跟踪器捕获跟踪信息，并在服务之间传播调用上下文。开发人员可以使用这些信息深入了解不同服务的通信方式，并调试其分布式应用程序中的问题，总体流程如下所示：</p><p><img src=/images/2022-06-11-istio-packet-02/3.svg alt></p><p>步骤1：进入到 ”envoy/jaeger“ 目录：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> envoy/jaeger/
+</span></span></code></pre></div><p>步骤2：运行以下命令启动 docker 容器：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  jaeger git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker psdocker compose up -d
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>➜  jaeger git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                           COMMAND                   CREATED         STATUS                   PORTS                                                                               NAMES
+</span></span><span style=display:flex><span>bd6650e1ce77   jaeger-front-envoy              <span style=color:#f1fa8c>&#34;/docker-entrypoint.…&#34;</span>   <span style=color:#bd93f9>2</span> minutes ago   Up <span style=color:#bd93f9>2</span> minutes             0.0.0.0:8000-&gt;8000/tcp, 10000/tcp                                                   jaeger-front-envoy-1
+</span></span><span style=display:flex><span>e3557ab6a981   jaeger-service1                 <span style=color:#f1fa8c>&#34;/usr/local/bin/star…&#34;</span>   <span style=color:#bd93f9>2</span> minutes ago   Up <span style=color:#bd93f9>2</span> minutes <span style=color:#ff79c6>(</span>healthy<span style=color:#ff79c6>)</span>                                                                                       jaeger-service1-1
+</span></span><span style=display:flex><span>2e4d3ea57dcb   jaeger-service2                 <span style=color:#f1fa8c>&#34;/usr/local/bin/star…&#34;</span>   <span style=color:#bd93f9>2</span> minutes ago   Up <span style=color:#bd93f9>2</span> minutes <span style=color:#ff79c6>(</span>healthy<span style=color:#ff79c6>)</span>                                                                                       jaeger-service2-1
+</span></span><span style=display:flex><span>a072154fa8ca   jaeger-jaeger                   <span style=color:#f1fa8c>&#34;/go/bin/all-in-one-…&#34;</span>   <span style=color:#bd93f9>2</span> minutes ago   Up <span style=color:#bd93f9>2</span> minutes             5775/udp, 5778/tcp, 14250/tcp, 6831-6832/udp, 14268/tcp, 0.0.0.0:10000-&gt;16686/tcp   jaeger-jaeger-1
+</span></span></code></pre></div><p>步骤3：在浏览器中打开 http://localhost:8000/trace/1。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Hello from behind Envoy <span style=color:#ff79c6>(</span>service 1<span style=color:#ff79c6>)</span>! hostname e3557ab6a981 resolved 192.168.0.3
+</span></span></code></pre></div><p>步骤4：刷新页面或者通过以下命令产生一些流量。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  jaeger git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl http://localhost:8000/trace/1
+</span></span><span style=display:flex><span>Hello from behind Envoy <span style=color:#ff79c6>(</span>service 1<span style=color:#ff79c6>)</span>! hostname e3557ab6a981 resolved 192.168.0.3
+</span></span><span style=display:flex><span>➜  jaeger git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl http://localhost:8000/trace/1
+</span></span><span style=display:flex><span>Hello from behind Envoy <span style=color:#ff79c6>(</span>service 1<span style=color:#ff79c6>)</span>! hostname e3557ab6a981 resolved 192.168.0.3
+</span></span><span style=display:flex><span>➜  jaeger git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl http://localhost:8000/trace/1
+</span></span><span style=display:flex><span>Hello from behind Envoy <span style=color:#ff79c6>(</span>service 1<span style=color:#ff79c6>)</span>! hostname e3557ab6a981 resolved 192.168.0.3
+</span></span></code></pre></div><p>步骤5：在浏览器中打开 http://localhost:10000/search 并且访问 Jaeger 的搜索页面。</p><p>步骤6：在 Jaeger 搜索页面中，从下拉菜单中选择“ front proxy” 服务，然后点击 “Find Traces” 按钮。</p><p><img src=/images/2022-06-11-istio-packet-02/4.png alt></p><p>步骤7：查看 http://localhost:8000/trace/1 详细信息，并探索 Envoy 的分布式跟踪功能。</p><p><img src=/images/2022-06-11-istio-packet-02/5.png alt></p><p><img src=/images/2022-06-11-istio-packet-02/6.png alt></p><p>Envoy Tracing 最重要的是它将 trace 数据传送到 Jaeger 集群。
+然而，为了实现 tracing，应用程序在调用其他服务时必须传递 Envoy 生成的 trace header。
+在测试应用程序中，service1 在对 service2 进行调用时传递了 header，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span>TRACE_HEADERS_TO_PROPAGATE <span style=color:#ff79c6>=</span> [
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-Ot-Span-Context&#39;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-Request-Id&#39;</span>,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># Zipkin headers</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-B3-TraceId&#39;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-B3-SpanId&#39;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-B3-ParentSpanId&#39;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-B3-Sampled&#39;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#39;X-B3-Flags&#39;</span>,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># Jaeger header (for native client)</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;uber-trace-id&#34;</span>,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># SkyWalking headers.</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;sw8&#34;</span>
+</span></span><span style=display:flex><span>]
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>if</span> service_type <span style=color:#ff79c6>==</span> <span style=color:#f1fa8c>&#34;trace&#34;</span> <span style=color:#ff79c6>and</span> <span style=color:#8be9fd;font-style:italic>int</span>(service_name) <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>1</span>:
+</span></span><span style=display:flex><span>        <span style=color:#6272a4># call service 2 from service 1</span>
+</span></span><span style=display:flex><span>        headers <span style=color:#ff79c6>=</span> {}
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>for</span> header <span style=color:#ff79c6>in</span> TRACE_HEADERS_TO_PROPAGATE:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>if</span> header <span style=color:#ff79c6>in</span> request<span style=color:#ff79c6>.</span>headers:
+</span></span><span style=display:flex><span>                headers[header] <span style=color:#ff79c6>=</span> request<span style=color:#ff79c6>.</span>headers[header]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>async</span> <span style=color:#ff79c6>with</span> aiohttp<span style=color:#ff79c6>.</span>ClientSession() <span style=color:#ff79c6>as</span> session:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>async</span> <span style=color:#ff79c6>with</span> session<span style=color:#ff79c6>.</span>get(<span style=color:#f1fa8c>&#34;http://localhost:9000/trace/2&#34;</span>, headers<span style=color:#ff79c6>=</span>headers) <span style=color:#ff79c6>as</span> resp:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>pass</span>
+</span></span></code></pre></div><h2 id=envoy-udp-proxy>Envoy UDP Proxy</h2><p><img src=/images/2022-06-11-istio-packet-02/7.svg alt></p><p>Envoy 中的用户数据报协议（UDP）示例简单演示了如何使用 Envoy 代理 UDP 流量。该示例包括侦听端口 5005 上的 UDP 流量的上游服务器和侦听端口 10000 上的 UDP 通信并将其代理到上游服务器的 Envoy 代理。此外，Envoy 在端口 10001 上提供了一个端点（endpoint），用于提供UDP 流量的统计信息。此示例演示了 Envoy 不仅能够用于处理 HTTP 流量，还用于处理 UDP 流量。Envoy 配置如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>static_resources</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>listeners</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: listener_0
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>protocol</span>: UDP
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>address</span>: <span style=color:#bd93f9>0.0.0.0</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>10000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>listener_filters</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>name</span>: envoy.filters.udp_listener.udp_proxy
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.UdpProxyConfig
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>stat_prefix</span>: service
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>matcher</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>on_no_match</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>action</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>name</span>: route
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/envoy.extensions.filters.udp.udp_proxy.v3.Route
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>cluster</span>: service_udp
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: service_udp
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>type</span>: STRICT_DNS
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>lb_policy</span>: ROUND_ROBIN
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>load_assignment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cluster_name</span>: service_udp
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>endpoints</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>lb_endpoints</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>endpoint</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>address</span>: service-udp
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>5005</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>admin</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>address</span>: <span style=color:#bd93f9>0.0.0.0</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>10001</span>
+</span></span></code></pre></div><p>步骤1：进入到 ”envoy/udp“ 目录：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> envoy/udp
+</span></span></code></pre></div><p>步骤2：运行以下命令启动 docker 容器，启动 Envoy 和 端口为 5005 的上游服务器：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker-compose up -d
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                           COMMAND                   CREATED         STATUS         PORTS                                                           NAMES
+</span></span><span style=display:flex><span>70c9b8412b12   udp-testing                     <span style=color:#f1fa8c>&#34;/docker-entrypoint.…&#34;</span>   <span style=color:#bd93f9>5</span> seconds ago   Up <span style=color:#bd93f9>3</span> seconds   10000/tcp, 0.0.0.0:10000-&gt;10000/udp, 0.0.0.0:10001-&gt;10001/tcp   udp-testing-1
+</span></span><span style=display:flex><span>19add082ed4e   udp-service-udp                 <span style=color:#f1fa8c>&#34;python -u /udpliste…&#34;</span>   <span style=color:#bd93f9>5</span> seconds ago   Up <span style=color:#bd93f9>3</span> seconds   5005/tcp, 5005/udp                                              udp-service-udp-1
+</span></span></code></pre></div><p>步骤3：发送 UDP 消息将数据包发送到上游服务器，运行以下命令：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span><span style=color:#8be9fd;font-style:italic>echo</span> -n OLEH | nc -u -w1 127.0.0.1 <span style=color:#bd93f9>10000</span>
+</span></span><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span><span style=color:#8be9fd;font-style:italic>echo</span> -n OLEH | nc -4u -w1 127.0.0.1 <span style=color:#bd93f9>10000</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker compose logs service-udp
+</span></span><span style=display:flex><span>udp-service-udp-1  | Listening on UDP port <span style=color:#bd93f9>5005</span>
+</span></span><span style=display:flex><span>udp-service-udp-1  | HELO
+</span></span><span style=display:flex><span>udp-service-udp-1  | HELO
+</span></span><span style=display:flex><span>udp-service-udp-1  | OLEH
+</span></span></code></pre></div><p>步骤4：查看 Envoy admin UDP 统计数据：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -s http://127.0.0.1:10001/stats | grep udp | grep -v <span style=color:#f1fa8c>&#34;\: 0&#34;</span>
+</span></span><span style=display:flex><span>➜  udp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -s http://127.0.0.1:10001/stats | grep udp | grep -v <span style=color:#f1fa8c>&#34;\: 0&#34;</span>
+</span></span><span style=display:flex><span>cluster.service_udp.default.total_match_count: <span style=color:#bd93f9>52</span>
+</span></span><span style=display:flex><span>cluster.service_udp.max_host_weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>cluster.service_udp.membership_change: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>cluster.service_udp.membership_healthy: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>cluster.service_udp.membership_total: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>cluster.service_udp.udp.sess_tx_datagrams: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>cluster.service_udp.update_attempt: <span style=color:#bd93f9>52</span>
+</span></span><span style=display:flex><span>cluster.service_udp.update_no_rebuild: <span style=color:#bd93f9>51</span>
+</span></span><span style=display:flex><span>cluster.service_udp.update_success: <span style=color:#bd93f9>52</span>
+</span></span><span style=display:flex><span>cluster.service_udp.upstream_cx_tx_bytes_total: <span style=color:#bd93f9>12</span>
+</span></span><span style=display:flex><span>udp.service.downstream_sess_rx_bytes: <span style=color:#bd93f9>12</span>
+</span></span><span style=display:flex><span>udp.service.downstream_sess_rx_datagrams: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>udp.service.downstream_sess_total: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>udp.service.idle_timeout: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>cluster.service_udp.upstream_cx_connect_ms: No recorded values
+</span></span><span style=display:flex><span>cluster.service_udp.upstream_cx_length_ms: No recorded values
+</span></span></code></pre></div><h2 id=动态-xds>动态 XDS</h2><p>Envoy XDS 是 Istio 的核心功能，它为基于微服务的应用程序提供流量管理、安全性和可观察性等功能。
+Envoy XDS 允许 Istio 动态修改 Envoy sidecar 配置。Envoy XDS 如何工作的原理流程图如下所示：</p><p><img src=/images/2022-06-11-istio-packet-02/8.svg alt></p><ol><li>配置服务器充当 Envoy 代理在服务网格中路由流量所需的所有配置信息的集中存储库。</li><li>配置服务器通过 XDS（发现服务）协议向 Envoy 代理提供动态配置更新，XDS 协议使用 gRPC 来实现控制平面和数据平面之间的通信。</li><li>当将新服务添加到服务网格或更新现有服务时，配置服务器会向 Envoy 代理发送新的配置。</li><li>Envoy 代理应用新的配置更新，并开始根据新规则路由流量。</li><li>配置服务器还可以向 Envoy 提供健康检查信息，这使 Envoy 能够仅将流量路由到服务的健康实例。</li><li>通过这种方式，控制平面和数据平面一起工作，在服务网格中提供动态服务发现和路由。</li></ol><p>接下来给大家演示下 Envoy XDS 示例，Envoy 配置文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>node</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>cluster</span>: test-cluster
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>id</span>: test-id
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>dynamic_resources</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ads_config</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>api_type</span>: GRPC
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>transport_api_version</span>: V3
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>grpc_services</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>envoy_grpc</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>cluster_name</span>: xds_cluster
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>cds_config</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>resource_api_version</span>: V3
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>ads</span>: {}
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>lds_config</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>resource_api_version</span>: V3
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>ads</span>: {}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static_resources</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>clusters</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>type</span>: STRICT_DNS
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>typed_extension_protocol_options</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>envoy.extensions.upstreams.http.v3.HttpProtocolOptions</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>explicit_http_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>http2_protocol_options</span>: {}
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: xds_cluster
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>load_assignment</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cluster_name</span>: xds_cluster
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>endpoints</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>lb_endpoints</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>endpoint</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>address</span>: go-control-plane
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>18000</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>admin</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>address</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>socket_address</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>address</span>: <span style=color:#bd93f9>0.0.0.0</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>port_value</span>: <span style=color:#bd93f9>19000</span>
+</span></span></code></pre></div><p>步骤1：进入到 ”envoy/dynamic-config-cp“ 目录：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> envoy/dynamic-config-cp
+</span></span></code></pre></div><p>步骤2：运行以下命令启动 docker 容器，启动代理容器以及两个上游 HTTP echo 服务器 service1 和 service2。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker-compose up -d proxy
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                           COMMAND                   CREATED          STATUS          PORTS                                                NAMES
+</span></span><span style=display:flex><span>bd329d6b9f2e   dynamic-config-cp-proxy         <span style=color:#f1fa8c>&#34;/docker-entrypoint.…&#34;</span>   <span style=color:#bd93f9>15</span> seconds ago   Up <span style=color:#bd93f9>13</span> seconds   0.0.0.0:10000-&gt;10000/tcp, 0.0.0.0:19000-&gt;19000/tcp   dynamic-config-cp-proxy-1
+</span></span><span style=display:flex><span>8c596816f819   dynamic-config-cp-service2      <span style=color:#f1fa8c>&#34;/bin/echo-server&#34;</span>        <span style=color:#bd93f9>15</span> seconds ago   Up <span style=color:#bd93f9>13</span> seconds   8080/tcp                                             dynamic-config-cp-service2-1
+</span></span><span style=display:flex><span>8bbf2404e57b   dynamic-config-cp-service1      <span style=color:#f1fa8c>&#34;/bin/echo-server&#34;</span>        <span style=color:#bd93f9>15</span> seconds ago   Up <span style=color:#bd93f9>13</span> seconds   8080/tcp                                             dynamic-config-cp-service1-1
+</span></span></code></pre></div><p>步骤3：由于控制平面尚未启动，10000 端口上此时应该没有任何响应值，运行以下命令进行检查。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -s http://localhost:19000/config_dump | jq <span style=color:#f1fa8c>&#39;.configs[1].static_clusters&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;cluster&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;@type&#34;</span>: <span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.config.cluster.v3.Cluster&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;xds_cluster&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;STRICT_DNS&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;load_assignment&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;cluster_name&#34;</span>: <span style=color:#f1fa8c>&#34;xds_cluster&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;endpoints&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;lb_endpoints&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                <span style=color:#f1fa8c>&#34;endpoint&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                  <span style=color:#f1fa8c>&#34;address&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                    <span style=color:#f1fa8c>&#34;socket_address&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                      <span style=color:#f1fa8c>&#34;address&#34;</span>: <span style=color:#f1fa8c>&#34;go-control-plane&#34;</span>,
+</span></span><span style=display:flex><span>                      <span style=color:#f1fa8c>&#34;port_value&#34;</span>: <span style=color:#bd93f9>18000</span>
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;typed_extension_protocol_options&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;envoy.extensions.upstreams.http.v3.HttpProtocolOptions&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;@type&#34;</span>: <span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;explicit_http_config&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;http2_protocol_options&#34;</span>: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>]</span>
+</span></span></code></pre></div><p>步骤4：执行以下命令检查是否配置 dynamic_active_cluster：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -s http://localhost:19000/config_dump  | jq <span style=color:#f1fa8c>&#39;.configs[1].dynamic_active_clusters&#39;</span>
+</span></span><span style=display:flex><span>null
+</span></span></code></pre></div><p>步骤5：通过运行以下命令来启动控制平面。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker compose up --build -d go-control-plane
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                                COMMAND                   CREATED          STATUS                    PORTS                                                NAMES
+</span></span><span style=display:flex><span>a552cba2a194   dynamic-config-cp-go-control-plane   <span style=color:#f1fa8c>&#34;/usr/local/bin/exam…&#34;</span>   <span style=color:#bd93f9>32</span> seconds ago   Up <span style=color:#bd93f9>30</span> seconds <span style=color:#ff79c6>(</span>healthy<span style=color:#ff79c6>)</span>                                                        dynamic-config-cp-go-control-plane-1
+</span></span></code></pre></div><p>步骤6：一旦控制平面启动并处于健康状态，执行以下操作验证 service1 是否就绪：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl http://localhost:10000
+</span></span><span style=display:flex><span>Request served by service1
+</span></span><span style=display:flex><span>GET / HTTP/1.1
+</span></span><span style=display:flex><span>Host: localhost:10000
+</span></span><span style=display:flex><span>Accept: */*
+</span></span><span style=display:flex><span>User-Agent: curl/7.79.1
+</span></span><span style=display:flex><span>X-Envoy-Expected-Rq-Timeout-Ms: <span style=color:#bd93f9>15000</span>
+</span></span><span style=display:flex><span>X-Forwarded-Proto: http
+</span></span><span style=display:flex><span>X-Request-Id: dc1704d2-c39b-41c2-888f-4fa5f36a862b
+</span></span></code></pre></div><p>步骤7：要验证动态配置是否有效，请运行以下命令进行验证，输出显示 example_proxy_cluster 指向 service1，并且版本为 1，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  dynamic-config-cp git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> curl -s http://localhost:19000/config_dump | jq <span style=color:#f1fa8c>&#39;.configs[1].dynamic_active_clusters&#39;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;version_info&#34;</span>: <span style=color:#f1fa8c>&#34;1&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;cluster&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;@type&#34;</span>: <span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.config.cluster.v3.Cluster&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;example_proxy_cluster&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;LOGICAL_DNS&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;connect_timeout&#34;</span>: <span style=color:#f1fa8c>&#34;5s&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;dns_lookup_family&#34;</span>: <span style=color:#f1fa8c>&#34;V4_ONLY&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;load_assignment&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;cluster_name&#34;</span>: <span style=color:#f1fa8c>&#34;example_proxy_cluster&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;endpoints&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;lb_endpoints&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                <span style=color:#f1fa8c>&#34;endpoint&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                  <span style=color:#f1fa8c>&#34;address&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                    <span style=color:#f1fa8c>&#34;socket_address&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                      <span style=color:#f1fa8c>&#34;address&#34;</span>: <span style=color:#f1fa8c>&#34;service1&#34;</span>,
+</span></span><span style=display:flex><span>                      <span style=color:#f1fa8c>&#34;port_value&#34;</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>]</span>
+</span></span></code></pre></div><h1 id=总结>总结</h1><p>在本文中，我们讨论与学习了 Envoy Proxy 实现原理和Jaeger Tracing、UDP 协议、动态 XDS 示例等功能。</p><h1 id=参考>参考</h1><ol><li><a href=https://www.envoyproxy.io/docs/envoy/latest/>https://www.envoyproxy.io/docs/envoy/latest/</a></li><li><a href=https://github.com/envoyproxy/envoy>https://github.com/envoyproxy/envoy</a></li><li><a href=https://istio.io/latest/docs/>https://istio.io/latest/docs/</a></li><li><a href=https://www.jaegertracing.io/docs/>https://www.jaegertracing.io/docs/</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2022-06-01-istio-packet-01/ data-toggle=tooltip data-placement=top title="Istio 中数据包的生命周期 - 上篇">&larr;
+Previous Post</a></li><li class=next><a href=/post/2022-10-28-istio-history/ data-toggle=tooltip data-placement=top title="说道说道 Istio">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
