@@ -1,0 +1,354 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="使用 Istio 过程中遇到的常见问题与解决方法（三）"><meta property="og:title" content="使用 Istio 过程中遇到的常见问题与解决方法（三）"><meta property="twitter:title" content="使用 Istio 过程中遇到的常见问题与解决方法（三）"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>使用 Istio 过程中遇到的常见问题与解决方法（三） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2022-11-20-istio-questions-3/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/istio title=istio>istio</a></div><h1>使用 Istio 过程中遇到的常见问题与解决方法（三）</h1><h2 class=subheading>在使用 Istio 过程中可能会碰到的棘手问题以及常见排查手段与解决方法</h2><span class=meta>Posted by
+陈谭军
+on
+Sunday, November 20, 2022
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2022-11-20-istio-questions-3/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 4191 字</span>，阅读约 <span class=more-meta>9 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=istio-常见问题列表>Istio 常见问题列表</h1><ol><li>Istio 实用安装选项</li><li>多集群（跨集群应用）service 访问不通</li><li>gRPC 服务导致请求负载不均衡问题</li><li>Sidecar Inbound 与 OutBound 生效范围问题</li><li>Sidecar（优雅终止）服务停止导致请求失败问题</li><li>应用未监听 0.0.0.0 导致连接异常</li><li>Smart DNS 相关问题</li><li>virtualservice 路由匹配顺序问题</li><li>http Header 大写导致基于 Header 会话保持不生效</li><li>支持 websocket 协议</li></ol><h2 id=istio-实用安装选项>Istio 实用安装选项</h2><p>我们在使用 Istio 时，如果想体验某个功能，往往需要在安装 Istio 时开启特性开关，因此我列举 Istio 安装时动态可选项，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>istioctl install <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --set <span style=color:#8be9fd;font-style:italic>profile</span><span style=color:#ff79c6>=</span>demo <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --set meshConfig.accessLogFile<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;/dev/stdout&#34;</span>  <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --set meshConfig.accessLogEncoding<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;JSON&#34;</span>  <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --set values.global.proxy.privileged<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --set values.global.proxy.enableCoreDump<span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>true</span> <span style=color:#f1fa8c>\ </span>
+</span></span><span style=display:flex><span>  --set values.global.hub<span style=color:#ff79c6>=</span>docker.io/istio 
+</span></span></code></pre></div><p>使用 <code>Istio Operator</code> 安装 Istio 使用的 Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: install.istio.io/v1alpha1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: IstioOperator
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: test-iop
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>profile</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>values</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>global</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>istioNamespace</span>: istio-system
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>logging</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>level</span>: default:info <span style=color:#6272a4># 日志级别</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>meshConfig</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>enableTracing</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>accessLogFile</span>: /dev/stdout <span style=color:#6272a4># 输出到终端</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>enableAutoMtls</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>accessLogFormat</span>: <span style=color:#f1fa8c>&#34;[%START_TIME%] %REQ(X-META-PROTOCOL-APPLICATION-PROTOCOL)%
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>     %RESPONSE_CODE% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% \&#34;%UPSTREAM_TRANSPORT_FAILURE_REASON%\&#34;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>     %BYTES_RECEIVED% %BYTES_SENT% %DURATION% \&#34;%REQ(X-FORWARDED-FOR)%\&#34; \&#34;%REQ(X-REQUEST-ID)%\&#34; %UPSTREAM_CLUSTER%
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>     %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %ROUTE_NAME%\n&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>defaultConfig</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>holdApplicationUntilProxyStarts</span>: <span style=color:#ff79c6>true</span>  <span style=color:#6272a4># sidecar 启动顺序</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>proxyMetadata</span>:
+</span></span><span style=display:flex><span>        <span style=color:#6272a4># Enable basic DNS proxying</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ISTIO_META_DNS_CAPTURE</span>: <span style=color:#f1fa8c>&#39;true&#39;</span>
+</span></span><span style=display:flex><span>        <span style=color:#6272a4># Enable automatic address allocation</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ISTIO_META_DNS_AUTO_ALLOCATE</span>: <span style=color:#f1fa8c>&#39;true&#39;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>tracing</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>sampling</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>zipkin</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>address</span>: zipkin.istio-system:9411
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>components</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>pilot</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hub</span>: docker.io/istio  <span style=color:#6272a4># hub</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>tag</span>: <span style=color:#bd93f9>1.16.5</span>   <span style=color:#6272a4># tag</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>enabled</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>k8s</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>overlays</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: istiod
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>patches</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>path</span>: spec.template.spec.hostNetwork
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>value</span>: <span style=color:#ff79c6>true</span>   <span style=color:#6272a4># istiod 使用主机模式</span>
+</span></span></code></pre></div><p>通过 istioctl 与 istio iop 文件安装 Istio，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 安装</span>
+</span></span><span style=display:flex><span>istioctl install -f test-iop.yaml 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 生成 Kubernetes 文件</span>
+</span></span><span style=display:flex><span>istioctl manifest generate -f test-iop.yaml 
+</span></span></code></pre></div><h2 id=多集群跨集群应用service-访问不通>多集群（跨集群应用）service 访问不通</h2><p><strong>现象</strong>：同一网格实例的多个集群之间通过 service 调用，可能会发现跨集群服务访问不通。</p><p><strong>排查方式1</strong>：可能是 pilot agent 没启用 smart DNS，无法自动解析其它集群的 service 域名，可以通过手动在本集群创建跟远程集群同样的 service 来解决，也可以启用 smart DNS 来自动解析。</p><p><strong>排查方式2</strong>：如果底层容器网络 Pod IP 是互通的（集群 A 与 集群 B Pod 网络底层是互通的，此时不需要东西向网关进行转发），核实本集群与远程集群中的服务与应用是否保持一致。</p><p><strong>排查方式3</strong>：如果底层容器网络 Pod IP 不是互通的，此时需要在集群中安装东西向网关进行转发，我们可以查看东西网关是否有报错日志。</p><p><strong>排查方式4</strong>：查看主集群中的 istiod 纳管远程集群是否成功，主集群是否可以通过 secret 连接到远程集群获取 <code>Endpoint</code> 元数据，istiod 在多集群模式下是否有报错日志。</p><h2 id=grpc-服务导致请求负载不均衡问题>gRPC 服务导致请求负载不均衡问题</h2><p><strong>现象</strong>：在使用 Istio 对 gRPC 协议的服务进行流量控制时，会出现流量负载不均衡的问题。同一个 client（gRPC 协议） 的请求始终只打到同一个 server 的 pod，造成负载不均衡。</p><p><strong>原因</strong>：Istio 支持多种负载均衡策略，包括 ROUND_ROBIN、LEAST_CONN、RANDOM 等，如果配置不正确，可能会导致流量分配不均。gRPC 默认会复用长连接，这可能会导致流量都被路由到同一个 Pod，从而出现负载不均衡的问题。如果只使用普通的 k8s service，gRPC 协议会被当成 tcp 来转发，在连接层面做负载均衡，不会在请求层面做负载均衡。但在 istio 中默认会对 gRPC 的请求进行请求级别的负载均衡，如果发现负载不均衡，通常是 Istio 没有正确配置。要让 gRPC 在 Istio 中实现请求级别负载均衡，能够让 istio 正确识别是 gRPC 协议就行，用 tcp 的话就只能在连接级别进行负载均衡了，请求级别可能就会负载不均衡。</p><p><strong>解决方式</strong>：部署服务的 service 的 port name 以 &ldquo;grpc-&rdquo; 开头定义，让 istio 能够正确识别，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Service
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: grpc
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: grpc-9000 <span style=color:#6272a4># 以 grpc- 开头</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>protocol</span>: TCP
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>targetPort</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: grpc
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>type</span>: ClusterIP
+</span></span></code></pre></div><p>如果使用了 <code>VirtualService</code>，需要使用 http 而不用 tcp，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: grpc
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - default/grpc-gw
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#39;*&#39;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>: <span style=color:#6272a4># 使用 http 不用 tcp</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: grpc.demo.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>weight</span>: <span style=color:#bd93f9>100</span>
+</span></span></code></pre></div><p>如果使用 ingress-gateway 暴露服务，protocal 配置 GRPC 不用 TCP，如下示例：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Gateway
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: grpc-gw
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: istio-ingressgateway
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>istio</span>: ingressgateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>servers</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#f1fa8c>&#39;*&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: grpc-demo-server
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>9000</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>protocol</span>: GRPC <span style=color:#6272a4># 使用 GRPC 不用 TCP</span>
+</span></span></code></pre></div><h1 id=sidecar-inbound-与-outbound-生效范围问题>Sidecar Inbound 与 OutBound 生效范围问题</h1><ol><li>inbound：主要处理进入 Pod 的流量，即从其他服务到达本服务的流量，在这个过程中，sidecar 代理会根据 Istio 的策略进行流量控制、安全认证等操作。</li><li>outbound：主要处理从 Pod 发出的流量，即从本服务到其他服务的流量，在这个过程中，sidecar 代理会根据 Istio 的策略进行流量路由、负载均衡等操作。</li></ol><p>inbound 和 outbound 的主要区别在于处理的流量方向不同，但都是通过 Istio 的策略对流量进行控制。下图展示了 Istio proxy 作为代理在 inbound 和 outbound 所生效的功能列表。</p><p><img src=/images/2022-11-20-istio-questions-3/1.png alt></p><h1 id=sidecar优雅终止服务停止导致请求失败问题>Sidecar（优雅终止）服务停止导致请求失败问题</h1><p><strong>概念</strong>：优雅终止（Graceful Termination）是指在关闭或重启服务时，允许服务完成当前正在处理的请求，而不是立即中断这些请求。这样可以避免因服务突然中断而导致的数据丢失或者系统错误。优雅终止的主要优点是可以保证服务的稳定性和数据的完整性，避免因服务突然中断而导致的问题。但是，优雅终止可能会使得服务的关闭或重启时间变长，因此需要根据实际情况进行权衡。</p><p><strong>现象</strong>：当注入了 Sidecar 的 Pod 开始停止时，它将从服务的 endpoints 列表中被摘除掉，不再转发流量给它，同时 Sidecar 也会收到 SIGTERM 信号，立刻不在接受 inbound 新连接，但会保持存量 inbound 连接继续处理，outbound 方向流量仍然可以正常发起。缺省情况下，在收到 SIGTERM 后，Istio-Agent 会在等待 <code>terminationDrainDuration</code> 5S 后退出，由于 Envoy 是 Istio-agent 的子进程，Envoy 也会随之退出，上述现象可能会存在以下问题：</p><ol><li>若停止的服务提供的接口耗时本身较长，存量 inbound 请求可能无法被处理完就被断开。</li><li>若停止的过程需要调用其它服务(比如服务后置任务)，outbound 请求可能会调用失败。</li></ol><p><strong>解决方式</strong>：设置 <code>EXIT_ON_ZERO_ACTIVE_CONNECTIONS</code> （Istio 1.12+）设置为 <code>true</code>。<br>当 <code>EXIT_ON_ZERO_ACTIVE_CONNECTIONS</code> 设置为 <code>true</code> 时，如果一个 Pod 中没有活跃的连接，那么 Istio 的 sidecar 代理会自动退出，从而允许 Kubernetes 删除该 Pod。这样可以确保在 Pod 删除时，不会中断任何活跃的连接，从而实现优雅地终止服务。该参数就是等待 Sidecar 退出时完成剩余请求，在响应时，也通知客户端去关闭长连接（对于 HTTP1 响应 &ldquo;Connection: close&rdquo; header，对于 HTTP2 响应 GOAWAY 这个帧）。</p><p>核心源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// 配置了 EXIT_ON_ZERO_ACTIVE_CONNECTIONS 为 true 时，检查活动链接为 0 后再退出
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#ff79c6>if</span> a.exitOnZeroActiveConnections {
+</span></span><span style=display:flex><span>    log.<span style=color:#50fa7b>Infof</span>(<span style=color:#f1fa8c>&#34;Agent draining proxy for %v, then waiting for active connections to terminate...&#34;</span>, a.minDrainDuration)
+</span></span><span style=display:flex><span>    time.<span style=color:#50fa7b>Sleep</span>(a.minDrainDuration)
+</span></span><span style=display:flex><span>    log.<span style=color:#50fa7b>Infof</span>(<span style=color:#f1fa8c>&#34;Checking for active connections...&#34;</span>)
+</span></span><span style=display:flex><span>    ticker <span style=color:#ff79c6>:=</span> time.<span style=color:#50fa7b>NewTicker</span>(activeConnectionCheckDelay)
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span> <span style=color:#ff79c6>range</span> ticker.C {
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>if</span> a.<span style=color:#50fa7b>activeProxyConnections</span>() <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>            log.<span style=color:#50fa7b>Info</span>(<span style=color:#f1fa8c>&#34;There are no more active connections. terminating proxy...&#34;</span>)
+</span></span><span style=display:flex><span>            a.abortCh <span style=color:#ff79c6>&lt;-</span> errAbort
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>} <span style=color:#ff79c6>else</span> { <span style=color:#6272a4>// 缺省情况下等待 5S 即退出
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    log.<span style=color:#50fa7b>Infof</span>(<span style=color:#f1fa8c>&#34;Graceful termination period is %v, starting...&#34;</span>, a.terminationDrainDuration)
+</span></span><span style=display:flex><span>    time.<span style=color:#50fa7b>Sleep</span>(a.terminationDrainDuration)
+</span></span><span style=display:flex><span>    log.<span style=color:#50fa7b>Infof</span>(<span style=color:#f1fa8c>&#34;Graceful termination period complete, terminating remaining proxies.&#34;</span>)
+</span></span><span style=display:flex><span>    a.abortCh <span style=color:#ff79c6>&lt;-</span> errAbort
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>如何开启该参数配置，可以修改全局配置的 istio configmap，在 <code>defaultConfig.proxyMetadata</code> 加上下面的环境变量：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>meshConfig</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>defaultConfig</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>proxyMetadata</span>: 
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>EXIT_ON_ZERO_ACTIVE_CONNECTIONS</span>: <span style=color:#f1fa8c>&#39;true&#39;</span>
+</span></span></code></pre></div><p>我们也可以单独给某个 Pod 添加下面的注解：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: sleep
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: sleep
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>proxy.istio.io/config</span>: |<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          proxyMetadata: 
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            EXIT_ON_ZERO_ACTIVE_CONNECTIONS: &#39;true&#39; </span>          
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: sleep
+</span></span><span style=display:flex><span>  ...
+</span></span></code></pre></div><p><strong>解决方式</strong>：通过 Kubernetes 的 Pod 生命周期管理来实现。在 Kubernetes 中，可以通过定义 Pod 的生命周期钩子来管理容器的启动和停止过程。preStop 钩子可以在容器停止前执行一些操作，这就可以用来实现 Istio Proxy 的优雅退出。Istio Proxy 实现优雅退出的示例 Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Pod
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: myapp
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: test
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>image</span>: myapp
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>lifecycle</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>preStop</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>exec</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>command</span>: [<span style=color:#f1fa8c>&#34;/bin/sh&#34;</span>,<span style=color:#f1fa8c>&#34;-c&#34;</span>,<span style=color:#f1fa8c>&#34;curl -XPOST localhost:15000/quitquitquit&#34;</span>]
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: istio-proxy
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>image</span>: docker.io/istio/proxyv2:1.16.5
+</span></span></code></pre></div><p><strong>解决方式</strong>：配置 pod 的 <code>terminationGracePeriodSeconds</code> 参数。
+Kubernetes 在向 pod 发出 SIGTERM 信号后，会缺省等待 30S，如果 30S 后 pod 还未结束，Kubernetes 会向 pod 发出 SIGKILL 信号。
+因此，即使我们设置了 <code>EXIT_ON_ZERO_ACTIVE_CONNECTIONS</code> 为 true，Envoy 最多也只能等待 30S。如果应用退出需要等待更长时间，则需要设置 pod 的 <code>terminationGracePeriodSeconds</code> 参数，将 <code>terminationGracePeriodSeconds</code> 从缺省的 30S 延长到了 60S 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: sleep
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: sleep
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: sleep
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>image</span>: busybox:latest
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: sleep
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>terminationGracePeriodSeconds</span>: <span style=color:#bd93f9>60</span>
+</span></span></code></pre></div><h1 id=应用未监听-0000-导致连接异常>应用未监听 0.0.0.0 导致连接异常</h1><p>通常，一个应用程序将同时绑定 lo 与 eth0。然而，具有内部逻辑的应用程序（如管理接口）可能会选择仅绑定到 lo 网络设备，以避免来自其他 pod 的访问。
+此外，一些应用程序，通常是有状态的应用程序，选择只绑定到 eth0。在 istio 1.10 之前的版本，istio 要求应用提供服务时监听 <code>0.0.0.0</code>，因为 127 和 Pod IP 地址都被 envoy 占用了，有些应用启动时没有监听 <code>0.0.0.0</code> 或 <code>::</code> 的地址，就会导致无法正常通信。</p><p>在 Istio 1.10 之前的版本，Envoy 代理与应用程序在同一个 pod 中运行，绑定到 eth0 接口，并将所有入站流量重定向到 lo 接口，如下图所示：
+<img src=/images/2022-11-20-istio-questions-3/2.svg alt></p><p>上述行为与 Kubernetes 标准的使用方式不同，将可能导致以下异常行为：</p><ol><li>仅绑定到 lo 网络设备的应用程序将接收来自其他 pod 的流量，否则这是不允许的（某些应用程序是禁止此行为的）。</li><li>仅绑定到 eth0 网络设备的应用程序将不会接收流量。</li></ol><p>同时绑定 lo 网络设备和 eth0 网络设备的应用程序（这是典型的）不会受到影响。从 Istio 1.10 开始，proxy 模式被更改为与 Kubernetes 中的标准行为一致，如下所示：
+<img src=/images/2022-11-20-istio-questions-3/3.svg alt></p><p>在这里，我们可以看到代理不再将流量重定向到 lo 接口，而是将其转发到监听 eth0 的应用程序。因此，Kubernetes 的标准行为得到了保留，这一变化使 Istio 更接近其目标，即成为一个可在零配置的情况下处理现有工作负载的透明代理。此外，它还避免了只绑定到 lo 的应用程序的安全暴露问题。有关 proxy 劫持模式的变化请参考文档<a href=https://istio.io/latest/blog/2021/upcoming-networking-changes/>Upcoming networking changes in Istio 1.10</a>。</p><h1 id=启用-smart-dns-后域名解析失败>启用 Smart DNS 后域名解析失败</h1><p><strong>现象</strong>：启用 Istio 的 Smart DNS (智能 DNS) 后，有些 Pod DNS 解析失败。具体情况可以参考<a href=https://github.com/istio/istio/issues/31295>Smart DNS Proxy is breaking dns resolution on latest alpine-based image</a>。（Istio 1.9.2 以下版本存在该问题，高版本不会存在该问题）。目前主要的问题是：</p><ol><li>基于 alpine 镜像的容器内解析 dns 失败。</li><li>gRPC 服务解析 dns 失败。</li></ol><p><strong>原因</strong>：Smart DNS 初期实现存在一些问题，响应的 DNS 数据包格式跟普通 DNS 有些差别，走底层库 glibc 解析没问题，但使用其它 dns 客户端可能就会失败，如下所示：</p><ol><li>alpine 镜像底层库使用 <code>musl libc</code>，解析行为跟 glibc 有些不一样，导致大部分应用解析失败。</li><li>基于 c/c++ 的 gRPC 框架的服务，dns 解析默认使用 c-ares 库，导致部分场景会解析失败。</li></ol><p><strong>解决方式1</strong>：升级 Istio 版本。</p><p><strong>解决方式2</strong>：替换 alpine 镜像到其他使用 glibc 底层库的镜像；c/c++ 的 gRPC 服务，指定 <code>GRPC_DNS_RESOLVER</code> 环境变量为 native，走底层库解析，不走默认的 c-ares 库。</p><h1 id=virtualservice-路由匹配顺序问题>virtualservice 路由匹配顺序问题</h1><p><strong>现象</strong>：如下所示的 <code>VirtualService</code> 路由规则，将会导致第二个规则一直无法生效。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: test
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - default/nginx-gw
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#39;nginx&#39;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>prefix</span>: /nginx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>rewrite</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>uri</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>prefix</span>: /nginx-2
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>rewrite</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>uri</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx-2.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>Istio 是按顺序匹配，不像 nginx 使用最长前缀匹配。这里使用 prefix 进行匹配，第一个是 <code>/nginx</code>，表示只要访问路径前缀含 <code>/nginx</code> 就会转发到第一个服务，由于第二个匹配路径 <code>/nginx-2</code> 本身也属于带 <code>nginx</code> 的前缀，所以永远不会转发到第二个匹配路径的服务。</p><p><strong>解决方式</strong>：调整匹配顺序，如果前缀有包含关系，越长的放在越前面，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: test
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - default/nginx-gw
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#39;nginx&#39;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>prefix</span>: /nginx-2
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>rewrite</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>uri</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx-2.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>prefix</span>: /nginx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>rewrite</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>uri</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>也可以使用正则匹配，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: test
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - default/nginx-gw
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#39;nginx&#39;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: <span style=color:#f1fa8c>&#34;/nginx(/.*)?&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>rewrite</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>uri</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: <span style=color:#f1fa8c>&#34;/usrv-2(/.*)?&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>rewrite</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>uri</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx-2.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><h1 id=http-header-大写导致-virtualservice-会话保持不生效>http Header 大写导致 virtualservice 会话保持不生效</h1><p><strong>现象</strong>：在 <code>DestinationRule</code> 中配置了基于 <code>http header</code> 的会话保持，但是策略没有生效，测试 Yaml 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: header
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: nginx.default.svc.cluster.local
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>loadBalancer</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>consistentHash</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>httpHeaderName</span>: User
+</span></span></code></pre></div><p>测试请求传入相同 Header (如 User: test) 却被转发了不同后端服务。</p><p><strong>原因</strong>：Envoy 默认把 header 转成小写，导致路由规则没有生效。</p><p><strong>解决方式</strong>：定义 <code>httpHeaderName</code> 时改成小写，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: header
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: nginx.default.svc.cluster.local
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>loadBalancer</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>consistentHash</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>httpHeaderName</span>: user
+</span></span></code></pre></div><h1 id=支持-websocket-协议>支持 websocket 协议</h1><p><strong>现象</strong>：业务使用的是 websocket 协议，那么在 istio 中如何配置 websocket 呢？</p><p>我们可以参考 Istio 社区中官网示例 <a href=https://github.com/istio/istio/tree/master/samples/websockets>Tornado - Demo Websockets App</a>。</p><p>参考示例的 Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Gateway
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: tornado-gateway
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>istio</span>: ingressgateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>servers</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: http
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>protocol</span>: HTTP
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#f1fa8c>&#34;*&#34;</span>
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: tornado
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#34;*&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - tornado-gateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>uri</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>prefix</span>: /
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: tornado
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>weight</span>: <span style=color:#bd93f9>100</span>
+</span></span></code></pre></div><hr><ul class=pager><li class=previous><a href=/post/2022-11-19-istio-questions-2/ data-toggle=tooltip data-placement=top title="使用 Istio 过程中遇到的常见问题与解决方法（二）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2022-12-01-cilium-1.12-release/ data-toggle=tooltip data-placement=top title="Cilium 1.12 GA：发布 Cilium Service Mesh 和企业级 Kubernetes 新功能">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
