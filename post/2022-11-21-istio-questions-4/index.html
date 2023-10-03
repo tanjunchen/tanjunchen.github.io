@@ -1,0 +1,345 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="使用 Istio 过程中遇到的常见问题与解决方法（四）"><meta property="og:title" content="使用 Istio 过程中遇到的常见问题与解决方法（四）"><meta property="twitter:title" content="使用 Istio 过程中遇到的常见问题与解决方法（四）"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>使用 Istio 过程中遇到的常见问题与解决方法（四） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2022-11-21-istio-questions-4/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/istio title=istio>istio</a></div><h1>使用 Istio 过程中遇到的常见问题与解决方法（四）</h1><h2 class=subheading>在使用 Istio 过程中可能会碰到的棘手问题以及常见排查手段与解决方法</h2><span class=meta>Posted by
+陈谭军
+on
+Monday, November 21, 2022
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2022-11-21-istio-questions-4/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 5913 字</span>，阅读约 <span class=more-meta>12 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>服务网格为微服务提供了一个服务通信的基础设施层，统一为上层的微服务提供了服务发现、负载均衡、重试、熔断等基础通信功能，以及服务路由、灰度发布等高级治理功能。如果我们在使用服务网格系统出现问题的话，我们如何才能快速定位问题以及处理呢？</p><p><a href=https://tanjunchen.github.io/post/2022-11-18-istio-questions-1/>使用 Istio 过程中遇到的常见问题与解决方法（一）</a><br><a href=https://tanjunchen.github.io/post/2022-11-19-istio-questions-2/>使用 Istio 过程中遇到的常见问题与解决方法（二）</a><br><a href=https://tanjunchen.github.io/post/2022-11-20-istio-questions-3/>使用 Istio 过程中遇到的常见问题与解决方法（三）</a><br><a href=https://tanjunchen.github.io/post/2022-11-21-istio-questions-4/>使用 Istio 过程中遇到的常见问题与解决方法（四）</a></p><h1 id=istio-常见问题列表>Istio 常见问题列表</h1><ol><li>使用 corsPolicy 解决跨域问题</li><li>如何使用 iphash 进行负载均衡</li><li>动态设置 max_body_size</li><li>动态调整 header 数量与大小</li><li>利用 VirtualService 实现基于 Header 的授权策略</li><li>Istio 最好使用默认路由</li><li>服务 service 显式指定协议</li><li>Istio 控制平面与数据平面性能优化</li><li>headless service 相关问题</li><li>EnvoyFilter 与 lua 实现动态路由</li></ol><h1 id=使用-corspolicy-解决跨域问题>使用 corsPolicy 解决跨域问题</h1><p><strong>背景</strong>：使用 istio 后我们可以将跨域问题转交给 istio 处理，业务与 web 框架不需要关心。本文介绍如何利用 Istio 配置来支持 HTTP 跨域。</p><p>跨源资源共享（<a href=https://developer.mozilla.org/zh-CN/docs/Glossary/CORS>CORS</a>，或通俗地译为跨域资源共享）是一种基于 <a href=https://developer.mozilla.org/zh-CN/docs/Glossary/HTTP>HTTP</a> 头的机制，该机制通过允许服务器标示除了它自己以外的其他<a href=https://developer.mozilla.org/zh-CN/docs/Glossary/Origin>源</a>（域、协议或端口），使得浏览器允许这些源访问加载自己的资源。跨源资源共享还通过一种机制来检查服务器是否会允许要发送的真实请求，该机制通过浏览器发起一个到服务器托管的跨源资源的“预检”请求。在预检中，浏览器发送的头中标示有 HTTP 方法和真实请求中会用到的头。</p><p><strong>解决方式</strong>：Istio 可以通过配置 <code>VirtualService</code> 的 <code>corsPolicy</code> 字段来实现跨域，示例的 Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - default/nginx-gw
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - nginx.example.com
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>corsPolicy</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>allowOrigins</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>regex</span>: <span style=color:#f1fa8c>&#34;https?://nginx.example.com&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: nginx.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>关于 <code>corsPolicy</code> 配置，参考 Istio <a href=https://istio.io/latest/docs/reference/config/networking/virtual-service/#CorsPolicy>CorsPolicy 官方文档</a>。</p><p><strong>注意事项</strong>：控制请求能否跨域的逻辑核心在于浏览器，浏览器通过判断请求响应的 <code>access-control-allow-origin</code> header 中是否有当前页面的地址，来判断该跨域请求能否被允许。通常一些 web 框架支持跨域主要是为响应自动加上 <code>access-control-allow-origin</code> header，istio 也是同样的道理。</p><h1 id=如何使用-iphash-进行负载均衡>如何使用 iphash 进行负载均衡</h1><p>在 Istio 中，可以通过配置 DestinationRule 来实现基于源 IP 的负载均衡，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: bookinfo-ratings
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: ratings.default.svc.cluster.local
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>loadBalancer</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>consistentHash</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>httpHeaderName</span>: X-Forwarded-For
+</span></span></code></pre></div><p>需要注意的是，这种方法需要你的服务能够正确地设置 <code>X-Forwarded-For</code> 头部。如果你的服务位于一个支持这个头部的代理后面（例如 Istio 的 Ingress Gateway 或者 Envoy 代理），那么这个头部应该已经被正确地设置。如果你的服务直接接收来自客户端的请求，那么你可能需要在你的服务中添加代码来设置这个头部。此外，这种方法只适用于 HTTP 和 HTTP/2 的流量。对于 TCP 和 UDP 的流量，Istio 目前还不支持基于源 IP 的负载均衡。</p><p>配置 DestinationRule，指定 useSourceIp 负载均衡策略，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: bookinfo-ratings
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: ratings.prod.svc.cluster.local
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>loadBalancer</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>consistentHash</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>useSourceIp</span>: <span style=color:#ff79c6>true</span>
+</span></span></code></pre></div><p>更多的详细配置，可以参考官方文档 <a href=https://istio.io/latest/docs/reference/config/networking/destination-rule/#LoadBalancerSettings-ConsistentHashLB>LoadBalancerSettings-ConsistentHashLB</a>。</p><h1 id=动态设置-envoy-max_body_size>动态设置 Envoy max_body_size</h1><p><strong>背景</strong>：Nginx 可以通过 <code>client_max_body_size</code> 参数来设置 HTTP 请求体的最大大小。这个参数定义了服务器接受的请求体的最大字节数，超过这个值的请求将被拒绝并返回 <code>413 Request Entity Too Large</code> 错误，如下所示：</p><pre tabindex=0><code class=language-conf data-lang=conf>server {
+    ...
+    client_max_body_size 50m;
+    ...
+    location /upload {
+        client_max_body_size 200m;
+        ...
+    }
+}
+</code></pre><p>在 istio 中如何调整客户端的最大请求大小，我们通过 EnvoyFilter 调整 Envoy 能够接受的最大请求大小，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: limit-request-size
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>workloadSelector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>istio</span>: ingressgateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: HTTP_FILTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: GATEWAY
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: envoy.http_connection_manager
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: INSERT_BEFORE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: envoy.buffer
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/udpa.type.v1.TypedStruct
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>maxRequestBytes</span>: <span style=color:#bd93f9>104857600</span>  <span style=color:#6272a4># 100 MB</span>
+</span></span></code></pre></div><h1 id=动态调整-header-数量与大小>动态调整 header 数量与大小</h1><p>Envoy 默认会限制请求与响应的 header 数量与大小（默认 100 左右），有相关的 Issue，参见 <a href=https://github.com/envoyproxy/envoy/issues/13827>How to set max resposne header limit</a>。</p><p>Envoy 报错日志，可能如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>2022-12-31T14:24:27.501043Z     debug   envoy client    <span style=color:#ff79c6>[</span>C4689<span style=color:#ff79c6>]</span> protocol error: headers size exceeds limit
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>2023-01-01T13:29:07.022454Z	info	xdsproxy	connected to upstream XDS server: istiod.istio-system.svc:15012
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>2023-01-01T13:29:06.662Z<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;- - HTTP/1.1&#34;</span> <span style=color:#bd93f9>431</span> DPE http1.headers_too_large - <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>31</span> <span style=color:#bd93f9>0</span> - <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#f1fa8c>&#34;-&#34;</span> - - 192.168.36.246:5000 10.1.2.24:56864 - -
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>not supporting multiuse
+</span></span><span style=display:flex><span>HTTP/1.1 <span style=color:#bd93f9>431</span> Request Header Fields Too Large
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>2023-01-02T07:40:56.459Z<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;GET /headers HTTP/1.1&#34;</span> <span style=color:#bd93f9>502</span> UPE upstream_reset_before_response_started<span style=color:#ff79c6>{</span>protocol_error<span style=color:#ff79c6>}</span> - <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>87</span> <span style=color:#bd93f9>7</span> - <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#f1fa8c>&#34;curl/7.87.0-DEV&#34;</span> <span style=color:#f1fa8c>&#34;3b7caa0b-9626-946d-b4ef-36c5ddf790bc&#34;</span> <span style=color:#f1fa8c>&#34;helloworld:5000&#34;</span> <span style=color:#f1fa8c>&#34;10.1.2.42:5000&#34;</span> inbound|5000<span style=color:#ff79c6>||</span> 127.0.0.6:44336 10.1.2.42:5000 172.16.9.8:44408 - default
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>upstream connect error or disconnect/reset before headers. reset reason: connection failure, transport failure reason: delayed connect error: <span style=color:#bd93f9>111</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>2023-01-01T14:47:26.285Z<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;GET /hello HTTP/1.1&#34;</span> <span style=color:#bd93f9>503</span> UF upstream_reset_before_response_started<span style=color:#ff79c6>{</span>connection_failure,delayed_connect_error:_111<span style=color:#ff79c6>}</span> - <span style=color:#f1fa8c>&#34;delayed_connect_error:_111&#34;</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>145</span> <span style=color:#bd93f9>0</span> - <span style=color:#f1fa8c>&#34;-&#34;</span> <span style=color:#f1fa8c>&#34;curl/7.87.0-DEV&#34;</span> <span style=color:#f1fa8c>&#34;35e82df8-1262-9404-8ad2-303b8613955c&#34;</span> <span style=color:#f1fa8c>&#34;helloworld:5000&#34;</span> <span style=color:#f1fa8c>&#34;10.1.2.31:5000&#34;</span> inbound|5000<span style=color:#ff79c6>||</span> - 10.1.2.31:5000 172.16.9.8:5067 - default
+</span></span></code></pre></div><p><strong>解决方式</strong>：通过 envoyfilter 调大 header 的最大限制值，测试 Yaml 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: max-header
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: NETWORK_FILTER <span style=color:#6272a4># http connection manager is a filter in Envoy</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: ANY
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;envoy.http_connection_manager&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: MERGE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span><span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>max_request_headers_kb</span>: <span style=color:#bd93f9>80</span>   <span style=color:#6272a4># 80</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>common_http_protocol_options</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>max_headers_count</span>: <span style=color:#bd93f9>200</span>  <span style=color:#6272a4># 200 条</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: CLUSTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: ANY
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cluster</span>: 
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>portNumber</span>: <span style=color:#bd93f9>5000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: MERGE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>: <span style=color:#6272a4># cluster specification</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>common_http_protocol_options</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>max_headers_count</span>: <span style=color:#bd93f9>300</span>  <span style=color:#6272a4># cluster 300</span>
+</span></span></code></pre></div><p><strong>最佳实践</strong>：优化业务 header 数目，header 为啥需要这么多，会超过 Envoy (默认值 100) 限制值。</p><h1 id=使用-virtualservice-实现基于-header-的授权>使用 VirtualService 实现基于 Header 的授权</h1><p><strong>背景</strong>：业务在 http header 或 grpc metadata 中会有用户信息，想通过 Istio 来实现基于 header 来对请求进行授权，如果不满足条件则返回 401。但是 <code>AuthorizationPolicy</code> CRD 不支持基于 Header 的授权，但是我们可以使用 <code>VirtualService headers</code> 来实现业务基于 header 的授权功能。测试使用的 Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: helloworld
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - helloworld
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: whitelist
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>end-user</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>regex</span>: <span style=color:#f1fa8c>&#34;istio&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: helloworld
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>5000</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: default
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: helloworld
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>5000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>fault</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>abort</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>percentage</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>value</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>httpStatus</span>: <span style=color:#bd93f9>401</span>
+</span></span></code></pre></div><h1 id=istio-最好使用默认路由>Istio 最好使用默认路由</h1><p>默认路由规则可以指定流量应该如何在服务间路由，例如，将所有流量路由到某个特定的版本，或者根据某种比例将流量分配到不同的版本。使用默认路由的场景如下所示：</p><ol><li>蓝绿部署：创建两个版本的服务（例如，蓝色版本和绿色版本），然后通过修改默认路由规则来切换流量。</li><li>金丝雀发布：创建一个新的服务版本（例如，金丝雀版本），然后通过修改默认路由规则来逐渐将流量引入新版本。</li><li>故障注入和恢复：通过修改默认路由规则来模拟故障，然后观察服务如何响应，当故障解决后，可以恢复默认路由规则。</li><li>A/B 测试：创建两个或更多版本的服务，然后通过修改默认路由规则来将不同的用户流量路由到不同的版本。</li></ol><p>刚开始我们的服务没有多个版本，也没配置 vs，只有一个 deployment 和一个 svc，如果我们要为业务配置默认流量策略，可以直接创建 dr，给对应 host 设置 trafficPolicy，yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: reviews
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: reviews
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>connectionPool</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>tcp</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>maxConnections</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>subsets</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: v1
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>version</span>: v1
+</span></span></code></pre></div><p>虽然 <code>DestinationRule</code> CRD 的 subsets 可以设置 <code>trafficPolicy</code>，但 subsets 下设置的不是默认策略，而且 vs 没有明确指定路由到对应 subset 时，即便我们的服务只有一个版本，istio 也不会使用 subset 下指定的 <code>trafficPolicy</code>，所以我们最好创建一个全局默认 <code>trafficPolicy</code>。</p><p><strong>最佳实践</strong>：我们最好为服务不同版本创建 <code>DestinationRule</code> 与 <code>VirtualService</code>，后续就可以对不同版本配置不同的流量策略，测试 yaml 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: reviews
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - reviews
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: reviews
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>subset</span>: v1
+</span></span></code></pre></div><h1 id=给-service-显式指定协议>给 Service 显式指定协议</h1><p><strong>背景</strong>：协议嗅探，也称为协议自动检测，是网络设备或软件自动确定数据包所使用协议的过程。例如，它可以自动区分一个数据包是使用 HTTP 还是 HTTPS 协议。协议嗅探的主要目的是简化网络配置和管理。如果没有协议嗅探，网络管理员可能需要为每种协议单独配置和管理网络设备或软件。通过协议嗅探，网络设备或软件可以自动处理多种协议，从而减少了配置和管理的复杂性。</p><p>协议嗅探的好处包括：</p><ul><li>简化配置：不需要为每种协议单独配置网络设备或软件。</li><li>提高灵活性：可以自动处理新的或未知的协议。</li><li>提高效率：可以根据协议的特性进行优化，例如，对 HTTP 流量进行缓存或压缩。</li></ul><p>然而，协议嗅探也有一些潜在的问题：</p><ul><li>安全风险：如果协议嗅探被误用，可能会导致数据泄露或被篡改。例如，如果一个网络设备错误地将 HTTPS 流量识别为 HTTP 流量，可能会导致敏感信息被明文传输。</li><li>性能开销：协议嗅探需要对每个数据包进行深度分析，这可能会增加处理延迟和 CPU 使用率。</li><li>不准确：协议嗅探可能会误识别协议，特别是对于使用非标准端口或封装在其他协议中的协议。</li></ul><p>istio 需要知道服务提供什么七层协议，从而来为其配置相应协议的 filter chain 链，通常最好是显式声明协议，如果没有声明，istio 会自动开启协议探测，这个探测能力比较有限，导致无法正常工作。那么如何给 service 指定显示协议呢？这可以通过两种方式进行配置：</p><ul><li>按端口名称格式，<code>name: &lt;protocol>[-&lt;suffix>]</code>。</li><li>在 Kubernetes 1.18+ 版本中，通过 <code>appProtocol</code> 字段 <code>appProtocol: &lt;protocol></code>。</li></ul><p><strong>解决方式</strong>：给集群内 Service 指定 port name 时加上相应的前缀或指定 appProtocol 字段可以显示声明协议，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Service
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>8080</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: rpc
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>appProtocol</span>: grpc <span style=color:#6272a4># 指定该端口提供 grpc 协议的服务</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: http-web <span style=color:#6272a4># 指定该端口提供 http 协议的服务</span>
+</span></span></code></pre></div><p><strong>解决方式</strong>：使用 ServiceEntry 指定协议，如果外部服务可以被 DNS 解析，可以定义 ServiceEntry 来指定协议，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: ServiceEntry
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: external-mysql
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - mysql.test.com
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>location</span>: MESH_EXTERNAL
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>number</span>: <span style=color:#bd93f9>3306</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: mysql
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>protocol</span>: mysql
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resolution</span>: DNS
+</span></span></code></pre></div><p>更多的详细信息可参考 <a href=https://istio.io/latest/docs/ops/configuration/traffic-management/protocol-selection/#explicit-protocol-selection>explicit-protocol-selection</a>。</p><h1 id=istio-控制平面与数据平面性能优化>Istio 控制平面与数据平面性能优化</h1><p><strong>背景</strong>：Istio 提供了丰富的功能，如流量管理、安全、观察性等，这些功能的实现和运行可能会对系统性能产生一定影响，因此，对 Istio 进行优化是必要的。如下所示：</p><ul><li>提高性能：随着 Envoy 代理的注入，会增加网络延迟和 CPU 使用率。</li><li>提升可扩展性：随着服务数量的增加，Istio 的控制平面可能会面临更大的压力。</li><li>降低资源消耗：Istio 的运行需要消耗一定的系统资源，如 CPU、内存。</li><li>提高稳定性：优化可以帮助减少 Istio 的错误和故障，提高系统的稳定性。</li></ul><p>我们可以分别从控制平面与数据平面对 Istio 进行优化。</p><p><strong>控制平面</strong>：</p><ul><li>使用参数 <code>ENABLE_ENHANCED_RESOURCE_SCOPING</code> 开启 Istio CRD 隔离，<code>meshConfig.discoverySelectors</code> 将限制 CRD 配置（如 Gateway、VirtualService、DestinationRule、Ingress 等）生效范围，在 Kubernetes 集群中新建多个 Istio 网格实例，此选项很有意思，能够实现 CRD 隔离，明显降低 Pilot 对 CPU、内存资源消耗，从而进一步提升控制平面的稳定性。</li><li>解决 Kubernetes 元数据（尤其是大规模集群）对 Istiod 造成的 CPU、内存等资源消耗倍增问题。相关代码提交可参考 <a href=https://github.com/istio/istio/commit/3fcff36ddc5e69ed20755c6385d44eb1a0e50505#diff-f5208fc7b2fabcbd75534363ac5e26deaccd9cefcf75e92722407c9a96de3f68>Istio Bump k8s dependencies to v0.26</a>。要求 Istio 1.14+。Istiod 内存能在大规模集群下降低 40% 以上，主要是不使用 Kubernetes 无效的字段 <code>unused field</code>。</li><li>使用选择性服务发现 <a href=https://istio.io/v1.14/blog/2021/discovery-selectors/>discovery selectors</a>。要求 Istio 1.10+，选择性服务发现可以减少 Envoy 代理需要处理的服务信息的数量。</li><li>istiod 保持负载均衡。Envoy 提供了一个定时重连的机制。通过这个机制，Envoy 会定期断开与 Istiod 的连接，然后重新建立连接。在重新建立连接时，Envoy 会根据负载均衡策略选择一个 Istiod 实例，这样就可以保证 Istiod 的负载均衡。</li><li>istiod HPA。istiod 是无状态的，我们可以通过 HPA 进行负载均衡，提升 istiod 稳定性。</li><li>xDS 按需下发。增量 xDS 推送，可参见 <a href="https://docs.google.com/document/d/1hwC81_jS8qARBDcDE6VTxx6fA31In96xAZWqfwnKhpQ/edit#heading=h.xw1gqgyqs5b">Delta xDS</a>。<a href=https://github.com/slime-io/slime>Slime</a> 是网易开源的一个项目，它实现了 Istio 的 lazyXDS 机制。</li><li>关闭 mtls。如果认为集群内是安全的，可以关掉 mtls 以提升性能。示例的 yaml 文件如下所示：</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: security.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: PeerAuthentication
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># istiod 所在的命名空间</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>mtls</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>mode</span>: DISABLE
+</span></span></code></pre></div><ul><li>控制平面参数优化。开启 <code>PILOT_ENABLE_EDS_DEBOUNCE</code> 参数，默认情况下，此功能已启用。<code>PILOT_PUSH_THROTTLE</code>(默认值 100ms)，限制允许的并发推送数量，在较大的机器上，可以增加此限制以实现更快的推送。<code>PILOT_DEBOUNCE_AFTER</code>(默认值 100ms)、<code>PILOT_DEBOUNCE_MAX</code>(默认值 10s)，用于防抖动的配置/注册事件的延迟，其他参数优化。</li></ul><p><strong>数据平面</strong>：</p><ul><li>使用 Sidecar CRD 以减少 Envoy 资源消耗。istio 默认会下发 mesh 内集群服务所有可能需要的信息，以便让 sidecar 能够与任意 workload 通信。当集群规模较大，可能就会导致 sidecar 占用资源非常高。如果只有部分 namespace 使用了 istio，而网格中的服务与其它 namespace 没有注入 sidecar 的服务没有多大关系，可以配置下 istio 的 Sidecar 资源，避免 sidecar 加载大量无用 outbound 的规则。如下所示：</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Sidecar
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>egress</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#f1fa8c>&#34;dev/*&#34;</span>
+</span></span><span style=display:flex><span>    - <span style=color:#f1fa8c>&#34;test/*&#34;</span>
+</span></span></code></pre></div><p><strong>说明</strong>：定义在 istio-system 命名空间下表示 Sidecar 配置针对所有 namespace 生效。在 egress 的 hosts 配置中加入开启了 sidecar 自动注入的 namespace，表示只下发跟这些 namespace 相关的服务给 Envoy。更多详细信息可参考 <a href=https://istio.io/latest/docs/reference/config/networking/sidecar/>Istio sidecar 官方文档</a>。</p><h1 id=headless-service-相关问题>headless service 相关问题</h1><p><strong>现象</strong>：<strong>对于 <code>headless service</code> 服务，pod 重建后访问失败</strong>。client 通过 <code>headless service</code>（有状态服务） 访问 server，当 server 的 pod 因为某种原因重启后，client 访问 server 会失败，从 access log 中可以看到 <code>response_flags</code> 标志是 <code>UF,URX</code>。Istio（1.5及以下版本）会有该问题。</p><p><strong>原因</strong>：client 通过 dns 解析 <code>headless service</code>，返回其中一个 Pod IP，然后发起请求。envoy 检测到是 <code>headless service</code>，使用 <code>ORIGINAL_DST</code> 进行转发，即不做负载均衡，直接转发到原始的目的 IP。当 <code>headless service</code> 关联的 pod 发生重建后，由于 client 与它的 sidecar (envoy) 是长连接，所以 client 侧的连接并没有断开。client 继续发请求并不会重新解析 dns，而是仍然发请求给之前解析到的旧 Pod IP。由于旧 Pod 已经销毁，Envoy 会返回错误 (503)。客户端并不会因为服务端返回错误而断开连接，后续请求继续发给旧的 Pod IP，重复循环，一直失败。</p><p><strong>解决办法</strong>：升级 istio 到 1.6+，Envoy 在 Upstream 链接断开后会主动断开和 Downstream 的长链接。</p><p><strong>现象</strong>：<strong>对于 <code>headless service</code> 服务，负载均衡策略不生效</strong>。由于 istio 默认对 <code>headless service</code> 进行 passthrough，使用 ORIGINAL_DST 转发，直接转发到原始的目的 IP，因此不会做任何的负载均衡策略，<code>Destinationrule</code> 配置的 <code>trafficPolicy.loadBalancer</code> 不会生效，会话保持 (consistentHash)、地域感知 (localityLbSetting)策略不会生效。</p><p><strong>解决办法</strong>：单独再创建一个 service (非 headless)。</p><p><strong>现象</strong>：<strong>默认的 mtls 策略影响通信</strong>。client (有 sidecar) 通过 <code>headless service</code> 访问 server (无 sidecar)，访问失败，access log 中可以看到 response_flags 为 UF,URX。</p><p><strong>原因</strong>：istio 1.5/1.6 对 <code>headless service</code> 支持有 bug，不管 endpoint 有没有 sidecar，都会使用 mtls，导致没有 sidecar 的 headless 服务(如 redis) 访问被拒绝，更多详情请参考<a href=https://github.com/istio/istio/issues/21964>Istio 1.5 prevents all connection attempts to Redis (headless) service</a>。</p><p><strong>解决办法</strong>：配置 <code>DestinationRule</code> 禁用 <code>mtls</code>，所使用的 Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: redis-disable-mtls
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: redis.default.svc.cluster.local
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tls</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>mode</span>: DISABLE 
+</span></span></code></pre></div><p><strong>解决办法</strong>：升级 istio 到 1.7 及其以上的版本。</p><p><strong>现象</strong>：<strong><code>headless service</code>影响传统微服务通信（注入 sidecar）</strong>。传统服务 (比如 Srping Cloud) 迁移到 istio 后，服务间调用返回 404。</p><p><strong>原因</strong>：<code>headless service</code> 没走 Kubernetes 的服务发现，而是通过注册中心获取服务 IP 地址，然后服务间调用不经过域名解析，直接向获取到的目的 IP 发起调用。由于 istio 的 LDS 会拦截 <code>headless service</code> 中包含的 <code>PodIP+Port</code> 的请求，然后匹配请求 hosts，如果没有 hosts 或者 hosts 中没有这个 <code>PodIP+Port</code> 的 service 域名，就会匹配失败，最后返回 404。</p><p><strong>解决办法</strong>：注册中心不直接注册 Pod IP 地址，而是注册 service 域名；或者客户端请求时带上 hosts (需要改代码)。</p><h1 id=envoyfilter-与-lua-实现动态路由>EnvoyFilter 与 lua 实现动态路由</h1><p><strong>需求</strong>：需要实现一个将服务名和 subset 携带在 http 请求的 header，然后根据这个 header 来实现将服务转发到特定的 istio 服务的 subset。携带 <code>service: test tag: gray</code> 的话，将其路由去 test 的 <code>gray subset</code>。携带 <code>service: test tag: default</code> 的话，将其路由去 test 的 <code>default subset</code>。我可以使用 vs + dr 实现上述需求，Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: VirtualService
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: test
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>gateways</span>:
+</span></span><span style=display:flex><span>  - test-gateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hosts</span>:
+</span></span><span style=display:flex><span>  - test.com
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>http</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>service</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>exact</span>: test
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tag</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>exact</span>: gray
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: test.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>subset</span>: gray
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>response</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>set</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>test</span>: <span style=color:#f1fa8c>&#34;test gray&#34;</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>service</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>exact</span>: test
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>destination</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>host</span>: test.default.svc.cluster.local
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>subset</span>: default
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>response</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>set</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>test</span>: <span style=color:#f1fa8c>&#34;test default&#34;</span>
+</span></span></code></pre></div><p>上述 <code>vs + dr</code> 实现方式配置不够灵活，如果面对几百个服务，配置是个巨大的工作量；不同的namespace要配置不同的规则。那么，我们是不是有其他的实现方式呢？下面我们以 <code>Envoyfilter + Lua</code> 实现上述功能，Yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: test-routing
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>workloadSelector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>istio</span>: ingressgateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: VIRTUAL_HOST
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: GATEWAY
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: ADD
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: dynamic_routing
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>domains</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#39;test.com&#39;</span>
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#39;test.com:*&#39;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>routes</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;path-matching&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>prefix</span>: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>route</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>cluster_header</span>: <span style=color:#f1fa8c>&#34;x-service&#34;</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: HTTP_FILTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: GATEWAY
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;envoy.http_connection_manager&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>subFilter</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;envoy.router&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: INSERT_BEFORE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>       <span style=color:#ff79c6>name</span>: envoy.service-helper
+</span></span><span style=display:flex><span>       <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>         <span style=color:#ff79c6>&#34;@type&#34;: </span><span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua&#34;</span>
+</span></span><span style=display:flex><span>         <span style=color:#ff79c6>inlineCode</span>: |<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          function envoy_on_request(request_handle)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            local headers = request_handle:headers()
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            local mesh_service = headers:get(&#34;service&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            local tag = headers:get(&#34;tag&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            if mesh_service ~= nil then
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>              if tag ~= nil then
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                request_handle:headers():replace(&#34;x-service&#34;, &#34;outbound|80|&#34; .. tag .. &#34;|&#34; .. mesh_service .. &#34;.svc.cluster.local&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>              end
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            end
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          end
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          function envoy_on_response(response_handle)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            response_handle:headers():add(&#34;test&#34;, &#34;from envoy filter response&#34;)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          end</span>          
+</span></span></code></pre></div><p><strong>原理</strong>：设置 route 的 <code>cluster_header</code> 字段为 <code>x-service</code>。从 header 读取 service 和 tag 的值组合出 <code>upstream cluster</code>，并将 <code>x-service</code> header 替换。</p><hr><ul class=pager><li class=previous><a href=/post/2022-11-20-istio-questions-3/ data-toggle=tooltip data-placement=top title="使用 Istio 过程中遇到的常见问题与解决方法（三）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2022-12-01-cilium-1.12-release/ data-toggle=tooltip data-placement=top title="Cilium 1.12 GA：发布 Cilium Service Mesh 和企业级 Kubernetes 新功能">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
