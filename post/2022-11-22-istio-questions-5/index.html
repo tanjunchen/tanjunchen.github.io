@@ -1,0 +1,228 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="使用 Istio 过程中遇到的常见问题与解决方法（五）"><meta property="og:title" content="使用 Istio 过程中遇到的常见问题与解决方法（五）"><meta property="twitter:title" content="使用 Istio 过程中遇到的常见问题与解决方法（五）"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>使用 Istio 过程中遇到的常见问题与解决方法（五） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2022-11-22-istio-questions-5/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/istio title=istio>istio</a></div><h1>使用 Istio 过程中遇到的常见问题与解决方法（五）</h1><h2 class=subheading>在使用 Istio 过程中可能会碰到的棘手问题以及常见排查手段与解决方法</h2><span class=meta>Posted by
+陈谭军
+on
+Tuesday, November 22, 2022
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2022-11-22-istio-questions-5/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 914 字</span>，阅读约 <span class=more-meta>2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>服务网格为微服务提供了一个服务通信的基础设施层，统一为上层的微服务提供了服务发现、负载均衡、重试、熔断等基础通信功能，以及服务路由、灰度发布等高级治理功能。如果我们在使用服务网格系统出现问题的话，我们如何才能快速定位问题以及处理呢？</p><p><a href=https://tanjunchen.github.io/post/2022-11-18-istio-questions-1/>使用 Istio 过程中遇到的常见问题与解决方法（一）</a><br><a href=https://tanjunchen.github.io/post/2022-11-19-istio-questions-2/>使用 Istio 过程中遇到的常见问题与解决方法（二）</a><br><a href=https://tanjunchen.github.io/post/2022-11-20-istio-questions-3/>使用 Istio 过程中遇到的常见问题与解决方法（三）</a><br><a href=https://tanjunchen.github.io/post/2022-11-21-istio-questions-4/>使用 Istio 过程中遇到的常见问题与解决方法（四）</a><br><a href=https://tanjunchen.github.io/post/2022-11-22-istio-questions-5/>使用 Istio 过程中遇到的常见问题与解决方法（五）</a></p><h1 id=istio-常见问题列表>Istio 常见问题列表</h1><h1 id=istio-高频链接>Istio 高频链接</h1><ul><li>Istio 默认使用的端口，见 <a href=https://istio.io/latest/docs/ops/deployment/requirements/#ports-used-by-istio>ports-used-by-istio</a></li><li>Istio 资源注解，见 <a href=https://istio.io/latest/docs/reference/config/annotations/>Resource Annotations</a></li><li><a href=https://istio.io/latest/docs/releases/supported-releases/#support-status-of-istio-releases>Istio 支持的 Kubernetes 版本</a></li><li><a href=https://istio.io/>Istio 官网</a></li><li><a href=https://kubernetes.io/>Kubernetes 官网</a></li><li><a href=https://www.envoyproxy.io/>Envoy 官网</a></li></ul><h1 id=istio-常见的调试技巧方法脚本>Istio 常见的调试技巧、方法、脚本</h1><ul><li>查看 sidecar 证书</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 查看证书</span>
+</span></span><span style=display:flex><span>istioctl proxy-config secret productpage-v1-66756cddfd-shz6l.default
+</span></span><span style=display:flex><span>istioctl proxy-config secret productpage-v1-66756cddfd-shz6l.default -o json
+</span></span><span style=display:flex><span><span style=color:#6272a4># 查看证书</span>
+</span></span><span style=display:flex><span>istioctl proxy-config secret productpage-v1-66756cddfd-shz6l.default -o json | jq <span style=color:#f1fa8c>&#39;[.dynamicActiveSecrets[] | select(.name == &#34;default&#34;)][0].secret.tlsCertificate.certificateChain.inlineBytes&#39;</span> -r | base64 -d | openssl x509 -noout -text
+</span></span></code></pre></div><ul><li>测试服务与 istiod 的连通性</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 测试与 istiod 的连通性</span>
+</span></span><span style=display:flex><span>kubectl -n <span style=color:#8be9fd;font-style:italic>test</span> <span style=color:#8be9fd;font-style:italic>exec</span> test-6fd7477c9d-brqmq -c istio-proxy -- curl -sS istiod.istio-system:15014/debug/endpointz
+</span></span></code></pre></div><ul><li>查看 istio-proxy 指标</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it sleep-cdf8d68bc-t7gq5 -c istio-proxy -- curl localhost:15000/stats
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it sleep-cdf8d68bc-t7gq5 -c istio-proxy -- curl localhost:15000/stats/prometheus
+</span></span></code></pre></div><ul><li>为工作负载取消 sidecar 注入</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>sidecar.istio.io/inject</span>: <span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span></code></pre></div><ul><li>自定义 proxy 参数</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;sidecar.istio.io/proxyCPU&#34;: </span><span style=color:#f1fa8c>&#34;1000m&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;sidecar.istio.io/proxyCPULimit&#34;: </span><span style=color:#f1fa8c>&#34;2&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;sidecar.istio.io/proxyMemory&#34;: </span><span style=color:#f1fa8c>&#34;500Mi&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;sidecar.istio.io/proxyMemoryLimit&#34;: </span><span style=color:#f1fa8c>&#34;2Gi&#34;</span>
+</span></span></code></pre></div><p>更多的注解参考 <a href=https://istio.io/latest/docs/reference/config/annotations/>annotations</a>。</p><ul><li>自定义日志级别</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#6272a4># 可选: trace, debug, info, warning, error, critical, off</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;sidecar.istio.io/logLevel&#34;: </span>debug 
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>&#34;sidecar.istio.io/componentLogLevel&#34;: </span><span style=color:#f1fa8c>&#34;ext_authz:trace,filter:debug&#34;</span>
+</span></span></code></pre></div><p>更多的日志级别调整参考 <a href=https://www.envoyproxy.io/docs/envoy/latest/operations/cli#cmdoption-component-log-level>cmdoption-component-log-level</a>。</p><ul><li>不劫持某些 ip 网段</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>traffic.sidecar.istio.io/excludeOutboundIPRanges</span>: <span style=color:#f1fa8c>&#34;10.10.31.1/32,10.10.31.2/32&#34;</span>
+</span></span></code></pre></div><ul><li>全局禁用 mtls</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: security.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: PeerAuthentication
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: default
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>mtls</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>mode</span>: DISABLE
+</span></span></code></pre></div><ul><li><code>DestinationRule</code> 为某个服务启用地域感知</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1beta1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DestinationRule
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>host</span>: nginx
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>trafficPolicy</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>outlierDetection</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>consecutive5xxErrors</span>: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>interval</span>: 30s
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>baseEjectionTime</span>: 30s
+</span></span></code></pre></div><ul><li>调大 Envoy 默认 header 与请求体大小</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: http-options
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: NETWORK_FILTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: ANY
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;envoy.http_connection_manager&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: MERGE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#34;@type&#34;: </span><span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>max_request_headers_kb</span>: <span style=color:#bd93f9>96</span> <span style=color:#6272a4># 96KB, 请求 header 最大限制</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: HTTP_FILTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>context</span>: GATEWAY
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;envoy.http_connection_manager&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: INSERT_BEFORE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: <span style=color:#f1fa8c>&#34;envoy.filters.http.buffer&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#39;@type&#39;</span>: <span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.extensions.filters.http.buffer.v3.Buffer&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>max_request_bytes</span>: <span style=color:#bd93f9>10485760</span>  <span style=color:#6272a4># 10MB, 请求最大限制</span>
+</span></span></code></pre></div><ul><li>将 Header 全部转为首字母大写</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: http-header-proper-case-words
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># 配置保留 upstream 的 request header 大小写</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: CLUSTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: MERGE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_extension_protocol_options</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>Envoy.extensions.upstreams.http.v3.HttpProtocolOptions</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/Envoy.extensions.upstreams.http.v3.HttpProtocolOptions
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>use_downstream_protocol_config</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>http_protocol_options</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>header_key_format</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>stateful_formatter</span>:
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>name</span>: preserve_case
+</span></span><span style=display:flex><span>                    <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                      <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/Envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># 配置保留收到的 response header 大小写</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>applyTo</span>: NETWORK_FILTER
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: Envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>operation</span>: MERGE
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/Envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>http_protocol_options</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>header_key_format</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>stateful_formatter</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>name</span>: preserve_case
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                  <span style=color:#ff79c6>&#39;@type&#39;</span>: type.googleapis.com/Envoy.extensions.http.header_formatters.preserve_case.v3.PreserveCaseFormatterConfig
+</span></span></code></pre></div><ul><li>为 ingressgateway 启用 gzip 压缩</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: istio-system
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: ingressgateway-gzip
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>workloadSelector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>istio</span>: ingressgateway
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>applyTo</span>: HTTP_FILTER
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>context</span>: GATEWAY
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>name</span>: envoy.filters.network.http_connection_manager
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>subFilter</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>name</span>: envoy.filters.http.router
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>operation</span>: INSERT_BEFORE
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: envoy.filters.http.compressor
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.filters.http.compressor.v3.Compressor
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>response_direction_config</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>common_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>min_content_length</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>content_type</span>:
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;application/javascript&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;application/json&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;application/xhtml+xml&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;image/svg+xml&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;text/css&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;text/html&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;text/plain&#39;</span>
+</span></span><span style=display:flex><span>                  - <span style=color:#f1fa8c>&#39;text/xml&#39;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>compressor_library</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>name</span>: text_optimized
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>&#34;@type&#34;: </span>type.googleapis.com/envoy.extensions.compression.gzip.compressor.v3.Gzip
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>memory_level</span>: <span style=color:#bd93f9>9</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>window_bits</span>: <span style=color:#bd93f9>15</span>
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>compression_level</span>: BEST_COMPRESSION
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>compression_strategy</span>: DEFAULT_STRATEGY
+</span></span></code></pre></div><ul><li>给指定 workload 出流量加上 header（全链路灰度）</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: networking.istio.io/v1alpha3
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: EnvoyFilter
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: label-outbound-traffic
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>workloadSelector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: productpage
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>configPatches</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>applyTo</span>: HTTP_FILTER
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>match</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>context</span>: SIDECAR_OUTBOUND
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>listener</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>filterChain</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>name</span>: envoy.http_connection_manager
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>subFilter</span>:
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>name</span>: envoy.router
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>patch</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>operation</span>: INSERT_BEFORE
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>value</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: envoy.lua
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>typed_config</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>&#34;@type&#34;: </span><span style=color:#f1fa8c>&#34;type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>inlineCode</span>: |<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>              function envoy_on_request(request_handle)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>                request_handle:headers():add(&#34;app-custom&#34;, os.getenv(&#34;ISTIO_META_WORKLOAD_NAME&#34;))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>              end</span>              
+</span></span></code></pre></div><h1 id=envoy-常见异常状态码汇总>Envoy 常见异常状态码汇总</h1><h1 id=如何编译-istio-二进制与相关镜像>如何编译 Istio 二进制与相关镜像</h1><h1 id=解读-istio-代码目录与核心功能>解读 Istio 代码目录与核心功能</h1><hr><ul class=pager><li class=previous><a href=/post/2022-11-21-istio-questions-4/ data-toggle=tooltip data-placement=top title="使用 Istio 过程中遇到的常见问题与解决方法（四）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2022-12-01-cilium-1.12-release/ data-toggle=tooltip data-placement=top title="Cilium 1.12 GA：发布 Cilium Service Mesh 和企业级 Kubernetes 新功能">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
