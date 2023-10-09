@@ -17,13 +17,209 @@ Sunday, January 15, 2023
 <span class=old-visitors-count style=display:none></span>
 <span class=leancloud-visitors-count></span></span>
 <script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
-<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 573 字</span>，阅读约 <span class=more-meta>2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 1468 字</span>，阅读约 <span class=more-meta>3 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
 col-md-10 col-md-offset-1
 post-container"><p>云原生时代是指企业和开发者开始广泛采用云原生技术的时期。云原生技术是一种软件开发方法，它鼓励将应用作为小型、独立的服务来构建和部署，这些服务可以在公有云、私有云或混合云环境中运行。云原生时代的到来，使得企业和开发者可以更快、更灵活地开发和部署应用，更好地利用云计算资源，更有效地响应业务需求。如果我们在云原生时代遇见问题，我们如何才能快速定位问题以及处理呢？下面是一些常见排查手段、工具、脚本等。</p><h1 id=常见脚本与-yaml-文件>常见脚本与 yaml 文件</h1><h1 id=容器常见命令>容器常见命令</h1><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 等待 sidecar 就绪</span>
-</span></span><span style=display:flex><span><span style=color:#ff79c6>while</span> <span style=color:#ff79c6>[[</span> <span style=color:#f1fa8c>\&#34;</span><span style=color:#ff79c6>$(</span>curl -s -o /dev/null -w <span style=color:#f1fa8c>&#39;&#39;</span>%<span style=color:#ff79c6>{</span>http_code<span style=color:#ff79c6>}</span><span style=color:#f1fa8c>&#39;&#39;</span> localhost:15020/healthz/ready<span style=color:#ff79c6>)</span><span style=color:#f1fa8c>\&#34;</span> !<span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;200&#39;</span> <span style=color:#ff79c6>]]</span>; <span style=color:#ff79c6>do</span> <span style=color:#8be9fd;font-style:italic>echo</span> waiting <span style=color:#ff79c6>for</span> sidecar; sleep 1; <span style=color:#ff79c6>done</span>; <span style=color:#8be9fd;font-style:italic>echo</span> sidecar available; start-awesome-app-cmd<span style=color:#f1fa8c>&#34;
-</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
-</span></span></span><span style=display:flex><span><span style=color:#f1fa8c># 
-</span></span></span></code></pre></div><h1 id=nsenter-脚本>nsenter 脚本</h1><p>以下脚本是在宿主机上使用 nsenter 根据容器名称或容器 id 进入容器执行相关网络配置。</p><p>docker 环境：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4>#/bin/bash</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>while</span> <span style=color:#ff79c6>[[</span> <span style=color:#f1fa8c>\&#34;</span><span style=color:#ff79c6>$(</span>curl -s -o /dev/null -w <span style=color:#f1fa8c>&#39;&#39;</span>%<span style=color:#ff79c6>{</span>http_code<span style=color:#ff79c6>}</span><span style=color:#f1fa8c>&#39;&#39;</span> localhost:15020/healthz/ready<span style=color:#ff79c6>)</span><span style=color:#f1fa8c>\&#34;</span> !<span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#39;200&#39;</span> <span style=color:#ff79c6>]]</span>; <span style=color:#ff79c6>do</span> <span style=color:#8be9fd;font-style:italic>echo</span> waiting <span style=color:#ff79c6>for</span> sidecar;sleep 1; <span style=color:#ff79c6>done</span>; <span style=color:#8be9fd;font-style:italic>echo</span> sidecar available; start-awesome-app-cmd
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># k8s 批量删除状态为 Terminating 的 pod</span>
+</span></span><span style=display:flex><span>kubectl  get pods | grep Terminating | awk <span style=color:#f1fa8c>&#39;{print $1}&#39;</span> | xargs kubectl  delete pod --force --grace-period<span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 拉取 gcr.io 镜像，如 Kubernetes，istio 等</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># dockerhub根镜像代理</span>
+</span></span><span style=display:flex><span>官方命令：docker pull nginx:latest
+</span></span><span style=display:flex><span>代理命令：docker pull dockerproxy.com/library/nginx:latest
+</span></span><span style=display:flex><span><span style=color:#6272a4># github常规镜像代理</span>
+</span></span><span style=display:flex><span>官方命令：docker pull ghcr.io/username/image:tag
+</span></span><span style=display:flex><span>代理命令：docker pull ghcr.dockerproxy.com/username/image:tag
+</span></span><span style=display:flex><span><span style=color:#6272a4># gcr常规镜像代理</span>
+</span></span><span style=display:flex><span>官方命令：docker pull gcr.io/username/image:tag 
+</span></span><span style=display:flex><span>代理命令：docker pull gcr.dockerproxy.com/username/image:tag 
+</span></span><span style=display:flex><span><span style=color:#6272a4># k8s gcr常规镜像代理</span>
+</span></span><span style=display:flex><span>官方命令：docker pull k8s.gcr.io/coredns:1.6.5
+</span></span><span style=display:flex><span>代理命令：docker pull k8s.dockerproxy.com/coredns:1.6.5
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># Kubernetes 命名空间不能被正确地删除</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 方法一</span>
+</span></span><span style=display:flex><span>kubectl --kubeconfig<span style=color:#ff79c6>=</span>path/config  get namespace istio-system -o json | tr -d <span style=color:#f1fa8c>&#34;\n&#34;</span> | sed <span style=color:#f1fa8c>&#34;s/\&#34;finalizers\&#34;: \[[^]]\+\]/\&#34;finalizers\&#34;: []/&#34;</span> |  kubectl  --kubeconfig<span style=color:#ff79c6>=</span>path/config  replace --raw /api/v1/namespaces/istio-system/finalize -f -
+</span></span><span style=display:flex><span><span style=color:#6272a4># 方法二 </span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 将命名空间 yaml 文件导出为 json 文件</span>
+</span></span><span style=display:flex><span>kubectl get ns <span style=color:#8be9fd;font-style:italic>test</span> -o json &gt; test.json
+</span></span><span style=display:flex><span><span style=color:#6272a4># 以 test namespace 为例，编辑该 json文件，将 spec 内的内容全部删除，然后保存退出 </span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 另开一个终端，启动 proxy</span>
+</span></span><span style=display:flex><span>kubectl proxy --port<span style=color:#ff79c6>=</span><span style=color:#bd93f9>8081</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 使用以下命名强制删除 namespace，命令执行完成后就会发现 ns 删除成功 </span>
+</span></span><span style=display:flex><span>curl -k -H <span style=color:#f1fa8c>&#34;Content-Type: application/json&#34;</span> -X PUT --data-binary @test.json http://127.0.0.1:8081/api/v1/namespaces/test/finalize
+</span></span></code></pre></div><h1 id=批量删除-consul-不健康的-service>批量删除 consul 不健康的 service</h1><p>使用的脚本如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>#!/bin/bash
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#8be9fd;font-style:italic>CONSUL_ADDRESS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10.20.1.177:8500&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>CONSUL_CRITICAL</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>`</span>curl -H<span style=color:#f1fa8c>&#34;X-Consul-Token:p2BE1AtpwPbrxZdC6k+eXA==&#34;</span> <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>CONSUL_ADDRESS</span><span style=color:#f1fa8c>}</span>/v1/health/state/critical | python -m json.tool | grep ServiceID | awk <span style=color:#f1fa8c>&#39;{print $2}&#39;</span> |sed <span style=color:#f1fa8c>&#39;s/&#34;//g&#39;</span> | sed <span style=color:#f1fa8c>&#39;s/,//g&#39;</span><span style=color:#f1fa8c>`</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>for</span> critical in <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>CONSUL_CRITICAL</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>do</span>
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>critical</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c> 已删除&#34;</span>
+</span></span><span style=display:flex><span>  curl -XPUT -H<span style=color:#f1fa8c>&#34;X-Consul-Token:p2BE1AtpwPbrxZdC6k+eXA==&#34;</span> http://<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>CONSUL_ADDRESS</span><span style=color:#f1fa8c>}</span>/v1/agent/service/deregister/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>critical</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>done</span>
+</span></span></code></pre></div><h1 id=批量同步与迁移镜像到其他镜像仓库>批量同步与迁移镜像到其他镜像仓库</h1><p>使用的脚本如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>#!/bin/bash
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#8be9fd;font-style:italic>set</span> -e
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>dst_user</span><span style=color:#ff79c6>=</span>tanjunchen
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>dst_repo</span><span style=color:#ff79c6>=</span>docker.io
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># image 示例</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>images</span><span style=color:#ff79c6>=(</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;docker.io/library/nginx:1.14.2&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;docker.io/library/nginx:1.15.1&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>pull_tag_push_image<span style=color:#ff79c6>(){</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span> image in <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>images</span>[*]<span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>do</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>[</span> -z <span style=color:#f1fa8c>&#34;</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span> <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>then</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>fi</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;docker pull </span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>        docker pull <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;docker pull </span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c> success!!!&#34;</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>array</span><span style=color:#ff79c6>=(</span><span style=color:#f1fa8c>`</span><span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image</span><span style=color:#f1fa8c>}</span> | tr <span style=color:#f1fa8c>&#39;:&#39;</span> <span style=color:#f1fa8c>&#39; &#39;</span><span style=color:#f1fa8c>`</span> <span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>src_image</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>array</span>[0]<span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>src_version</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>array</span>[1]<span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>[</span> ! <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_image</span><span style=color:#f1fa8c>}</span> <span style=color:#ff79c6>]</span>; <span style=color:#ff79c6>then</span>
+</span></span><span style=display:flex><span>            <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;src_image is null, stop tag and push&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>fi</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>[</span> ! <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_version</span><span style=color:#f1fa8c>}</span> <span style=color:#ff79c6>]</span>; <span style=color:#ff79c6>then</span>
+</span></span><span style=display:flex><span>            <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;src_version is null, set default value latest&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#8be9fd;font-style:italic>src_version</span><span style=color:#ff79c6>=</span>latest
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>fi</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;docker src images info </span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_image</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c> </span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_version</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>image_array</span><span style=color:#ff79c6>=(</span><span style=color:#f1fa8c>`</span><span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_image</span><span style=color:#f1fa8c>}</span> | tr <span style=color:#f1fa8c>&#39;/&#39;</span> <span style=color:#f1fa8c>&#39; &#39;</span><span style=color:#f1fa8c>`</span> <span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>image_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image_array</span>[-1]<span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>[</span> ! <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image_name</span><span style=color:#f1fa8c>}</span> <span style=color:#ff79c6>]</span>; <span style=color:#ff79c6>then</span>
+</span></span><span style=display:flex><span>            <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;image_name is null, stop tag and push&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>fi</span>
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>dst_image</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>dst_repo</span><span style=color:#f1fa8c>}</span>/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>dst_user</span><span style=color:#f1fa8c>}</span>/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>image_name</span><span style=color:#f1fa8c>}</span>:<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_version</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>        <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#f1fa8c>&#34;docker destination images info </span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>dst_image</span><span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        docker tag <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_image</span><span style=color:#f1fa8c>}</span>:<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>src_version</span><span style=color:#f1fa8c>}</span> <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>dst_image</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>        docker push <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>dst_image</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>done</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span>pull_tag_push_image
+</span></span></code></pre></div><h1 id=kubernetes-集群登录到某个节点调试工具>Kubernetes 集群登录到某个节点调试工具</h1><p>使用的 yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: DaemonSet
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: node-shell-debug
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: node-shell-debug
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: node-shell-debug
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>sidecar.istio.io/inject</span>: <span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>tolerations</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>effect</span>: NoSchedule
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>key</span>: node-role.kubernetes.io/master
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>operator</span>: Exists
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>args</span>:
+</span></span><span style=display:flex><span>        - -t
+</span></span><span style=display:flex><span>        - <span style=color:#f1fa8c>&#34;1&#34;</span>
+</span></span><span style=display:flex><span>        - -m
+</span></span><span style=display:flex><span>        - -u
+</span></span><span style=display:flex><span>        - -i
+</span></span><span style=display:flex><span>        - -<span style=color:#ff79c6>n</span>
+</span></span><span style=display:flex><span>        - sleep
+</span></span><span style=display:flex><span>        - <span style=color:#f1fa8c>&#34;140000000&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>command</span>:
+</span></span><span style=display:flex><span>        - nsenter
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/node-shell:dev
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>name</span>: shell
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>securityContext</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>privileged</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hostIPC</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hostNetwork</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>hostPID</span>: <span style=color:#ff79c6>true</span>
+</span></span></code></pre></div><p>原始 dockerfile 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-dockerfile data-lang=dockerfile><span style=display:flex><span><span style=color:#ff79c6>FROM</span><span style=color:#f1fa8c> ubuntu:latest</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 安装必要的软件包</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>RUN</span> apt-get update <span style=color:#ff79c6>&amp;&amp;</span> apt-get install -y <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    curl <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    dnsutils <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    iputils-ping <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    net-tools <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    util-linux <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    <span style=color:#ff79c6>&amp;&amp;</span> rm -rf /var/lib/apt/lists/*
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 设置工作目录</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>WORKDIR</span><span style=color:#f1fa8c> /</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 启动容器时执行的命令</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>CMD</span> [<span style=color:#f1fa8c>&#34;/bin/bash&#34;</span>]
+</span></span></code></pre></div><h1 id=常见网络调试工具>常见网络调试工具</h1><p>network-multitool 网络调试 yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: network-multitool
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>app</span>: network-multitool
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: network-multitool
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: network-multitool
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: network
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>image</span>: registry.cn-hangzhou.aliyuncs.com/tanjunchen/network-multitool:v1
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>env</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: HTTP_PORT
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>value</span>: <span style=color:#f1fa8c>&#34;1180&#34;</span>
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: HTTPS_PORT
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>value</span>: <span style=color:#f1fa8c>&#34;11443&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>1180</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: http-port
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>11443</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: https-port
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>requests</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>cpu</span>: <span style=color:#f1fa8c>&#34;1m&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>memory</span>: <span style=color:#f1fa8c>&#34;20Mi&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>limits</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>cpu</span>: <span style=color:#f1fa8c>&#34;10m&#34;</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>memory</span>: <span style=color:#f1fa8c>&#34;20Mi&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>securityContext</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>runAsUser</span>: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>capabilities</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>add</span>: [<span style=color:#f1fa8c>&#34;NET_ADMIN&#34;</span>]
+</span></span></code></pre></div><p>更多的详情可参考 <a href=https://github.com/Praqma/Network-MultiTool>Network-MultiTool</a>。</p><p>含 curl 版本的 busybox yaml 文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Pod 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>: 
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: busybox 
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: default 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>: 
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>containers</span>: 
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>name</span>: busybox 
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>image</span>: busybox:1.28.4 
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>command</span>: 
+</span></span><span style=display:flex><span>      - sleep 
+</span></span><span style=display:flex><span>      - <span style=color:#f1fa8c>&#34;3600&#34;</span> 
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>imagePullPolicy</span>: IfNotPresent 
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>restartPolicy</span>: Always
+</span></span></code></pre></div><h1 id=nsenter-脚本>nsenter 脚本</h1><p>以下脚本是在宿主机上使用 nsenter 根据容器名称或容器 id 进入容器执行相关网络配置。</p><p>docker 环境：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4>#/bin/bash</span>
 </span></span><span style=display:flex><span>
 </span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>CTN</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>$1</span>  <span style=color:#6272a4># container ID or name</span>
 </span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>PID</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>sudo docker inspect --format <span style=color:#f1fa8c>&#34;{{.State.Pid}}&#34;</span> <span style=color:#8be9fd;font-style:italic>$CTN</span><span style=color:#ff79c6>)</span>
