@@ -1,0 +1,1201 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="使用 coroot 实现 Kubernetes 服务可观测性（1）"><meta property="og:title" content="使用 coroot 实现 Kubernetes 服务可观测性（1）"><meta property="twitter:title" content="使用 coroot 实现 Kubernetes 服务可观测性（1）"><meta name=description content="本篇文章主要介绍 Coroot 架构、核心功能、示例、核心源码、示例等。"><meta property="og:description" content="本篇文章主要介绍 Coroot 架构、核心功能、示例、核心源码、示例等。"><meta property="twitter:description" content="本篇文章主要介绍 Coroot 架构、核心功能、示例、核心源码、示例等。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>使用 coroot 实现 Kubernetes 服务可观测性（1） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2023-10-05-ebpf-coroot/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/coroot title=coroot>coroot</a>
+<a class=tag href=/tags/ebpf title=eBPF>eBPF</a>
+<a class=tag href=/tags/opentelemetry title=opentelemetry>opentelemetry</a></div><h1>使用 coroot 实现 Kubernetes 服务可观测性（1）</h1><h2 class=subheading>coroot 是针对微服务架构的可观测性和故障分析工具，它基于 eBPF 来可视化展示服务之间的拓扑关系，并对七层与四层的可观测性进行了强化，可以帮助你快速定位七层与四层的故障。</h2><span class=meta>Posted by
+陈谭军
+on
+Thursday, October 5, 2023
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2023-10-05-ebpf-coroot/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 6396 字</span>，阅读约 <span class=more-meta>13 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>核心实现思路：<br><a href=https://github.com/coroot/coroot>coroot</a> 使用数据库 SQLite（生产环境 Click House）+ Prometheus + Opentelemetry 去做应用（网络、IO、磁盘、文件等）可视化。<br><a href=https://github.com/coroot/coroot-node-agent>coroot-node-agent</a> 使用 eBPF（tracepoint + uprobe）+ 容器网络工具（cgroup + namespace）收集节点及其上运行的容器相关的信息，并以 Prometheus 暴露指标，支持的最低 Linux 内核版本为 4.16+。</p><h1 id=介绍>介绍</h1><h2 id=coroot>coroot</h2><p><a href=https://github.com/coroot/coroot>https://github.com/coroot/coroot</a> 是一款基于 eBPF 的开源可观测性工具，可将遥测数据转化为可操作视图，帮助快速识别和解决应用程序问题。官方示例可参考 <a href=https://community-demo.coroot.com/p/qcih204s>https://community-demo.coroot.com/p/qcih204s</a>。coroot 的架构设计基于 prometheus，同时也依赖了 eBPF，同时官方也开源了不少 exporter，比如 node，pg，aws 等。</p><p><strong>重点功能</strong></p><ul><li><a href=https://github.com/coroot/coroot#zero-instrumentation-observability>Zero-instrumentation observability</a></li><li><a href=https://github.com/coroot/coroot#distributed-systems-are-no-longer-blackboxes>Distributed systems are no longer blackboxes</a></li><li><a href=https://github.com/coroot/coroot#built-in-expertise>Built-in expertise</a></li><li><a href=https://github.com/coroot/coroot#explore-any-outlier-requests-with-distributed-tracing>Explore any outlier requests with distributed tracing</a></li><li><a href=https://github.com/coroot/coroot#grasp-insights-from-logs-with-just-a-quick-glance>Grasp insights from logs with just a quick glance</a></li><li><a href=https://github.com/coroot/coroot#profile-any-application-in-1-click>Profile any application in 1 click</a></li><li><a href=https://github.com/coroot/coroot#deployment-tracking>Deployment Tracking</a></li><li><a href=https://github.com/coroot/coroot#cost-monitoring>Cost Monitoring</a></li></ul><h2 id=coroot-node-agent>coroot-node-agent</h2><p><a href=https://github.com/coroot/coroot-node-agent>https://github.com/coroot/coroot-node-agent</a> ，使用 eBPF 与 network 相关工具收集节点及其上运行的容器相关的信息，并以 Prometheus 格式公开这些指标。它使用 eBPF 来跟踪与容器相关的事件，如 TCP 连接，因此支持的最低Linux内核版本为 <strong>4.16+</strong>。</p><p><strong>重点功能</strong></p><ul><li><a href=https://github.com/coroot/coroot-node-agent#tcp-connection-tracing>TCP connection tracing</a></li><li><a href=https://github.com/coroot/coroot-node-agent#log-patterns-extraction>Log patterns extraction</a></li><li><a href=https://github.com/coroot/coroot-node-agent#delay-accounting>Delay accounting</a></li><li><a href=https://github.com/coroot/coroot-node-agent#out-of-memory-events-tracing>Out-of-memory events tracing</a></li><li><a href=https://github.com/coroot/coroot-node-agent#instance-meta-information>Instance meta information</a></li></ul><p>架构图如下所示：
+<img src=/images/2023-10-05-ebpf-coroot/coroot-node-agent.png width=100%></p><p>片段 C 代码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#ff79c6>struct</span> trace_event_raw_args_with_fd__stub {
+</span></span><span style=display:flex><span>    __u64 unused;
+</span></span><span style=display:flex><span>    <span style=color:#8be9fd>long</span> <span style=color:#8be9fd>int</span> id;
+</span></span><span style=display:flex><span>    __u64 fd;
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;tracepoint/syscalls/sys_enter_connect&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> sys_enter_connect(<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>ctx) {
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>struct</span> trace_event_raw_args_with_fd__stub args <span style=color:#ff79c6>=</span> {};
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>if</span> (bpf_probe_read(<span style=color:#ff79c6>&amp;</span>args, <span style=color:#ff79c6>sizeof</span>(args), ctx) <span style=color:#ff79c6>&lt;</span> <span style=color:#bd93f9>0</span>) {
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    __u64 id <span style=color:#ff79c6>=</span> bpf_get_current_pid_tgid();
+</span></span><span style=display:flex><span>    bpf_map_update_elem(<span style=color:#ff79c6>&amp;</span>fd_by_pid_tgid, <span style=color:#ff79c6>&amp;</span>id, <span style=color:#ff79c6>&amp;</span>args.fd, BPF_ANY);
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;tracepoint/syscalls/sys_exit_connect&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> sys_exit_connect(<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>ctx) {
+</span></span><span style=display:flex><span>    __u64 id <span style=color:#ff79c6>=</span> bpf_get_current_pid_tgid();
+</span></span><span style=display:flex><span>    bpf_map_delete_elem(<span style=color:#ff79c6>&amp;</span>fd_by_pid_tgid, <span style=color:#ff79c6>&amp;</span>id);
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p><strong>指标</strong>：coroot 暴露的 metrics 指标，可参考：<a href=https://coroot.com/docs/metric-exporters/node-agent/metrics>metric-exporters</a>。核心网络、IO、磁盘、文件等指标如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-shell data-lang=shell><span style=display:flex><span>root@cce-lo9d0ykc-lq252ra3:/# curl  http://10.2.1.243/metrics
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP container_application_type Type of the application running in the container (e.g. memcached, postgres, mysql)</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE container_application_type gauge</span>
+</span></span><span style=display:flex><span>container_application_type<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>application_type</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;envoy&#34;</span>,container_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;/k8s/istio-system/istio-egressgateway-6664b79cb7-ch98h/istio-proxy&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>container_application_type<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>application_type</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;envoy&#34;</span>,container_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;/k8s/istio-system/istio-ingressgateway-787dc49b87-w4lw8/istio-proxy&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>container_application_type<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>application_type</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;kubelet&#34;</span>,container_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;/system.slice/kubelet.service&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP node_net_received_packets_total The total number of packets received</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE node_net_received_packets_total counter</span>
+</span></span><span style=display:flex><span>node_net_received_packets_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>interface</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;eth0&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> 1.20680598e+08
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP node_net_transmitted_bytes_total The total number of bytes transmitted</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE node_net_transmitted_bytes_total counter</span>
+</span></span><span style=display:flex><span>node_net_transmitted_bytes_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>interface</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;eth0&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> 9.801357895e+09
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP node_net_transmitted_packets_total The total number of packets transmitted</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE node_net_transmitted_packets_total counter</span>
+</span></span><span style=display:flex><span>node_net_transmitted_packets_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>interface</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;eth0&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> 9.4272602e+07
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP node_resources_cpu_logical_cores The number of logical CPU cores</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE node_resources_cpu_logical_cores gauge</span>
+</span></span><span style=display:flex><span>node_resources_cpu_logical_cores<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP node_resources_cpu_usage_seconds_total The amount of CPU time spent in each mode</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE node_resources_cpu_usage_seconds_total counter</span>
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;idle&#34;</span><span style=color:#ff79c6>}</span> 4.22894521e+06
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;iowait&#34;</span><span style=color:#ff79c6>}</span> 1582.97
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;irq&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nice&#34;</span><span style=color:#ff79c6>}</span> 349.25
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;softirq&#34;</span><span style=color:#ff79c6>}</span> 4837.57
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;steal&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;system&#34;</span><span style=color:#ff79c6>}</span> 25167.31
+</span></span><span style=display:flex><span>node_resources_cpu_usage_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>machine_id</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span>,mode<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;user&#34;</span><span style=color:#ff79c6>}</span> 56604.1
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP node_resources_disk_io_time_seconds_total The total number of seconds the disk spent doing I/O</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE node_resources_disk_io_time_seconds_total counter</span>
+</span></span><span style=display:flex><span>node_resources_disk_io_time_seconds_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>device</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;vda&#34;</span>,machine_id<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;8a79accec39b4434969f48d0d837c935&#34;</span><span style=color:#ff79c6>}</span> 4896.908
+</span></span><span style=display:flex><span>......
+</span></span></code></pre></div><p><font color=red><strong>核心实现思路：tracepoint （uprobe） + cilium/ebpf</strong></font></p><ul><li>SEC(<font color=green>&ldquo;tracepoint/sock/inet_sock_set_state&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_connect&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_connect&rdquo;</font>)</li><li>SEC(<font color=green>&ldquo;tracepoint/tcp/tcp_retransmit_skb&rdquo;</font>)</li><li>SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_open&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_open&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_openat&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_openat&rdquo;</font>)</li><li>SEC(<font color=green>&ldquo;tracepoint/task/task_newtask&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/sched/sched_process_exit&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/oom/mark_victim&rdquo;</font>)</li><li>SEC(<font color=green>&ldquo;uprobe/go_crypto_tls_write_enter&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/go_crypto_tls_read_enter&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/go_crypto_tls_read_exit&rdquo;</font>)</li><li>SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_write&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_writev&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_sendmsg&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_sendto&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_read&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_readv&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_recvmsg&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_enter_recvfrom&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_read&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_readv&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_recvmsg&rdquo;</font>)、SEC(<font color=green>&ldquo;tracepoint/syscalls/sys_exit_recvfrom&rdquo;</font>)</li><li>SEC(<font color=green>&ldquo;uprobe/openssl_SSL_write_enter&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_write_enter_v1_1_1&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_write_enter_v3_0&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_enter&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_ex_enter&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_enter_v1_1_1&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_ex_enter_v1_1_1&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_enter_v3_0&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_ex_enter_v3_0&rdquo;</font>)、SEC(<font color=green>&ldquo;uprobe/openssl_SSL_read_exit&rdquo;</font>)</li></ul><h1 id=demo-演示>demo 演示</h1><h2 id=安装>安装</h2><p>参考 <a href=https://coroot.com/docs/coroot-community-edition/getting-started/installation#manual_k8s>coroot部署文档</a> 安装 coroot。</p><ol><li>部署并创建 StorageClass，用于动态创建 pv</li></ol><ol start=2><li>创建两个 sc</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: storage.k8s.io/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: StorageClass
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: cds-hp
+</span></span><span style=display:flex><span><span style=color:#ff79c6>parameters</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>cdsSizeInGB</span>: <span style=color:#f1fa8c>&#34;100&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>dynamicVolume</span>: <span style=color:#f1fa8c>&#34;true&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>paymentTiming</span>: Prepaid
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>reservationLength</span>: <span style=color:#f1fa8c>&#34;3&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>storageType</span>: hdd
+</span></span><span style=display:flex><span><span style=color:#ff79c6>provisioner</span>: csi-cdsplugin
+</span></span><span style=display:flex><span><span style=color:#ff79c6>reclaimPolicy</span>: Retain
+</span></span><span style=display:flex><span><span style=color:#ff79c6>volumeBindingMode</span>: Immediate
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: storage.k8s.io/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: StorageClass
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: cds-hp-test
+</span></span><span style=display:flex><span><span style=color:#ff79c6>parameters</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>cdsSizeInGB</span>: <span style=color:#f1fa8c>&#34;100&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>dynamicVolume</span>: <span style=color:#f1fa8c>&#34;true&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>paymentTiming</span>: Prepaid
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>reservationLength</span>: <span style=color:#f1fa8c>&#34;3&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>storageType</span>: hdd
+</span></span><span style=display:flex><span><span style=color:#ff79c6>provisioner</span>: csi-cdsplugin
+</span></span><span style=display:flex><span><span style=color:#ff79c6>reclaimPolicy</span>: Retain
+</span></span><span style=display:flex><span><span style=color:#ff79c6>volumeBindingMode</span>: Immediate
+</span></span></code></pre></div><ol start=3><li>安装 coroot</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>helm repo add coroot https://coroot.github.io/helm-charts
+</span></span><span style=display:flex><span>helm repo update 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>helm install --namespace coroot --create-namespace coroot coroot/coroot
+</span></span></code></pre></div><ol start=4><li>在 pvc 指定 sc，先删除 coroot 空间下所有的 pvc，再使用下面的文件创建，在 <code>storageClassNamestorageClassName</code> 字段声明让 pvc 与 sc 绑定。</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>items</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>kind</span>: PersistentVolumeClaim
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>meta.helm.sh/release-name</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>meta.helm.sh/release-namespace</span>: coroot
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>finalizers</span>:
+</span></span><span style=display:flex><span>    - kubernetes.io/pvc-protection
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/instance</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/managed-by</span>: Helm
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/name</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/version</span>: <span style=color:#bd93f9>0.19.2</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>helm.sh/chart</span>: coroot-0.4.7
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: coroot-data
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>namespace</span>: coroot
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>accessModes</span>:
+</span></span><span style=display:flex><span>    - ReadWriteOnce
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>storageClassName</span>: cds-hp-test
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>requests</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>storage</span>: 10Gi
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>volumeMode</span>: Filesystem
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>status</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>phase</span>: Pending
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>kind</span>: PersistentVolumeClaim
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>meta.helm.sh/release-name</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>meta.helm.sh/release-namespace</span>: coroot
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>finalizers</span>:
+</span></span><span style=display:flex><span>    - kubernetes.io/pvc-protection
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: prometheus
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/managed-by</span>: Helm
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>chart</span>: prometheus-15.16.1
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>component</span>: server
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>heritage</span>: Helm
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>release</span>: coroot
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: coroot-prometheus-server
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>namespace</span>: coroot
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>accessModes</span>:
+</span></span><span style=display:flex><span>    - ReadWriteOnce
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>storageClassName</span>: cds-hp-test
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>requests</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>storage</span>: 10Gi
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>volumeMode</span>: Filesystem
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>status</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>phase</span>: Pending
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>kind</span>: PersistentVolumeClaim
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>meta.helm.sh/release-name</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>meta.helm.sh/release-namespace</span>: coroot
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>finalizers</span>:
+</span></span><span style=display:flex><span>    - kubernetes.io/pvc-protection
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/instance</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/managed-by</span>: Helm
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/name</span>: pyroscope
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/version</span>: <span style=color:#bd93f9>0.37.2</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>helm.sh/chart</span>: pyroscope-0.2.92
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: coroot-pyroscope
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>namespace</span>: coroot
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>accessModes</span>:
+</span></span><span style=display:flex><span>    - ReadWriteOnce
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>storageClassName</span>: cds-hp-test
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>requests</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>storage</span>: 30Gi
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>volumeMode</span>: Filesystem
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>status</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>phase</span>: Pending
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>kind</span>: PersistentVolumeClaim
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>finalizers</span>:
+</span></span><span style=display:flex><span>    - kubernetes.io/pvc-protection
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/component</span>: clickhouse
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/instance</span>: coroot
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/managed-by</span>: Helm
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app.kubernetes.io/name</span>: clickhouse
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>helm.sh/chart</span>: clickhouse-3.1.6
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: data-coroot-clickhouse-shard0-0
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>namespace</span>: coroot
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>accessModes</span>:
+</span></span><span style=display:flex><span>    - ReadWriteOnce
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>storageClassName</span>: cds-hp
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>requests</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>storage</span>: 50Gi
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>volumeMode</span>: Filesystem
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>status</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>phase</span>: Pending
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: List
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>resourceVersion</span>: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span></code></pre></div><ol start=5><li>重启所有有问题的 pod</li></ol><ol start=6><li>查看效果 http://localhost:8080/ 。</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl port-forward -n coroot service/coroot 8080:8080
+</span></span></code></pre></div><img src=/images/2023-10-05-ebpf-coroot/查看效果.png width=100%><h2 id=示例>示例</h2><img src=/images/2023-10-05-ebpf-coroot/示例1.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例2.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例3.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例4.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例5.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例6.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例7.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例8.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例9.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例10.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例11.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例12.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例13.png width=100%>
+<img src=/images/2023-10-05-ebpf-coroot/示例14.png width=100%><p>Pyroscope 是一个开源的持续分析系统，使用 Go 语言实现。服务端使用 web 页面查看，提供丰富的分析的功能，客户端提供 Go、Java、Python、Ruby、PHP、.NET 等多种语言的支持，并且支持 PUSH、PULL 两种采集方式。</p><img src=/images/2023-10-05-ebpf-coroot/Pyroscope.png width=100%><h1 id=代码>代码</h1><p>registry.go</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewRegistry</span>(reg prometheus.Registerer, kernelVersion <span style=color:#8be9fd>string</span>) (<span style=color:#ff79c6>*</span>Registry, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	ns, err <span style=color:#ff79c6>:=</span> proc.<span style=color:#50fa7b>GetSelfNetNs</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	selfNetNs = ns
+</span></span><span style=display:flex><span>	hostNetNs, err <span style=color:#ff79c6>:=</span> proc.<span style=color:#50fa7b>GetHostNetNs</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> hostNetNs.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	hostNetNsId = hostNetNs.<span style=color:#50fa7b>UniqueId</span>()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	err = proc.<span style=color:#50fa7b>ExecuteInNetNs</span>(hostNetNs, selfNetNs, <span style=color:#8be9fd;font-style:italic>func</span>() <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>TaskstatsInit</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>	})
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 初始化某些 ns 命名空间
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> cgroup.<span style=color:#50fa7b>Init</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 初始化 docker
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>DockerdInit</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		klog.<span style=color:#50fa7b>Warningln</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 初始化 containerd
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>ContainerdInit</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		klog.<span style=color:#50fa7b>Warningln</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 初始化 crio
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>CrioInit</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		klog.<span style=color:#50fa7b>Warningln</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 初始化 journal
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>JournaldInit</span>(); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		klog.<span style=color:#50fa7b>Warningln</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 初始化 journal
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	ct, err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>NewConntrack</span>(hostNetNs)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	r <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&amp;</span>Registry{
+</span></span><span style=display:flex><span>		reg:    reg,
+</span></span><span style=display:flex><span>		events: <span style=color:#8be9fd;font-style:italic>make</span>(<span style=color:#8be9fd;font-style:italic>chan</span> ebpftracer.Event, <span style=color:#bd93f9>10000</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		hostConntrack: ct,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		containersById:       <span style=color:#8be9fd;font-style:italic>map</span>[ContainerID]<span style=color:#ff79c6>*</span>Container{},
+</span></span><span style=display:flex><span>		containersByCgroupId: <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#ff79c6>*</span>Container{},
+</span></span><span style=display:flex><span>		containersByPid:      <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>uint32</span>]<span style=color:#ff79c6>*</span>Container{},
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		tracer: ebpftracer.<span style=color:#50fa7b>NewTracer</span>(kernelVersion, <span style=color:#ff79c6>*</span>flags.DisableL7Tracing),
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 处理事件 收集容器、主机等指标
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>go</span> r.<span style=color:#50fa7b>handleEvents</span>(r.events)
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// eBPF 数据与程序收集器交换媒介
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err = r.tracer.<span style=color:#50fa7b>Run</span>(r.events); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>close</span>(r.events)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> r, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>cgroup_linux.go</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>Init</span>() <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	selfNs, err <span style=color:#ff79c6>:=</span> netns.<span style=color:#50fa7b>GetFromPath</span>(<span style=color:#f1fa8c>&#34;/proc/self/ns/cgroup&#34;</span>)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> selfNs.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	hostNs, err <span style=color:#ff79c6>:=</span> netns.<span style=color:#50fa7b>GetFromPath</span>(<span style=color:#f1fa8c>&#34;/proc/1/ns/cgroup&#34;</span>)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> hostNs.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> selfNs.<span style=color:#50fa7b>Equal</span>(hostNs) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	runtime.<span style=color:#50fa7b>LockOSThread</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> runtime.<span style=color:#50fa7b>UnlockOSThread</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> unix.<span style=color:#50fa7b>Setns</span>(<span style=color:#8be9fd;font-style:italic>int</span>(hostNs), unix.CLONE_NEWCGROUP); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	cg, err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>NewFromProcessCgroupFile</span>(<span style=color:#f1fa8c>&#34;/proc/self/cgroup&#34;</span>)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	baseCgroupPath = cg.Id
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> unix.<span style=color:#50fa7b>Setns</span>(<span style=color:#8be9fd;font-style:italic>int</span>(selfNs), unix.CLONE_NEWCGROUP); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>handleEvents.go</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (r <span style=color:#ff79c6>*</span>Registry) <span style=color:#50fa7b>handleEvents</span>(ch <span style=color:#ff79c6>&lt;-</span><span style=color:#8be9fd;font-style:italic>chan</span> ebpftracer.Event) {
+</span></span><span style=display:flex><span>	gcTicker <span style=color:#ff79c6>:=</span> time.<span style=color:#50fa7b>NewTicker</span>(gcInterval)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> gcTicker.<span style=color:#50fa7b>Stop</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>select</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> now <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&lt;-</span>gcTicker.C:
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>for</span> pid, c <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.containersByPid {
+</span></span><span style=display:flex><span>				cg, err <span style=color:#ff79c6>:=</span> proc.<span style=color:#50fa7b>ReadCgroup</span>(pid)
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByPid, pid)
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>						c.<span style=color:#50fa7b>onProcessExit</span>(pid, <span style=color:#ff79c6>false</span>)
+</span></span><span style=display:flex><span>					}
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> <span style=color:#ff79c6>&amp;&amp;</span> cg.Id <span style=color:#ff79c6>!=</span> c.cgroup.Id {
+</span></span><span style=display:flex><span>					<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByPid, pid)
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onProcessExit</span>(pid, <span style=color:#ff79c6>false</span>)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>for</span> id, c <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.containersById {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> !c.<span style=color:#50fa7b>Dead</span>(now) {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				klog.<span style=color:#50fa7b>Infoln</span>(<span style=color:#f1fa8c>&#34;deleting dead container:&#34;</span>, id)
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>for</span> cg, cc <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.containersByCgroupId {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>if</span> cc <span style=color:#ff79c6>==</span> c {
+</span></span><span style=display:flex><span>						<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByCgroupId, cg)
+</span></span><span style=display:flex><span>					}
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>for</span> pid, cc <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.containersByPid {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>if</span> cc <span style=color:#ff79c6>==</span> c {
+</span></span><span style=display:flex><span>						<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByPid, pid)
+</span></span><span style=display:flex><span>					}
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> ok <span style=color:#ff79c6>:=</span> prometheus.<span style=color:#50fa7b>WrapRegistererWith</span>(prometheus.Labels{<span style=color:#f1fa8c>&#34;container_id&#34;</span>: <span style=color:#8be9fd;font-style:italic>string</span>(id)}, r.reg).<span style=color:#50fa7b>Unregister</span>(c); !ok {
+</span></span><span style=display:flex><span>					klog.<span style=color:#50fa7b>Warningln</span>(<span style=color:#f1fa8c>&#34;failed to unregister container:&#34;</span>, id)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersById, id)
+</span></span><span style=display:flex><span>				c.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> e, more <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&lt;-</span>ch:
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> !more {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>switch</span> e.Type {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeProcessStart:
+</span></span><span style=display:flex><span>				c, seen <span style=color:#ff79c6>:=</span> r.containersByPid[e.Pid]
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>switch</span> { <span style=color:#6272a4>// possible pids wraparound + missed `process-exit` event
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>				<span style=color:#ff79c6>case</span> c <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> <span style=color:#ff79c6>&amp;&amp;</span> seen: <span style=color:#6272a4>// ignored
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>					<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByPid, e.Pid)
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>case</span> c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span>: <span style=color:#6272a4>// revalidating by cgroup
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>					cg, err <span style=color:#ff79c6>:=</span> proc.<span style=color:#50fa7b>ReadCgroup</span>(e.Pid)
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> <span style=color:#ff79c6>||</span> cg.Id <span style=color:#ff79c6>!=</span> c.cgroup.Id {
+</span></span><span style=display:flex><span>						<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByPid, e.Pid)
+</span></span><span style=display:flex><span>						c.<span style=color:#50fa7b>onProcessExit</span>(e.Pid, <span style=color:#ff79c6>false</span>)
+</span></span><span style=display:flex><span>					}
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>getOrCreateContainer</span>(e.Pid); c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onProcessStart</span>(e.Pid)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeProcessExit:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.containersByPid[e.Pid]; c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onProcessExit</span>(e.Pid, e.Reason <span style=color:#ff79c6>==</span> ebpftracer.EventReasonOOMKill)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>delete</span>(r.containersByPid, e.Pid)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeFileOpen:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>getOrCreateContainer</span>(e.Pid); c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onFileOpen</span>(e.Pid, e.Fd)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeListenOpen:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>getOrCreateContainer</span>(e.Pid); c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onListenOpen</span>(e.Pid, e.SrcAddr, <span style=color:#ff79c6>false</span>)
+</span></span><span style=display:flex><span>				} <span style=color:#ff79c6>else</span> {
+</span></span><span style=display:flex><span>					klog.<span style=color:#50fa7b>Infoln</span>(<span style=color:#f1fa8c>&#34;TCP listen open from unknown container&#34;</span>, e)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeListenClose:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.containersByPid[e.Pid]; c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onListenClose</span>(e.Pid, e.SrcAddr)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeConnectionOpen:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>getOrCreateContainer</span>(e.Pid); c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onConnectionOpen</span>(e.Pid, e.Fd, e.SrcAddr, e.DstAddr, e.Timestamp, <span style=color:#ff79c6>false</span>)
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>attachTlsUprobes</span>(r.tracer, e.Pid)
+</span></span><span style=display:flex><span>				} <span style=color:#ff79c6>else</span> {
+</span></span><span style=display:flex><span>					klog.<span style=color:#50fa7b>Infoln</span>(<span style=color:#f1fa8c>&#34;TCP connection from unknown container&#34;</span>, e)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeConnectionError:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>getOrCreateContainer</span>(e.Pid); c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onConnectionOpen</span>(e.Pid, e.Fd, e.SrcAddr, e.DstAddr, <span style=color:#bd93f9>0</span>, <span style=color:#ff79c6>true</span>)
+</span></span><span style=display:flex><span>				} <span style=color:#ff79c6>else</span> {
+</span></span><span style=display:flex><span>					klog.<span style=color:#50fa7b>Infoln</span>(<span style=color:#f1fa8c>&#34;TCP connection error from unknown container&#34;</span>, e)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeConnectionClose:
+</span></span><span style=display:flex><span>				srcDst <span style=color:#ff79c6>:=</span> AddrPair{src: e.SrcAddr, dst: e.DstAddr}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>for</span> _, c <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.containersById {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>if</span> c.<span style=color:#50fa7b>onConnectionClose</span>(srcDst) {
+</span></span><span style=display:flex><span>						<span style=color:#ff79c6>break</span>
+</span></span><span style=display:flex><span>					}
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeTCPRetransmit:
+</span></span><span style=display:flex><span>				srcDst <span style=color:#ff79c6>:=</span> AddrPair{src: e.SrcAddr, dst: e.DstAddr}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>for</span> _, c <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.containersById {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>if</span> c.<span style=color:#50fa7b>onRetransmit</span>(srcDst) {
+</span></span><span style=display:flex><span>						<span style=color:#ff79c6>break</span>
+</span></span><span style=display:flex><span>					}
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> ebpftracer.EventTypeL7Request:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> e.L7Request <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> c <span style=color:#ff79c6>:=</span> r.containersByPid[e.Pid]; c <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>					c.<span style=color:#50fa7b>onL7Request</span>(e.Pid, e.Fd, e.Timestamp, e.L7Request)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>onL7Request.go</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (c <span style=color:#ff79c6>*</span>Container) <span style=color:#50fa7b>onL7Request</span>(pid <span style=color:#8be9fd>uint32</span>, fd <span style=color:#8be9fd>uint64</span>, timestamp <span style=color:#8be9fd>uint64</span>, r <span style=color:#ff79c6>*</span>l7.RequestData) {
+</span></span><span style=display:flex><span>	c.lock.<span style=color:#50fa7b>Lock</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> c.lock.<span style=color:#50fa7b>Unlock</span>()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> dest AddrPair
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> conn <span style=color:#ff79c6>*</span>ActiveConnection
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> found <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> dest, conn = <span style=color:#ff79c6>range</span> c.connectionsActive {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> conn.Pid <span style=color:#ff79c6>==</span> pid <span style=color:#ff79c6>&amp;&amp;</span> conn.Fd <span style=color:#ff79c6>==</span> fd <span style=color:#ff79c6>&amp;&amp;</span> (timestamp <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>||</span> conn.Timestamp <span style=color:#ff79c6>==</span> timestamp) {
+</span></span><span style=display:flex><span>			found = <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>break</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !found {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	stats <span style=color:#ff79c6>:=</span> c.l7Stats.<span style=color:#50fa7b>get</span>(r.Protocol, dest.dst, conn.ActualDest)
+</span></span><span style=display:flex><span>	trace <span style=color:#ff79c6>:=</span> tracing.<span style=color:#50fa7b>NewTrace</span>(<span style=color:#8be9fd;font-style:italic>string</span>(c.id), conn.ActualDest)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> r.Protocol {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolHTTP:
+</span></span><span style=display:flex><span>		stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>Http</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>		method, path <span style=color:#ff79c6>:=</span> l7.<span style=color:#50fa7b>ParseHttp</span>(r.Payload)
+</span></span><span style=display:flex><span>		trace.<span style=color:#50fa7b>HttpRequest</span>(method, path, r.Status, r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolHTTP2:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> conn.http2Parser <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			conn.http2Parser = l7.<span style=color:#50fa7b>NewHttp2Parser</span>()
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		requests <span style=color:#ff79c6>:=</span> conn.http2Parser.<span style=color:#50fa7b>Parse</span>(r.Method, r.Payload, <span style=color:#8be9fd;font-style:italic>uint64</span>(r.Duration))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> _, req <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> requests {
+</span></span><span style=display:flex><span>			stats.<span style=color:#50fa7b>observe</span>(req.Status.<span style=color:#50fa7b>Http</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, req.Duration)
+</span></span><span style=display:flex><span>			trace.<span style=color:#50fa7b>Http2Request</span>(req.Method, req.Path, req.Scheme, req.Status, req.Duration)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolPostgres:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> r.Method <span style=color:#ff79c6>!=</span> l7.MethodStatementClose {
+</span></span><span style=display:flex><span>			stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> conn.postgresParser <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			conn.postgresParser = l7.<span style=color:#50fa7b>NewPostgresParser</span>()
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		query <span style=color:#ff79c6>:=</span> conn.postgresParser.<span style=color:#50fa7b>Parse</span>(r.Payload)
+</span></span><span style=display:flex><span>		trace.<span style=color:#50fa7b>PostgresQuery</span>(query, r.Status.<span style=color:#50fa7b>Error</span>(), r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolMysql:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> r.Method <span style=color:#ff79c6>!=</span> l7.MethodStatementClose {
+</span></span><span style=display:flex><span>			stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> conn.mysqlParser <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			conn.mysqlParser = l7.<span style=color:#50fa7b>NewMysqlParser</span>()
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		query <span style=color:#ff79c6>:=</span> conn.mysqlParser.<span style=color:#50fa7b>Parse</span>(r.Payload, r.StatementId)
+</span></span><span style=display:flex><span>		trace.<span style=color:#50fa7b>MysqlQuery</span>(query, r.Status.<span style=color:#50fa7b>Error</span>(), r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolMemcached:
+</span></span><span style=display:flex><span>		stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>		cmd, items <span style=color:#ff79c6>:=</span> l7.<span style=color:#50fa7b>ParseMemcached</span>(r.Payload)
+</span></span><span style=display:flex><span>		trace.<span style=color:#50fa7b>MemcachedQuery</span>(cmd, items, r.Status.<span style=color:#50fa7b>Error</span>(), r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolRedis:
+</span></span><span style=display:flex><span>		stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>		cmd, args <span style=color:#ff79c6>:=</span> l7.<span style=color:#50fa7b>ParseRedis</span>(r.Payload)
+</span></span><span style=display:flex><span>		trace.<span style=color:#50fa7b>RedisQuery</span>(cmd, args, r.Status.<span style=color:#50fa7b>Error</span>(), r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolMongo:
+</span></span><span style=display:flex><span>		stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>		query <span style=color:#ff79c6>:=</span> l7.<span style=color:#50fa7b>ParseMongo</span>(r.Payload)
+</span></span><span style=display:flex><span>		trace.<span style=color:#50fa7b>MongoQuery</span>(query, r.Status.<span style=color:#50fa7b>Error</span>(), r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolKafka, l7.ProtocolCassandra:
+</span></span><span style=display:flex><span>		stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>, r.Duration)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> l7.ProtocolRabbitmq, l7.ProtocolNats:
+</span></span><span style=display:flex><span>		stats.<span style=color:#50fa7b>observe</span>(r.Status.<span style=color:#50fa7b>String</span>(), r.Method.<span style=color:#50fa7b>String</span>(), <span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>container 如何收集数据？Collect.go 代码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (c <span style=color:#ff79c6>*</span>Container) <span style=color:#50fa7b>Collect</span>(ch <span style=color:#8be9fd;font-style:italic>chan</span><span style=color:#ff79c6>&lt;-</span> prometheus.Metric) {
+</span></span><span style=display:flex><span>	c.lock.<span style=color:#50fa7b>RLock</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> c.lock.<span style=color:#50fa7b>RUnlock</span>()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> c.metadata.image <span style=color:#ff79c6>!=</span> <span style=color:#f1fa8c>&#34;&#34;</span> {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.ContainerInfo, <span style=color:#bd93f9>1</span>, c.metadata.image)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.Restarts, <span style=color:#8be9fd;font-style:italic>float64</span>(c.restarts))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> cpu, err <span style=color:#ff79c6>:=</span> c.cgroup.<span style=color:#50fa7b>CpuStat</span>(); err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> cpu.LimitCores &gt; <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.CPULimit, cpu.LimitCores)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.CPUUsage, cpu.UsageSeconds)
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.ThrottledTime, cpu.ThrottledTimeSeconds)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> taskstatsClient <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		c.<span style=color:#50fa7b>updateDelays</span>()
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.CPUDelay, <span style=color:#8be9fd;font-style:italic>float64</span>(c.delays.cpu)<span style=color:#ff79c6>/</span><span style=color:#8be9fd;font-style:italic>float64</span>(time.Second))
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.DiskDelay, <span style=color:#8be9fd;font-style:italic>float64</span>(c.delays.disk)<span style=color:#ff79c6>/</span><span style=color:#8be9fd;font-style:italic>float64</span>(time.Second))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> s, err <span style=color:#ff79c6>:=</span> c.cgroup.<span style=color:#50fa7b>MemoryStat</span>(); err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.MemoryRss, <span style=color:#8be9fd;font-style:italic>float64</span>(s.RSS))
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.MemoryCache, <span style=color:#8be9fd;font-style:italic>float64</span>(s.Cache))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> s.Limit &gt; <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.MemoryLimit, <span style=color:#8be9fd;font-style:italic>float64</span>(s.Limit))
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> c.oomKills &gt; <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.OOMKills, <span style=color:#8be9fd;font-style:italic>float64</span>(c.oomKills))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> disks, err <span style=color:#ff79c6>:=</span> node.<span style=color:#50fa7b>GetDisks</span>(); err <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		ioStat, _ <span style=color:#ff79c6>:=</span> c.cgroup.<span style=color:#50fa7b>IOStat</span>()
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> majorMinor, mounts <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.<span style=color:#50fa7b>getMounts</span>() {
+</span></span><span style=display:flex><span>			dev <span style=color:#ff79c6>:=</span> disks.<span style=color:#50fa7b>GetParentBlockDevice</span>(majorMinor)
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> dev <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>for</span> mountPoint, fsStat <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> mounts {
+</span></span><span style=display:flex><span>				dls <span style=color:#ff79c6>:=</span> []<span style=color:#8be9fd>string</span>{mountPoint, dev.Name, c.metadata.volumes[mountPoint]}
+</span></span><span style=display:flex><span>				ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.DiskSize, <span style=color:#8be9fd;font-style:italic>float64</span>(fsStat.CapacityBytes), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>				ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.DiskUsed, <span style=color:#8be9fd;font-style:italic>float64</span>(fsStat.UsedBytes), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>				ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.DiskReserved, <span style=color:#8be9fd;font-style:italic>float64</span>(fsStat.ReservedBytes), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> io, ok <span style=color:#ff79c6>:=</span> ioStat[majorMinor]; ok {
+</span></span><span style=display:flex><span>					ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.DiskReadOps, <span style=color:#8be9fd;font-style:italic>float64</span>(io.ReadOps), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>					ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.DiskReadBytes, <span style=color:#8be9fd;font-style:italic>float64</span>(io.ReadBytes), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>					ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.DiskWriteOps, <span style=color:#8be9fd;font-style:italic>float64</span>(io.WriteOps), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>					ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.DiskWriteBytes, <span style=color:#8be9fd;font-style:italic>float64</span>(io.WrittenBytes), dls<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> addr, open <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.<span style=color:#50fa7b>getListens</span>() {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.NetListenInfo, <span style=color:#8be9fd;font-style:italic>float64</span>(open), addr.<span style=color:#50fa7b>String</span>(), <span style=color:#f1fa8c>&#34;&#34;</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> proxy, addrs <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.<span style=color:#50fa7b>getProxiedListens</span>() {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> addr <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> addrs {
+</span></span><span style=display:flex><span>			ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.NetListenInfo, <span style=color:#bd93f9>1</span>, addr.<span style=color:#50fa7b>String</span>(), proxy)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> d, count <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.connectsSuccessful {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.NetConnectsSuccessful, <span style=color:#8be9fd;font-style:italic>float64</span>(count), d.src.<span style=color:#50fa7b>String</span>(), d.dst.<span style=color:#50fa7b>String</span>())
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> dst, count <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.connectsFailed {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.NetConnectsFailed, <span style=color:#8be9fd;font-style:italic>float64</span>(count), dst.<span style=color:#50fa7b>String</span>())
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> d, count <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.retransmits {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.NetRetransmits, <span style=color:#8be9fd;font-style:italic>float64</span>(count), d.src.<span style=color:#50fa7b>String</span>(), d.dst.<span style=color:#50fa7b>String</span>())
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	connections <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>map</span>[AddrPair]<span style=color:#8be9fd>int</span>{}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> c, conn <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.connectionsActive {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> !conn.Closed.<span style=color:#50fa7b>IsZero</span>() {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		connections[AddrPair{src: c.dst, dst: conn.ActualDest}]<span style=color:#ff79c6>++</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> d, count <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> connections {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.NetConnectionsActive, <span style=color:#8be9fd;font-style:italic>float64</span>(count), d.src.<span style=color:#50fa7b>String</span>(), d.dst.<span style=color:#50fa7b>String</span>())
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> source, p <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.logParsers {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> _, c <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> p.parser.<span style=color:#50fa7b>GetCounters</span>() {
+</span></span><span style=display:flex><span>			ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>counter</span>(metrics.LogMessages, <span style=color:#8be9fd;font-style:italic>float64</span>(c.Messages), source, c.Level.<span style=color:#50fa7b>String</span>(), c.Hash, c.Sample)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	appTypes <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#8be9fd;font-style:italic>struct</span>{}{}
+</span></span><span style=display:flex><span>	seenJvms <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#8be9fd>bool</span>{}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> pid <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.processes {
+</span></span><span style=display:flex><span>		cmdline <span style=color:#ff79c6>:=</span> proc.<span style=color:#50fa7b>GetCmdline</span>(pid)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(cmdline) <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		appType <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>guessApplicationType</span>(cmdline)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> appType <span style=color:#ff79c6>!=</span> <span style=color:#f1fa8c>&#34;&#34;</span> {
+</span></span><span style=display:flex><span>			appTypes[appType] = <span style=color:#8be9fd;font-style:italic>struct</span>{}{}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#50fa7b>isJvm</span>(cmdline) {
+</span></span><span style=display:flex><span>			jvm, jMetrics <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>jvmMetrics</span>(pid)
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(jMetrics) &gt; <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>&amp;&amp;</span> !seenJvms[jvm] {
+</span></span><span style=display:flex><span>				seenJvms[jvm] = <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>for</span> _, m <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> jMetrics {
+</span></span><span style=display:flex><span>					ch <span style=color:#ff79c6>&lt;-</span> m
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> appType <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> appTypes {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.ApplicationType, <span style=color:#bd93f9>1</span>, appType)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	c.l7Stats.<span style=color:#50fa7b>collect</span>(ch)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !<span style=color:#ff79c6>*</span>flags.DisablePinger {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> ip, rtt <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> c.<span style=color:#50fa7b>ping</span>() {
+</span></span><span style=display:flex><span>			ch <span style=color:#ff79c6>&lt;-</span> <span style=color:#50fa7b>gauge</span>(metrics.NetLatency, rtt, ip.<span style=color:#50fa7b>String</span>())
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>coroot-node-agent 暴露了哪些指标？metric.go 代码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#ff79c6>package</span> containers
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> (
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/coroot/coroot-node-agent/ebpftracer/l7&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/prometheus/client_golang/prometheus&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>var</span> metrics = <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	ContainerInfo <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	Restarts      <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	CPULimit      <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	CPUUsage      <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	CPUDelay      <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	ThrottledTime <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	MemoryLimit <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	MemoryRss   <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	MemoryCache <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	OOMKills    <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	DiskDelay      <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskSize       <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskUsed       <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskReserved   <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskReadOps    <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskReadBytes  <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskWriteOps   <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	DiskWriteBytes <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	NetListenInfo         <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	NetConnectsSuccessful <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	NetConnectsFailed     <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	NetConnectionsActive  <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	NetRetransmits        <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	NetLatency            <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	LogMessages <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	ApplicationType <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	JvmInfo              <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	JvmHeapSize          <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	JvmHeapUsed          <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	JvmGCTime            <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	JvmSafepointTime     <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>	JvmSafepointSyncTime <span style=color:#ff79c6>*</span>prometheus.Desc
+</span></span><span style=display:flex><span>}{
+</span></span><span style=display:flex><span>	ContainerInfo: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_info&#34;</span>, <span style=color:#f1fa8c>&#34;Meta information about the container&#34;</span>, <span style=color:#f1fa8c>&#34;image&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	Restarts: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_restarts_total&#34;</span>, <span style=color:#f1fa8c>&#34;Number of times the container was restarted&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	CPULimit:      <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_cpu_limit_cores&#34;</span>, <span style=color:#f1fa8c>&#34;CPU limit of the container&#34;</span>),
+</span></span><span style=display:flex><span>	CPUUsage:      <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_cpu_usage_seconds_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total CPU time consumed by the container&#34;</span>),
+</span></span><span style=display:flex><span>	CPUDelay:      <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_cpu_delay_seconds_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total time duration processes of the container have been waiting for a CPU (while being runnable)&#34;</span>),
+</span></span><span style=display:flex><span>	ThrottledTime: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_cpu_throttled_seconds_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total time duration the container has been throttled&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	MemoryLimit: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_memory_limit_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Memory limit of the container&#34;</span>),
+</span></span><span style=display:flex><span>	MemoryRss:   <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_memory_rss_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Amount of physical memory used by the container (doesn&#39;t include page cache)&#34;</span>),
+</span></span><span style=display:flex><span>	MemoryCache: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_memory_cache_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Amount of page cache memory allocated by the container&#34;</span>),
+</span></span><span style=display:flex><span>	OOMKills:    <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_oom_kills_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of times the container was terminated by the OOM killer&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	DiskDelay:      <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_delay_seconds_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total time duration processes of the container have been waiting fot I/Os to complete&#34;</span>),
+</span></span><span style=display:flex><span>	DiskSize:       <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_size_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Total capacity of the volume&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>	DiskUsed:       <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_used_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Used capacity of the volume&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>	DiskReserved:   <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_reserved_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Reserved capacity of the volume&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>	DiskReadOps:    <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_reads_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of reads completed successfully by the container&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>	DiskReadBytes:  <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_read_bytes_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of bytes read from the disk by the container&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>	DiskWriteOps:   <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_writes_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of writes completed successfully by the container&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>	DiskWriteBytes: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_resources_disk_written_bytes_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of bytes written to the disk by the container&#34;</span>, <span style=color:#f1fa8c>&#34;mount_point&#34;</span>, <span style=color:#f1fa8c>&#34;device&#34;</span>, <span style=color:#f1fa8c>&#34;volume&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	NetListenInfo:         <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_net_tcp_listen_info&#34;</span>, <span style=color:#f1fa8c>&#34;Listen address of the container&#34;</span>, <span style=color:#f1fa8c>&#34;listen_addr&#34;</span>, <span style=color:#f1fa8c>&#34;proxy&#34;</span>),
+</span></span><span style=display:flex><span>	NetConnectsSuccessful: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_net_tcp_successful_connects_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of successful TCP connects&#34;</span>, <span style=color:#f1fa8c>&#34;destination&#34;</span>, <span style=color:#f1fa8c>&#34;actual_destination&#34;</span>),
+</span></span><span style=display:flex><span>	NetConnectsFailed:     <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_net_tcp_failed_connects_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of failed TCP connects&#34;</span>, <span style=color:#f1fa8c>&#34;destination&#34;</span>),
+</span></span><span style=display:flex><span>	NetConnectionsActive:  <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_net_tcp_active_connections&#34;</span>, <span style=color:#f1fa8c>&#34;Number of active outbound connections used by the container&#34;</span>, <span style=color:#f1fa8c>&#34;destination&#34;</span>, <span style=color:#f1fa8c>&#34;actual_destination&#34;</span>),
+</span></span><span style=display:flex><span>	NetRetransmits:        <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_net_tcp_retransmits_total&#34;</span>, <span style=color:#f1fa8c>&#34;Total number of retransmitted TCP segments&#34;</span>, <span style=color:#f1fa8c>&#34;destination&#34;</span>, <span style=color:#f1fa8c>&#34;actual_destination&#34;</span>),
+</span></span><span style=display:flex><span>	NetLatency:            <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_net_latency_seconds&#34;</span>, <span style=color:#f1fa8c>&#34;Round-trip time between the container and a remote IP&#34;</span>, <span style=color:#f1fa8c>&#34;destination_ip&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	LogMessages: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_log_messages_total&#34;</span>, <span style=color:#f1fa8c>&#34;Number of messages grouped by the automatically extracted repeated pattern&#34;</span>, <span style=color:#f1fa8c>&#34;source&#34;</span>, <span style=color:#f1fa8c>&#34;level&#34;</span>, <span style=color:#f1fa8c>&#34;pattern_hash&#34;</span>, <span style=color:#f1fa8c>&#34;sample&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	ApplicationType: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_application_type&#34;</span>, <span style=color:#f1fa8c>&#34;Type of the application running in the container (e.g. memcached, postgres, mysql)&#34;</span>, <span style=color:#f1fa8c>&#34;application_type&#34;</span>),
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	JvmInfo:              <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_jvm_info&#34;</span>, <span style=color:#f1fa8c>&#34;Meta information about the JVM&#34;</span>, <span style=color:#f1fa8c>&#34;jvm&#34;</span>, <span style=color:#f1fa8c>&#34;java_version&#34;</span>),
+</span></span><span style=display:flex><span>	JvmHeapSize:          <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_jvm_heap_size_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Total heap size in bytes&#34;</span>, <span style=color:#f1fa8c>&#34;jvm&#34;</span>),
+</span></span><span style=display:flex><span>	JvmHeapUsed:          <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_jvm_heap_used_bytes&#34;</span>, <span style=color:#f1fa8c>&#34;Used heap size in bytes&#34;</span>, <span style=color:#f1fa8c>&#34;jvm&#34;</span>),
+</span></span><span style=display:flex><span>	JvmGCTime:            <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_jvm_gc_time_seconds&#34;</span>, <span style=color:#f1fa8c>&#34;Time spent in the given JVM garbage collector in seconds&#34;</span>, <span style=color:#f1fa8c>&#34;jvm&#34;</span>, <span style=color:#f1fa8c>&#34;gc&#34;</span>),
+</span></span><span style=display:flex><span>	JvmSafepointTime:     <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_jvm_safepoint_time_seconds&#34;</span>, <span style=color:#f1fa8c>&#34;Time the application has been stopped for safepoint operations in seconds&#34;</span>, <span style=color:#f1fa8c>&#34;jvm&#34;</span>),
+</span></span><span style=display:flex><span>	JvmSafepointSyncTime: <span style=color:#50fa7b>metric</span>(<span style=color:#f1fa8c>&#34;container_jvm_safepoint_sync_time_seconds&#34;</span>, <span style=color:#f1fa8c>&#34;Time spent getting to safepoints in seconds&#34;</span>, <span style=color:#f1fa8c>&#34;jvm&#34;</span>),
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>var</span> (
+</span></span><span style=display:flex><span>	L7Requests = <span style=color:#8be9fd;font-style:italic>map</span>[l7.Protocol]prometheus.CounterOpts{
+</span></span><span style=display:flex><span>		l7.ProtocolHTTP:      {Name: <span style=color:#f1fa8c>&#34;container_http_requests_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound HTTP requests&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolPostgres:  {Name: <span style=color:#f1fa8c>&#34;container_postgres_queries_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Postgres queries&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolRedis:     {Name: <span style=color:#f1fa8c>&#34;container_redis_queries_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Redis queries&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolMemcached: {Name: <span style=color:#f1fa8c>&#34;container_memcached_queries_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Memcached queries&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolMysql:     {Name: <span style=color:#f1fa8c>&#34;container_mysql_queries_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Mysql queries&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolMongo:     {Name: <span style=color:#f1fa8c>&#34;container_mongo_queries_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Mongo queries&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolKafka:     {Name: <span style=color:#f1fa8c>&#34;container_kafka_requests_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Kafka requests&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolCassandra: {Name: <span style=color:#f1fa8c>&#34;container_cassandra_queries_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of outbound Cassandra requests&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolRabbitmq:  {Name: <span style=color:#f1fa8c>&#34;container_rabbitmq_messages_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of Rabbitmq messages produced or consumed by the container&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolNats:      {Name: <span style=color:#f1fa8c>&#34;container_nats_messages_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Total number of NATS messages produced or consumed by the container&#34;</span>},
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	L7Latency = <span style=color:#8be9fd;font-style:italic>map</span>[l7.Protocol]prometheus.HistogramOpts{
+</span></span><span style=display:flex><span>		l7.ProtocolHTTP:      {Name: <span style=color:#f1fa8c>&#34;container_http_requests_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the response time for each outbound HTTP request&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolPostgres:  {Name: <span style=color:#f1fa8c>&#34;container_postgres_queries_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Postgres query&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolRedis:     {Name: <span style=color:#f1fa8c>&#34;container_redis_queries_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Redis query&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolMemcached: {Name: <span style=color:#f1fa8c>&#34;container_memcached_queries_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Memcached query&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolMysql:     {Name: <span style=color:#f1fa8c>&#34;container_mysql_queries_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Mysql query&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolMongo:     {Name: <span style=color:#f1fa8c>&#34;container_mongo_queries_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Mongo query&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolKafka:     {Name: <span style=color:#f1fa8c>&#34;container_kafka_requests_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Kafka request&#34;</span>},
+</span></span><span style=display:flex><span>		l7.ProtocolCassandra: {Name: <span style=color:#f1fa8c>&#34;container_cassandra_queries_duration_seconds_total&#34;</span>, Help: <span style=color:#f1fa8c>&#34;Histogram of the execution time for each outbound Cassandra request&#34;</span>},
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>metric</span>(name, help <span style=color:#8be9fd>string</span>, labels <span style=color:#ff79c6>...</span><span style=color:#8be9fd>string</span>) <span style=color:#ff79c6>*</span>prometheus.Desc {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> prometheus.<span style=color:#50fa7b>NewDesc</span>(name, help, labels, <span style=color:#ff79c6>nil</span>)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>ebpftracer.go</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-Go data-lang=Go><span style=display:flex><span><span style=color:#ff79c6>package</span> ebpftracer
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> (
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;bytes&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;encoding/binary&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;errors&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;fmt&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/cilium/ebpf&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/cilium/ebpf/link&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/cilium/ebpf/perf&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/coroot/coroot-node-agent/common&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/coroot/coroot-node-agent/ebpftracer/l7&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;github.com/coroot/coroot-node-agent/proc&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;golang.org/x/mod/semver&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;golang.org/x/sys/unix&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;inet.af/netaddr&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;k8s.io/klog/v2&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;os&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;runtime&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;strconv&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;strings&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;time&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>const</span> MaxPayloadSize = <span style=color:#bd93f9>1024</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> EventType <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> EventReason <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>const</span> (
+</span></span><span style=display:flex><span>	EventTypeProcessStart    EventType = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	EventTypeProcessExit     EventType = <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	EventTypeConnectionOpen  EventType = <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>	EventTypeConnectionClose EventType = <span style=color:#bd93f9>4</span>
+</span></span><span style=display:flex><span>	EventTypeConnectionError EventType = <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>	EventTypeListenOpen      EventType = <span style=color:#bd93f9>6</span>
+</span></span><span style=display:flex><span>	EventTypeListenClose     EventType = <span style=color:#bd93f9>7</span>
+</span></span><span style=display:flex><span>	EventTypeFileOpen        EventType = <span style=color:#bd93f9>8</span>
+</span></span><span style=display:flex><span>	EventTypeTCPRetransmit   EventType = <span style=color:#bd93f9>9</span>
+</span></span><span style=display:flex><span>	EventTypeL7Request       EventType = <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	EventReasonNone    EventReason = <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	EventReasonOOMKill EventReason = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> Event <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	Type      EventType
+</span></span><span style=display:flex><span>	Reason    EventReason
+</span></span><span style=display:flex><span>	Pid       <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	SrcAddr   netaddr.IPPort
+</span></span><span style=display:flex><span>	DstAddr   netaddr.IPPort
+</span></span><span style=display:flex><span>	Fd        <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	Timestamp <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	L7Request <span style=color:#ff79c6>*</span>l7.RequestData
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> Tracer <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	kernelVersion    <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span>	disableL7Tracing <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	collection <span style=color:#ff79c6>*</span>ebpf.Collection
+</span></span><span style=display:flex><span>	readers    <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#ff79c6>*</span>perf.Reader
+</span></span><span style=display:flex><span>	links      []link.Link
+</span></span><span style=display:flex><span>	uprobes    <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#ff79c6>*</span>ebpf.Program
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewTracer</span>(kernelVersion <span style=color:#8be9fd>string</span>, disableL7Tracing <span style=color:#8be9fd>bool</span>) <span style=color:#ff79c6>*</span>Tracer {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> disableL7Tracing {
+</span></span><span style=display:flex><span>		klog.<span style=color:#50fa7b>Infoln</span>(<span style=color:#f1fa8c>&#34;L7 tracing is disabled&#34;</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>Tracer{
+</span></span><span style=display:flex><span>		kernelVersion:    kernelVersion,
+</span></span><span style=display:flex><span>		disableL7Tracing: disableL7Tracing,
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		readers: <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#ff79c6>*</span>perf.Reader{},
+</span></span><span style=display:flex><span>		uprobes: <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#ff79c6>*</span>ebpf.Program{},
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (t <span style=color:#ff79c6>*</span>Tracer) <span style=color:#50fa7b>Run</span>(events <span style=color:#8be9fd;font-style:italic>chan</span><span style=color:#ff79c6>&lt;-</span> Event) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> t.<span style=color:#50fa7b>ebpf</span>(events); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> t.<span style=color:#50fa7b>init</span>(events); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (t <span style=color:#ff79c6>*</span>Tracer) <span style=color:#50fa7b>Close</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, p <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> t.uprobes {
+</span></span><span style=display:flex><span>		_ = p.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, l <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> t.links {
+</span></span><span style=display:flex><span>		_ = l.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, r <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> t.readers {
+</span></span><span style=display:flex><span>		_ = r.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	t.collection.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (t <span style=color:#ff79c6>*</span>Tracer) <span style=color:#50fa7b>init</span>(ch <span style=color:#8be9fd;font-style:italic>chan</span><span style=color:#ff79c6>&lt;-</span> Event) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	pids, err <span style=color:#ff79c6>:=</span> proc.<span style=color:#50fa7b>ListPids</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;failed to list pids: %w&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, pid <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> pids {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> Event{Type: EventTypeProcessStart, Pid: pid}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	fds, sockets <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>readFds</span>(pids)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, fd <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> fds {
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> Event{Type: EventTypeFileOpen, Pid: fd.pid, Fd: fd.fd}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	listens <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>uint64</span>]<span style=color:#8be9fd>bool</span>{}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, s <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> sockets {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> s.Listen {
+</span></span><span style=display:flex><span>			listens[<span style=color:#8be9fd;font-style:italic>uint64</span>(s.pid)<span style=color:#ff79c6>&lt;&lt;</span><span style=color:#bd93f9>32</span>|<span style=color:#8be9fd;font-style:italic>uint64</span>(s.SAddr.<span style=color:#50fa7b>Port</span>())] = <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, s <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> sockets {
+</span></span><span style=display:flex><span>		typ <span style=color:#ff79c6>:=</span> EventTypeConnectionOpen
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> s.Listen {
+</span></span><span style=display:flex><span>			typ = EventTypeListenOpen
+</span></span><span style=display:flex><span>		} <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> listens[<span style=color:#8be9fd;font-style:italic>uint64</span>(s.pid)<span style=color:#ff79c6>&lt;&lt;</span><span style=color:#bd93f9>32</span>|<span style=color:#8be9fd;font-style:italic>uint64</span>(s.SAddr.<span style=color:#50fa7b>Port</span>())] <span style=color:#ff79c6>||</span> s.DAddr.<span style=color:#50fa7b>Port</span>() &gt; s.SAddr.<span style=color:#50fa7b>Port</span>() { <span style=color:#6272a4>// inbound
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> Event{
+</span></span><span style=display:flex><span>			Type:    typ,
+</span></span><span style=display:flex><span>			Pid:     s.pid,
+</span></span><span style=display:flex><span>			Fd:      s.fd,
+</span></span><span style=display:flex><span>			SrcAddr: s.SAddr,
+</span></span><span style=display:flex><span>			DstAddr: s.DAddr,
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> perfMap <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	name                  <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span>	perCPUBufferSizePages <span style=color:#8be9fd>int</span>
+</span></span><span style=display:flex><span>	event                 rawEvent
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (t <span style=color:#ff79c6>*</span>Tracer) <span style=color:#50fa7b>ebpf</span>(ch <span style=color:#8be9fd;font-style:italic>chan</span><span style=color:#ff79c6>&lt;-</span> Event) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> _, ok <span style=color:#ff79c6>:=</span> ebpfProg[runtime.GOARCH]; !ok {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;unsupported architecture: %s&#34;</span>, runtime.GOARCH)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	kv <span style=color:#ff79c6>:=</span> <span style=color:#f1fa8c>&#34;v&#34;</span> <span style=color:#ff79c6>+</span> common.<span style=color:#50fa7b>KernelMajorMinor</span>(t.kernelVersion)
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> prg []<span style=color:#8be9fd>byte</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, p <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> ebpfProg[runtime.GOARCH] {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> semver.<span style=color:#50fa7b>Compare</span>(kv, p.v) <span style=color:#ff79c6>&gt;=</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			prg = p.p
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>break</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(prg) <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;unsupported kernel version: %s&#34;</span>, t.kernelVersion)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> _, err <span style=color:#ff79c6>:=</span> os.<span style=color:#50fa7b>Stat</span>(<span style=color:#f1fa8c>&#34;/sys/kernel/debug/tracing&#34;</span>); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;kernel tracing is not available: %w&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	collectionSpec, err <span style=color:#ff79c6>:=</span> ebpf.<span style=color:#50fa7b>LoadCollectionSpecFromReader</span>(bytes.<span style=color:#50fa7b>NewReader</span>(prg))
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;failed to load collection spec: %w&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	_ = unix.<span style=color:#50fa7b>Setrlimit</span>(unix.RLIMIT_MEMLOCK, <span style=color:#ff79c6>&amp;</span>unix.Rlimit{Cur: unix.RLIM_INFINITY, Max: unix.RLIM_INFINITY})
+</span></span><span style=display:flex><span>	c, err <span style=color:#ff79c6>:=</span> ebpf.<span style=color:#50fa7b>NewCollectionWithOptions</span>(collectionSpec, ebpf.CollectionOptions{
+</span></span><span style=display:flex><span>		<span style=color:#6272a4>//Programs: ebpf.ProgramOptions{LogLevel: 2, LogSize: 20 * 1024 * 1024},
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	})
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>var</span> verr <span style=color:#ff79c6>*</span>ebpf.VerifierError
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> errors.<span style=color:#50fa7b>As</span>(err, <span style=color:#ff79c6>&amp;</span>verr) {
+</span></span><span style=display:flex><span>			klog.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;%+v&#34;</span>, verr)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;failed to load collection: %w&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	t.collection = c
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 核心部分，name 的值对应于 C 代码中的 map 名称，可见下述示例中的 C 代码
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	perfMaps <span style=color:#ff79c6>:=</span> []perfMap{
+</span></span><span style=display:flex><span>		{name: <span style=color:#f1fa8c>&#34;proc_events&#34;</span>, event: <span style=color:#ff79c6>&amp;</span>procEvent{}, perCPUBufferSizePages: <span style=color:#bd93f9>4</span>},
+</span></span><span style=display:flex><span>		{name: <span style=color:#f1fa8c>&#34;tcp_listen_events&#34;</span>, event: <span style=color:#ff79c6>&amp;</span>tcpEvent{}, perCPUBufferSizePages: <span style=color:#bd93f9>4</span>},
+</span></span><span style=display:flex><span>		{name: <span style=color:#f1fa8c>&#34;tcp_connect_events&#34;</span>, event: <span style=color:#ff79c6>&amp;</span>tcpEvent{}, perCPUBufferSizePages: <span style=color:#bd93f9>8</span>},
+</span></span><span style=display:flex><span>		{name: <span style=color:#f1fa8c>&#34;tcp_retransmit_events&#34;</span>, event: <span style=color:#ff79c6>&amp;</span>tcpEvent{}, perCPUBufferSizePages: <span style=color:#bd93f9>4</span>},
+</span></span><span style=display:flex><span>		{name: <span style=color:#f1fa8c>&#34;file_events&#34;</span>, event: <span style=color:#ff79c6>&amp;</span>fileEvent{}, perCPUBufferSizePages: <span style=color:#bd93f9>4</span>},
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !t.disableL7Tracing {
+</span></span><span style=display:flex><span>		perfMaps = <span style=color:#8be9fd;font-style:italic>append</span>(perfMaps, perfMap{name: <span style=color:#f1fa8c>&#34;l7_events&#34;</span>, event: <span style=color:#ff79c6>&amp;</span>l7Event{}, perCPUBufferSizePages: <span style=color:#bd93f9>32</span>})
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, pm <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> perfMaps {
+</span></span><span style=display:flex><span>		r, err <span style=color:#ff79c6>:=</span> perf.<span style=color:#50fa7b>NewReader</span>(t.collection.Maps[pm.name], pm.perCPUBufferSizePages<span style=color:#ff79c6>*</span>os.<span style=color:#50fa7b>Getpagesize</span>())
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			t.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;failed to create ebpf reader: %w&#34;</span>, err)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		t.readers[pm.name] = r
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>go</span> <span style=color:#50fa7b>runEventsReader</span>(pm.name, r, ch, pm.event)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, programSpec <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> collectionSpec.Programs {
+</span></span><span style=display:flex><span>		program <span style=color:#ff79c6>:=</span> t.collection.Programs[programSpec.Name]
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> t.disableL7Tracing {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>switch</span> programSpec.Name {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> <span style=color:#f1fa8c>&#34;sys_enter_writev&#34;</span>, <span style=color:#f1fa8c>&#34;sys_enter_write&#34;</span>, <span style=color:#f1fa8c>&#34;sys_enter_sendto&#34;</span>, <span style=color:#f1fa8c>&#34;sys_enter_sendmsg&#34;</span>:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> <span style=color:#f1fa8c>&#34;sys_enter_read&#34;</span>, <span style=color:#f1fa8c>&#34;sys_enter_readv&#34;</span>, <span style=color:#f1fa8c>&#34;sys_enter_recvfrom&#34;</span>, <span style=color:#f1fa8c>&#34;sys_enter_recvmsg&#34;</span>:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>case</span> <span style=color:#f1fa8c>&#34;sys_exit_read&#34;</span>, <span style=color:#f1fa8c>&#34;sys_exit_readv&#34;</span>, <span style=color:#f1fa8c>&#34;sys_exit_recvfrom&#34;</span>, <span style=color:#f1fa8c>&#34;sys_exit_recvmsg&#34;</span>:
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>var</span> l link.Link
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>switch</span> programSpec.Type {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> ebpf.TracePoint:
+</span></span><span style=display:flex><span>			parts <span style=color:#ff79c6>:=</span> strings.<span style=color:#50fa7b>SplitN</span>(programSpec.AttachTo, <span style=color:#f1fa8c>&#34;/&#34;</span>, <span style=color:#bd93f9>2</span>)
+</span></span><span style=display:flex><span>			l, err = link.<span style=color:#50fa7b>Tracepoint</span>(parts[<span style=color:#bd93f9>0</span>], parts[<span style=color:#bd93f9>1</span>], program, <span style=color:#ff79c6>nil</span>)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> ebpf.Kprobe:
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> strings.<span style=color:#50fa7b>HasPrefix</span>(programSpec.SectionName, <span style=color:#f1fa8c>&#34;uprobe/&#34;</span>) {
+</span></span><span style=display:flex><span>				t.uprobes[programSpec.Name] = program
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			l, err = link.<span style=color:#50fa7b>Kprobe</span>(programSpec.AttachTo, program, <span style=color:#ff79c6>nil</span>)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			t.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;failed to link program: %w&#34;</span>, err)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		t.links = <span style=color:#8be9fd;font-style:italic>append</span>(t.links, l)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (t EventType) <span style=color:#50fa7b>String</span>() <span style=color:#8be9fd>string</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> t {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeProcessStart:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;process-start&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeProcessExit:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;process-exit&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeConnectionOpen:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;connection-open&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeConnectionClose:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;connection-close&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeConnectionError:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;connection-error&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeListenOpen:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;listen-open&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeListenClose:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;listen-close&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeFileOpen:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;file-open&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeTCPRetransmit:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;tcp-retransmit&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventTypeL7Request:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;l7-request&#34;</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;unknown: &#34;</span> <span style=color:#ff79c6>+</span> strconv.<span style=color:#50fa7b>Itoa</span>(<span style=color:#8be9fd;font-style:italic>int</span>(t))
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (t EventReason) <span style=color:#50fa7b>String</span>() <span style=color:#8be9fd>string</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> t {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventReasonNone:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;none&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> EventReasonOOMKill:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;oom-kill&#34;</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#f1fa8c>&#34;unknown: &#34;</span> <span style=color:#ff79c6>+</span> strconv.<span style=color:#50fa7b>Itoa</span>(<span style=color:#8be9fd;font-style:italic>int</span>(t))
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> rawEvent <span style=color:#8be9fd;font-style:italic>interface</span> {
+</span></span><span style=display:flex><span>	<span style=color:#50fa7b>Event</span>() Event
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> procEvent <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	Type   <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Pid    <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Reason <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (e procEvent) <span style=color:#50fa7b>Event</span>() Event {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> Event{Type: <span style=color:#50fa7b>EventType</span>(e.Type), Reason: <span style=color:#50fa7b>EventReason</span>(e.Reason), Pid: e.Pid}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> tcpEvent <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	Fd        <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	Timestamp <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	Type      <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Pid       <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	SPort     <span style=color:#8be9fd>uint16</span>
+</span></span><span style=display:flex><span>	DPort     <span style=color:#8be9fd>uint16</span>
+</span></span><span style=display:flex><span>	SAddr     [<span style=color:#bd93f9>16</span>]<span style=color:#8be9fd>byte</span>
+</span></span><span style=display:flex><span>	DAddr     [<span style=color:#bd93f9>16</span>]<span style=color:#8be9fd>byte</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (e tcpEvent) <span style=color:#50fa7b>Event</span>() Event {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> Event{
+</span></span><span style=display:flex><span>		Type:      <span style=color:#50fa7b>EventType</span>(e.Type),
+</span></span><span style=display:flex><span>		Pid:       e.Pid,
+</span></span><span style=display:flex><span>		SrcAddr:   <span style=color:#50fa7b>ipPort</span>(e.SAddr, e.SPort),
+</span></span><span style=display:flex><span>		DstAddr:   <span style=color:#50fa7b>ipPort</span>(e.DAddr, e.DPort),
+</span></span><span style=display:flex><span>		Fd:        e.Fd,
+</span></span><span style=display:flex><span>		Timestamp: e.Timestamp,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> fileEvent <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	Type <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Pid  <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Fd   <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (e fileEvent) <span style=color:#50fa7b>Event</span>() Event {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> Event{Type: <span style=color:#50fa7b>EventType</span>(e.Type), Pid: e.Pid, Fd: e.Fd}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> l7Event <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	Fd                  <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	ConnectionTimestamp <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	Pid                 <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Status              <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	Duration            <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	Protocol            <span style=color:#8be9fd>uint8</span>
+</span></span><span style=display:flex><span>	Method              <span style=color:#8be9fd>uint8</span>
+</span></span><span style=display:flex><span>	Padding             <span style=color:#8be9fd>uint16</span>
+</span></span><span style=display:flex><span>	StatementId         <span style=color:#8be9fd>uint32</span>
+</span></span><span style=display:flex><span>	PayloadSize         <span style=color:#8be9fd>uint64</span>
+</span></span><span style=display:flex><span>	Payload             [MaxPayloadSize]<span style=color:#8be9fd>byte</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (e l7Event) <span style=color:#50fa7b>Event</span>() Event {
+</span></span><span style=display:flex><span>	r <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&amp;</span>l7.RequestData{
+</span></span><span style=display:flex><span>		Protocol:    l7.<span style=color:#50fa7b>Protocol</span>(e.Protocol),
+</span></span><span style=display:flex><span>		Status:      l7.<span style=color:#50fa7b>Status</span>(e.Status),
+</span></span><span style=display:flex><span>		Duration:    time.<span style=color:#50fa7b>Duration</span>(e.Duration),
+</span></span><span style=display:flex><span>		Method:      l7.<span style=color:#50fa7b>Method</span>(e.Method),
+</span></span><span style=display:flex><span>		StatementId: e.StatementId,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> e.PayloadSize <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span>:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> e.PayloadSize &gt; MaxPayloadSize:
+</span></span><span style=display:flex><span>		r.Payload = e.Payload[:MaxPayloadSize]
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>default</span>:
+</span></span><span style=display:flex><span>		r.Payload = e.Payload[:e.PayloadSize]
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> Event{Type: EventTypeL7Request, Pid: e.Pid, Fd: e.Fd, Timestamp: e.ConnectionTimestamp, L7Request: r}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>runEventsReader</span>(name <span style=color:#8be9fd>string</span>, r <span style=color:#ff79c6>*</span>perf.Reader, ch <span style=color:#8be9fd;font-style:italic>chan</span><span style=color:#ff79c6>&lt;-</span> Event, e rawEvent) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> {
+</span></span><span style=display:flex><span>		rec, err <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>Read</span>()
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> errors.<span style=color:#50fa7b>Is</span>(err, perf.ErrClosed) {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>break</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> rec.LostSamples &gt; <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			klog.<span style=color:#50fa7b>Errorln</span>(name, <span style=color:#f1fa8c>&#34;lost samples:&#34;</span>, rec.LostSamples)
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> binary.<span style=color:#50fa7b>Read</span>(bytes.<span style=color:#50fa7b>NewBuffer</span>(rec.RawSample), binary.LittleEndian, e); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			klog.<span style=color:#50fa7b>Warningln</span>(<span style=color:#f1fa8c>&#34;failed to read msg:&#34;</span>, err)
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		ch <span style=color:#ff79c6>&lt;-</span> e.<span style=color:#50fa7b>Event</span>()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>ipPort</span>(ip [<span style=color:#bd93f9>16</span>]<span style=color:#8be9fd>byte</span>, port <span style=color:#8be9fd>uint16</span>) netaddr.IPPort {
+</span></span><span style=display:flex><span>	i, _ <span style=color:#ff79c6>:=</span> netaddr.<span style=color:#50fa7b>FromStdIP</span>(ip[:])
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> netaddr.<span style=color:#50fa7b>IPPortFrom</span>(i, port)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>retransmit.c 重传代码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-C data-lang=C><span style=display:flex><span><span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>    __uint(type, BPF_MAP_TYPE_PERF_EVENT_ARRAY);
+</span></span><span style=display:flex><span>    __uint(key_size, <span style=color:#ff79c6>sizeof</span>(<span style=color:#8be9fd>int</span>));
+</span></span><span style=display:flex><span>    __uint(value_size, <span style=color:#ff79c6>sizeof</span>(<span style=color:#8be9fd>int</span>));
+</span></span><span style=display:flex><span>} tcp_retransmit_events SEC(<span style=color:#f1fa8c>&#34;.maps&#34;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>struct</span> trace_event_raw_tcp_event_sk_skb__stub {
+</span></span><span style=display:flex><span>    __u64 unused;
+</span></span><span style=display:flex><span>    <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>sbkaddr;
+</span></span><span style=display:flex><span>    <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>skaddr;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if __KERNEL_FROM &gt;= 420
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>    <span style=color:#8be9fd>int</span> state;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>    __u16 sport;
+</span></span><span style=display:flex><span>    __u16 dport;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#if __KERNEL_FROM &gt;= 512
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>    __u16 family;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>    __u8 saddr[<span style=color:#bd93f9>4</span>];
+</span></span><span style=display:flex><span>    __u8 daddr[<span style=color:#bd93f9>4</span>];
+</span></span><span style=display:flex><span>    __u8 saddr_v6[<span style=color:#bd93f9>16</span>];
+</span></span><span style=display:flex><span>    __u8 daddr_v6[<span style=color:#bd93f9>16</span>];
+</span></span><span style=display:flex><span>};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;tracepoint/tcp/tcp_retransmit_skb&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> tcp_retransmit_skb(<span style=color:#ff79c6>struct</span> trace_event_raw_tcp_event_sk_skb__stub <span style=color:#ff79c6>*</span>args)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>struct</span> tcp_event e <span style=color:#ff79c6>=</span> {
+</span></span><span style=display:flex><span>        .type <span style=color:#ff79c6>=</span> EVENT_TYPE_TCP_RETRANSMIT,
+</span></span><span style=display:flex><span>        .sport <span style=color:#ff79c6>=</span> args<span style=color:#ff79c6>-&gt;</span>sport,
+</span></span><span style=display:flex><span>        .dport <span style=color:#ff79c6>=</span> args<span style=color:#ff79c6>-&gt;</span>dport,
+</span></span><span style=display:flex><span>    };
+</span></span><span style=display:flex><span>    __builtin_memcpy(<span style=color:#ff79c6>&amp;</span>e.saddr, <span style=color:#ff79c6>&amp;</span>args<span style=color:#ff79c6>-&gt;</span>saddr_v6, <span style=color:#ff79c6>sizeof</span>(e.saddr));
+</span></span><span style=display:flex><span>    __builtin_memcpy(<span style=color:#ff79c6>&amp;</span>e.daddr, <span style=color:#ff79c6>&amp;</span>args<span style=color:#ff79c6>-&gt;</span>daddr_v6, <span style=color:#ff79c6>sizeof</span>(e.daddr));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    bpf_perf_event_output(args, <span style=color:#ff79c6>&amp;</span>tcp_retransmit_events, BPF_F_CURRENT_CPU, <span style=color:#ff79c6>&amp;</span>e, <span style=color:#ff79c6>sizeof</span>(e));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 id=参考>参考</h1><ol><li><a href=https://github.com/coroot/coroot>https://github.com/coroot/coroot</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2023-09-16-kubernetes-service/ data-toggle=tooltip data-placement=top title="深入研究 Kubernetes 集群中的 Service 通信机制">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2023</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
