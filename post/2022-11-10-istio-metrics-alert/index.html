@@ -1,0 +1,829 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="配置 Istio 核心指标监控告警"><meta property="og:title" content="配置 Istio 核心指标监控告警"><meta property="twitter:title" content="配置 Istio 核心指标监控告警"><meta name=description content="Istio 是一个开源的服务网格平台，它通过控制平面和数据平面来管理微服务架构中的流量、安全性和监控等方面。控制平面和数据平面有一些关键的指标，这些指标是 Istio 核心指标，本文介绍如何对 Istio 核心指标配置监控告警。"><meta property="og:description" content="Istio 是一个开源的服务网格平台，它通过控制平面和数据平面来管理微服务架构中的流量、安全性和监控等方面。控制平面和数据平面有一些关键的指标，这些指标是 Istio 核心指标，本文介绍如何对 Istio 核心指标配置监控告警。"><meta property="twitter:description" content="Istio 是一个开源的服务网格平台，它通过控制平面和数据平面来管理微服务架构中的流量、安全性和监控等方面。控制平面和数据平面有一些关键的指标，这些指标是 Istio 核心指标，本文介绍如何对 Istio 核心指标配置监控告警。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>配置 Istio 核心指标监控告警 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2022-11-10-istio-metrics-alert/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/istio title=istio>istio</a>
+<a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/microservice title=microservice>microservice</a></div><h1>配置 Istio 核心指标监控告警</h1><h2 class=subheading></h2><span class=meta>Posted by
+陈谭军
+on
+Thursday, November 10, 2022
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2022-11-10-istio-metrics-alert/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 3543 字</span>，阅读约 <span class=more-meta>8 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=部署-istio-与周边组件>部署 Istio 与周边组件</h1><p>部署 Istio 参考 <a href=https://istio.io/latest/docs/setup/getting-started/>getting-started</a>。</p><p>部署 Prometheus 参考 <a href=https://istio.io/latest/docs/tasks/observability/metrics/querying-metrics/>Querying Metrics from Prometheus</a>。</p><p>部署 Grafana 参考 <a href=https://istio.io/latest/docs/tasks/observability/metrics/using-istio-dashboard/>Visualizing Metrics with Grafana</a>。</p><h1 id=原生-istio-grafana-监控面板>原生 Istio Grafana 监控面板</h1><p>我们首先查看 Istio 原生 Grafana 大盘，如下图所示：</p><p><img src=/images/2022-11-10-istio-metrics-alert/1.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/2.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/3.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/4.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/5.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/6.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/7.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/8.png alt></p><h1 id=监控告警>监控告警</h1><p>在 Istio 服务网格中，每个组件都暴露了一个用于生成指标的接口，Prometheus 通过抓取这些接口并收集结果来实现工作。这是通过 Prometheus 的<a href=https://prometheus.io/docs/prometheus/latest/configuration/configuration/>配置文件</a>进行配置的，该文件控制要查询的接口、查询的端口和路径、TLS 设置等配置。</p><p>要收集整个网格的指标信息，需要配置 Prometheus，如下所示：</p><ul><li>控制平面（istiod deployment）</li><li>入口和出口网关</li><li>Envoy sidecar</li><li>用户应用程序（如果它们暴露了 Prometheus 指标）</li></ul><p>要抓取 Istiod 数据，需要将以下 job 添加到抓取其 http-monitoring 端口，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>job_name</span>: <span style=color:#f1fa8c>&#39;istiod&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kubernetes_sd_configs</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>role</span>: endpoints
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespaces</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>names</span>:
+</span></span><span style=display:flex><span>    - istio-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>relabel_configs</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>source_labels</span>: [__meta_kubernetes_service_name, __meta_kubernetes_endpoint_port_name]
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>action</span>: keep
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>regex</span>: istiod;http-monitoring 
+</span></span></code></pre></div><p>要抓取 Envoy 数据，包括 sidecar 代理和网关代理，需要将以下 job 添加到抓取以 -envoy-prom 结尾的端口，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>job_name</span>: <span style=color:#f1fa8c>&#39;envoy-stats&#39;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metrics_path</span>: /stats/prometheus
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kubernetes_sd_configs</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>role</span>: pod
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>relabel_configs</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>source_labels</span>: [__meta_kubernetes_pod_container_port_name]
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>action</span>: keep
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>regex</span>: <span style=color:#f1fa8c>&#39;.*-envoy-prom&#39;</span> 
+</span></span></code></pre></div><p>我们在给 Prometheus 添加了以上配置后，我们可以通过 Grafana 的 UI 查看抓取到的数据，如下图所示：</p><p><img src=/images/2022-11-10-istio-metrics-alert/9.png alt></p><p><img src=/images/2022-11-10-istio-metrics-alert/10.png alt></p><p>我们给 Istio 配置告警前，我们先简单了解下 Prometheus 基本知识。</p><p>一个有效的 Prometheus Configuration 配置文件如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#6272a4># my global config</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>global</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>scrape_interval</span>: 15s
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>evaluation_interval</span>: 30s
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>body_size_limit</span>: 15MB
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>sample_limit</span>: <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>target_limit</span>: <span style=color:#bd93f9>30</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>label_limit</span>: <span style=color:#bd93f9>30</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>label_name_length_limit</span>: <span style=color:#bd93f9>200</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>label_value_length_limit</span>: <span style=color:#bd93f9>200</span>
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># scrape_timeout is set to the global default (10s).</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>external_labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>monitor</span>: codelab
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>foo</span>: bar
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>rule_files</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#34;first.rules&#34;</span>
+</span></span><span style=display:flex><span>  - <span style=color:#f1fa8c>&#34;my/*.rules&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>remote_write</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>url</span>: http://remote1/push
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: drop_expensive
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>write_relabel_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [__name__]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: expensive.*
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: drop
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>oauth2</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>client_id</span>: <span style=color:#f1fa8c>&#34;123&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>client_secret</span>: <span style=color:#f1fa8c>&#34;456&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>token_url</span>: <span style=color:#f1fa8c>&#34;http://remote1/auth&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>url</span>: http://remote2/push
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: rw_tls
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: value
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>remote_read</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>url</span>: http://remote1/read
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>read_recent</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: default
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>enable_http2</span>: <span style=color:#ff79c6>false</span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>url</span>: http://remote3/read
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>read_recent</span>: <span style=color:#ff79c6>false</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>name</span>: read_special
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>required_matchers</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>job</span>: special
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>scrape_configs</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: prometheus
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>honor_labels</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># scrape_interval is defined by the configured global (15s).</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># scrape_timeout is defined by the global default (10s).</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># metrics_path defaults to &#39;/metrics&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># scheme defaults to &#39;http&#39;.</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>file_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>files</span>:
+</span></span><span style=display:flex><span>          - foo/*.slow.json
+</span></span><span style=display:flex><span>          - foo/*.slow.yml
+</span></span><span style=display:flex><span>          - single/file.yml
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>refresh_interval</span>: 10m
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>files</span>:
+</span></span><span style=display:flex><span>          - bar/*.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>static_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>targets</span>: [<span style=color:#f1fa8c>&#34;localhost:9090&#34;</span>, <span style=color:#f1fa8c>&#34;localhost:9191&#34;</span>]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>my</span>: label
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>your</span>: label
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>relabel_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [job, __meta_dns_name]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: (.*)some-[regex]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: job
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>replacement</span>: foo-${1}
+</span></span><span style=display:flex><span>        <span style=color:#6272a4># action defaults to &#39;replace&#39;</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [abc]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: cde
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>replacement</span>: static
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: abc
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>regex</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>replacement</span>: static
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: abc
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [foo]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: abc
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: keepequal
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [foo]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: abc
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: dropequal
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>credentials_file</span>: valid_token_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>min_version</span>: TLS10
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-x
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>basic_auth</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>username</span>: admin_name
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>password</span>: <span style=color:#f1fa8c>&#34;multiline\nmysecret\ntest&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scrape_interval</span>: 50s
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scrape_timeout</span>: 5s
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scrape_protocols</span>: [<span style=color:#f1fa8c>&#34;PrometheusText0.0.4&#34;</span>]
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>body_size_limit</span>: 10MB
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>sample_limit</span>: <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>target_limit</span>: <span style=color:#bd93f9>35</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>label_limit</span>: <span style=color:#bd93f9>35</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>label_name_length_limit</span>: <span style=color:#bd93f9>210</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>label_value_length_limit</span>: <span style=color:#bd93f9>210</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metrics_path</span>: /my_path
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scheme</span>: https
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>dns_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>refresh_interval</span>: 15s
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>names</span>:
+</span></span><span style=display:flex><span>          - first.dns.address.domain.com
+</span></span><span style=display:flex><span>          - second.dns.address.domain.com
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>names</span>:
+</span></span><span style=display:flex><span>          - first.dns.address.domain.com
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>relabel_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [job]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: (.*)some-[regex]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: drop
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [__address__]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>modulus</span>: <span style=color:#bd93f9>8</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: __tmp_hash
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: hashmod
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [__tmp_hash]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: keep
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>action</span>: labelmap
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>action</span>: labeldrop
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: d
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>action</span>: labelkeep
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: k
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metric_relabel_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [__name__]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: expensive_metric.*
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>action</span>: drop
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-y
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>consul_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>server</span>: <span style=color:#f1fa8c>&#34;localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>token</span>: mysecret
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>path_prefix</span>: /consul
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>services</span>: [<span style=color:#f1fa8c>&#34;nginx&#34;</span>, <span style=color:#f1fa8c>&#34;cache&#34;</span>, <span style=color:#f1fa8c>&#34;mysql&#34;</span>]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tags</span>: [<span style=color:#f1fa8c>&#34;canary&#34;</span>, <span style=color:#f1fa8c>&#34;v1&#34;</span>]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>node_meta</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>rack</span>: <span style=color:#f1fa8c>&#34;123&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>allow_stale</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>scheme</span>: https
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ca_file</span>: valid_ca_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>insecure_skip_verify</span>: <span style=color:#ff79c6>false</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>relabel_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>source_labels</span>: [__meta_sd_consul_tags]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>separator</span>: <span style=color:#f1fa8c>&#34;,&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>regex</span>: label:([^=]+)=([^,]+)
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: ${1}
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>replacement</span>: ${2}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-z
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>credentials</span>: mysecret
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-kubernetes
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>kubernetes_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: endpoints
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>api_server</span>: <span style=color:#f1fa8c>&#34;https://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>basic_auth</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>username</span>: <span style=color:#f1fa8c>&#34;myusername&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>password</span>: <span style=color:#f1fa8c>&#34;mysecret&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-kubernetes-namespaces
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>kubernetes_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: endpoints
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>api_server</span>: <span style=color:#f1fa8c>&#34;https://localhost:1234&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>namespaces</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>names</span>:
+</span></span><span style=display:flex><span>            - default
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>basic_auth</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>username</span>: <span style=color:#f1fa8c>&#34;myusername&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>password_file</span>: valid_password_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-kuma
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>kuma_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>server</span>: http://kuma-control-plane.kuma-system.svc:5676
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-marathon
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>marathon_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>servers</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#34;https://marathon.example.com:443&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>auth_token</span>: <span style=color:#f1fa8c>&#34;mysecret&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-nomad
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>nomad_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>server</span>: <span style=color:#f1fa8c>&#39;http://localhost:4646&#39;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-ec2
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>ec2_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>region</span>: us-east-1
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>access_key</span>: access
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>secret_key</span>: mysecret
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>profile</span>: profile
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>filters</span>:
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: tag:environment
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>values</span>:
+</span></span><span style=display:flex><span>              - prod
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>          - <span style=color:#ff79c6>name</span>: tag:service
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>values</span>:
+</span></span><span style=display:flex><span>              - web
+</span></span><span style=display:flex><span>              - db
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-lightsail
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>lightsail_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>region</span>: us-east-1
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>access_key</span>: access
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>secret_key</span>: mysecret
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>profile</span>: profile
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-azure
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>azure_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>environment</span>: AzurePublicCloud
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>authentication_method</span>: OAuth
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>subscription_id</span>: 11AAAA11-A11A-111A-A111-1111A1111A11
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>resource_group</span>: my-resource-group
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tenant_id</span>: BBBB222B-B2B2-2B22-B222-2BB2222BB2B2
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>client_id</span>: 333333CC-3C33-3333-CCC3-33C3CCCCC33C
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>client_secret</span>: mysecret
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>9100</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-nerve
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>nerve_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>servers</span>:
+</span></span><span style=display:flex><span>          - localhost
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>paths</span>:
+</span></span><span style=display:flex><span>          - /monitoring
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: 0123service-xxx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metrics_path</span>: /metrics
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>static_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>targets</span>:
+</span></span><span style=display:flex><span>          - localhost:9090
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: badfederation
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>honor_timestamps</span>: <span style=color:#ff79c6>false</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metrics_path</span>: /federate
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>static_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>targets</span>:
+</span></span><span style=display:flex><span>          - localhost:9090
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: 測試
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metrics_path</span>: /metrics
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>static_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>targets</span>:
+</span></span><span style=display:flex><span>          - localhost:9090
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: httpsd
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>http_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>url</span>: <span style=color:#f1fa8c>&#34;http://example.com/prometheus&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-triton
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>triton_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>account</span>: <span style=color:#f1fa8c>&#34;testAccount&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>dns_suffix</span>: <span style=color:#f1fa8c>&#34;triton.example.com&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>endpoint</span>: <span style=color:#f1fa8c>&#34;triton.example.com&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>9163</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>refresh_interval</span>: 1m
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>version</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: digitalocean-droplets
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>digitalocean_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>credentials</span>: abcdef
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: docker
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>docker_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>host</span>: unix:///var/run/docker.sock
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: dockerswarm
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>dockerswarm_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>host</span>: http://127.0.0.1:2375
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>role</span>: nodes
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-openstack
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>openstack_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: instance
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>region</span>: RegionOne
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>refresh_interval</span>: 1m
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ca_file</span>: valid_ca_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-puppetdb
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>puppetdb_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>url</span>: https://puppetserver/
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>query</span>: <span style=color:#f1fa8c>&#39;resources { type = &#34;Package&#34; and title = &#34;httpd&#34; }&#39;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>include_parameters</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>port</span>: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>refresh_interval</span>: 1m
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ca_file</span>: valid_ca_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: hetzner
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>relabel_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>action</span>: uppercase
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>source_labels</span>: [instance]
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>target_label</span>: instance
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>hetzner_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: hcloud
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>credentials</span>: abcdef
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: robot
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>basic_auth</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>username</span>: abcdef
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>password</span>: abcdef
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: service-eureka
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>eureka_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>server</span>: <span style=color:#f1fa8c>&#34;http://eureka.example.com:8761/eureka&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: ovhcloud
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>ovhcloud_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>service</span>: vps
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>endpoint</span>: ovh-eu
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>application_key</span>: testAppKey
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>application_secret</span>: testAppSecret
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>consumer_key</span>: testConsumerKey
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>refresh_interval</span>: 1m
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>service</span>: dedicated_server
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>endpoint</span>: ovh-eu
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>application_key</span>: testAppKey
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>application_secret</span>: testAppSecret
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>consumer_key</span>: testConsumerKey
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>refresh_interval</span>: 1m
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: scaleway
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scaleway_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: instance
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>project_id</span>: <span style=color:#bd93f9>11111111-1111-1111-1111-111111111112</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>access_key</span>: SCWXXXXXXXXXXXXXXXXX
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>secret_key</span>: <span style=color:#bd93f9>11111111-1111-1111-1111-111111111111</span>
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>role</span>: baremetal
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>project_id</span>: <span style=color:#bd93f9>11111111-1111-1111-1111-111111111112</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>access_key</span>: SCWXXXXXXXXXXXXXXXXX
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>secret_key</span>: <span style=color:#bd93f9>11111111-1111-1111-1111-111111111111</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: linode-instances
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>linode_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>credentials</span>: abcdef
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: uyuni
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>uyuni_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>server</span>: https://localhost:1234
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>username</span>: gopher
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>password</span>: hole
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: ionos
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>ionos_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>datacenter_id</span>: 8feda53f-15f0-447f-badf-ebe32dad2fc0
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>credentials</span>: abcdef
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>job_name</span>: vultr
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>vultr_sd_configs</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>authorization</span>:
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>credentials</span>: abcdef
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>alerting</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>alertmanagers</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>scheme</span>: https
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>static_configs</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>targets</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#f1fa8c>&#34;1.2.3.4:9093&#34;</span>
+</span></span><span style=display:flex><span>            - <span style=color:#f1fa8c>&#34;1.2.3.5:9093&#34;</span>
+</span></span><span style=display:flex><span>            - <span style=color:#f1fa8c>&#34;1.2.3.6:9093&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>storage</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>tsdb</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>out_of_order_time_window</span>: 30m
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>tracing</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>endpoint</span>: <span style=color:#f1fa8c>&#34;localhost:4317&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>client_type</span>: <span style=color:#f1fa8c>&#34;grpc&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>headers</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>foo</span>: <span style=color:#f1fa8c>&#34;bar&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>timeout</span>: 5s
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>compression</span>: <span style=color:#f1fa8c>&#34;gzip&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>tls_config</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>cert_file</span>: valid_cert_file
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>key_file</span>: valid_key_file
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>insecure_skip_verify</span>: <span style=color:#ff79c6>true</span>
+</span></span></code></pre></div><p>告警规则示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>groups</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>name</span>: example
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>rules</span>:
+</span></span><span style=display:flex><span>  - <span style=color:#ff79c6>alert</span>: HighRequestLatency
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>expr</span>: job:request_latency_seconds:mean5m{job=&#34;myjob&#34;} &gt; 0.5
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span>: 10m
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>severity</span>: page
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>summary</span>: High request latency
+</span></span></code></pre></div><ul><li>alert：定义一个告警规则。</li><li>expr：定义一个PromQL表达式，用于描述告警的条件。</li><li>for：定义告警的持续时间。例如，如果一个告警的for设置为10m，那么这个告警只会在表达式满足条件10分钟时触发。</li><li>labels：用于定义告警的标签，可以用于分类和过滤告警。</li><li>annotations：用于为告警提供附加信息，例如告警的描述、告警的严重性等。</li></ul><p>具体关于 Prometheus 告警规则的介绍，可以参考 <a href=https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/>Prometheus Alerting Rules</a>。</p><p>完成上述基础配置后，我们就可以给 Istio 配置告警。我们在上篇文章中详解过<a href=https://tanjunchen.github.io/post/2022-11-01-istio-metrics/>Istio 核心指标</a>，接下来我们针对这些 Istio 核心指标配置监控告警，以下是 Istio 1.16.5 版本为示例。</p><p><img src=/images/2022-11-10-istio-metrics-alert/11.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it reviews-v1-6955fcdd8d-d5s58  -- curl localhost:15000/stats/prometheus | grep envoy_
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_assignment_stale counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_assignment_stale<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_assignment_timeout_received counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_assignment_timeout_received<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_bind_errors counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_bind_errors<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_default_total_match_count counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_default_total_match_count<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_dropped_headers_with_underscores counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_dropped_headers_with_underscores<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_header_overflow counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_header_overflow<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_headers_cb_no_stream counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_headers_cb_no_stream<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_inbound_empty_frames_flood counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_inbound_empty_frames_flood<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_inbound_priority_frames_flood counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_inbound_priority_frames_flood<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_inbound_window_update_frames_flood counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_inbound_window_update_frames_flood<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_keepalive_timeout counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_keepalive_timeout<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_metadata_empty_frames counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_metadata_empty_frames<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_outbound_control_flood counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_outbound_control_flood<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE envoy_cluster_http2_outbound_flood counter</span>
+</span></span><span style=display:flex><span>envoy_cluster_http2_outbound_flood<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>cluster_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;xds-grpc&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>...
+</span></span></code></pre></div><p>数据平面告警示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioEnvoyInternalUpstreamReq503TooHigh
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Envoy Percentage of HTTP 503 internal upstream responses is too high&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;The amount of 503 internal upstream responses is higher than 1%. It is too high&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  rate(envoy_cluster_internal_upstream_rq_503[1m])/rate(envoy_cluster_internal_upstream_rq_completed[1m]) &gt; 0.01
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioEnvoyInternalUpstreamReq200TooLow
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Envoy Percentage of HTTP 200 internal upstream responses is too low&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;The amount of 200 internal upstream responses is lower than 99.9%. It is too low&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  rate(envoy_cluster_internal_upstream_rq_200[1m])/rate(envoy_cluster_internal_upstream_rq_completed[1m]) &lt; 0.999
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioEnvoyUpstreamReq503TooHigh
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Envoy Percentage of HTTP 503 upstream responses is too high&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;The amount of 503 upstream responses is higher than 1%. It is too high&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  rate(envoy_cluster_upstream_rq_503[1m])/rate(envoy_cluster_upstream_rq_completed[1m]) &gt; 0.01
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioEnvoyUpstreamReq200TooLow
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Envoy Percentage of HTTP 200 upstream responses is too low&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;The amount of 200 upstream responses is lower than 99.9%. It is too low&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  rate(envoy_cluster_upstream_rq_200[1m])/rate(envoy_cluster_upstream_rq_completed[1m]) &lt; 0.999
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioEnvoyClusterBindErrors
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Envoy cluster binding errors&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Error in binding cluster with {{ $labels.pod_name }}  pod in {{ $labels.namespace }} namespace.&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  envoy_cluster_bind_errors &gt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioEnvoyClusterDstHostInvalid
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Envoy cluster destination host invalid&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Envoy cluster destination host {{ $labels.pod_name }} in {{ $labels.namespace }} namespace invalid for 1 minutes&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; envoy_cluster_original_dst_host_invalid &gt; 0
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span></code></pre></div><p><img src=/images/2022-11-10-istio-metrics-alert/12.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it reviews-v1-6955fcdd8d-d5s58  -- curl localhost:15000/stats/prometheus | grep istio_ | head -n <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE istio_requests_total counter</span>
+</span></span><span style=display:flex><span>istio_requests_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>response_code</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;200&#34;</span>,reporter<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;source&#34;</span>,source_workload<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;reviews-v1&#34;</span>,source_workload_namespace<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default&#34;</span>,source_principal<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;spiffe://cluster.local/ns/default/sa/bookinfo-reviews&#34;</span>,source_app<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;reviews&#34;</span>,source_version<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span>,source_cluster<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz-cce-m6m1ymu1&#34;</span>,destination_workload<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage-v1&#34;</span>,destination_workload_namespace<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default&#34;</span>,destination_principal<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;spiffe://cluster.local/ns/default/sa/bookinfo-productpage&#34;</span>,destination_app<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage&#34;</span>,destination_version<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span>,destination_service<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage.default.svc.cluster.local&#34;</span>,destination_service_name<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage&#34;</span>,destination_service_namespace<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default&#34;</span>,destination_cluster<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz-cce-m6m1ymu1&#34;</span>,request_protocol<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;http&#34;</span>,response_flags<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;-&#34;</span>,grpc_response_status<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>,connection_security_policy<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;unknown&#34;</span>,source_canonical_service<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;reviews&#34;</span>,destination_canonical_service<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage&#34;</span>,source_canonical_revision<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span>,destination_canonical_revision<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>745</span>
+</span></span><span style=display:flex><span>istio_requests_total<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>response_code</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;404&#34;</span>,reporter<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;source&#34;</span>,source_workload<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;reviews-v1&#34;</span>,source_workload_namespace<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default&#34;</span>,source_principal<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;spiffe://cluster.local/ns/default/sa/bookinfo-reviews&#34;</span>,source_app<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;reviews&#34;</span>,source_version<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span>,source_cluster<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz-cce-m6m1ymu1&#34;</span>,destination_workload<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage-v1&#34;</span>,destination_workload_namespace<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default&#34;</span>,destination_principal<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;spiffe://cluster.local/ns/default/sa/bookinfo-productpage&#34;</span>,destination_app<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage&#34;</span>,destination_version<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span>,destination_service<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage.default.svc.cluster.local&#34;</span>,destination_service_name<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage&#34;</span>,destination_service_namespace<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default&#34;</span>,destination_cluster<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz-cce-m6m1ymu1&#34;</span>,request_protocol<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;http&#34;</span>,response_flags<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;-&#34;</span>,grpc_response_status<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>,connection_security_policy<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;unknown&#34;</span>,source_canonical_service<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;reviews&#34;</span>,destination_canonical_service<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;productpage&#34;</span>,source_canonical_revision<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span>,destination_canonical_revision<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>60</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE istio_build gauge</span>
+</span></span><span style=display:flex><span>istio_build<span style=color:#ff79c6>{</span><span style=color:#8be9fd;font-style:italic>component</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;proxy&#34;</span>,tag<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;1.16.5&#34;</span><span style=color:#ff79c6>}</span> <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE istio_request_bytes histogram</span>
+</span></span><span style=display:flex><span>...
+</span></span></code></pre></div><p>Istio 告警示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#6272a4># ISTIO</span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstiodAvailabilityDrop
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Istiod Availability Drop&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description: &#39;Istiod pods have dropped during the last 1m (current value</span>: <span style=color:#ff79c6>*{{</span> printf &#34;%2.0f%%&#34; $value }}*). Envoy sidecars might have outdated configuration&#39;
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    </span>    avg(avg_over_time(up{job=&#34;istiod&#34;}[1m]))  &lt; 0.5
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioLatency99Percentile
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket[1d])) by (clusterID, region, destination_workload_namespace, source_canonical_service, source_workload_namespace, le)) &gt; 1000
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: Istio latency 99 percentile (instance {{ $labels.instance }})
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Istio 1% slowest requests are longer than 1000ms.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstiodAvailabilityDrop
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Istiod Availability Drop&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description: &#39;Istiod pods have dropped during the last 1m (current value</span>: <span style=color:#ff79c6>*{{</span> printf &#34;%2.0f%%&#34; $value }}*). Inbound traffic will likely be affected&#39;
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: min(kube_deployment_spec_replicas{deployment=&#34;istiod&#34;, namespace=&#34;istio-system&#34;}) &lt; 0.5
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioNo200ResponseCodeRate
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(rate(istio_requests_total{response_code!~&#34;200&#34;, reporter=&#34;destination&#34;}[5s])) &gt; 0.01
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio Non-200 Response Code Rate Alert&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Detected a high rate of non-200 response codes in Istio within a 5 second window&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHigh4xxErrorRate
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(rate(istio_requests_total{reporter=&#34;destination&#34;, response_code=~&#34;4.*&#34;}[1m])) / sum(rate(istio_requests_total{reporter=&#34;destination&#34;}[1m])) * 100 &gt; 1
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio high 4xx error rate on clusterID {{ $labels.clusterID }} and region {{ $labels.region }}&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;High percentage of HTTP 4xx responses in Istio (&gt; 1%).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHigh4xxErrorRate5s
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(increase(istio_requests_total{reporter=&#34;destination&#34;, response_code=~&#34;4.*&#34;}[5s])) &gt; 2
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio high 4xx error rate on clusterID {{ $labels.clusterID }} and region {{ $labels.region }}&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;High percentage of HTTP 4xx responses in Istio (&gt; 2 in 5 seconds).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHigh5xxErrorRate
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(rate(istio_requests_total{reporter=&#34;destination&#34;, response_code=~&#34;5.*&#34;}[1m])) / sum(rate(istio_requests_total{reporter=&#34;destination&#34;}[1m])) * 100 &gt; 1
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio high 5xx error rate on clusterID {{ $labels.clusterID }} and region {{ $labels.region }}&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;High percentage of HTTP 5xx responses in Istio (&gt; 1%).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHigh5xxErrorRate5s
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(increase(istio_requests_total{reporter=&#34;destination&#34;, response_code=~&#34;5.*&#34;}[5s])) &gt; 2
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio high 5xx error rate on clusterID {{ $labels.clusterID }} and region {{ $labels.region }}&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;High percentage of HTTP 5xx responses in Istio (&gt; 2 in 5 seconds).\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioRequestTotalHTTP200RateLow
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Istio Percentage of HTTP 2xx responses is too low&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;The amount of 2xx responses between {{ $labels.source_app }} and {{ $labels.destination_app }}  is lower than 99.9 percentage. It is too low.&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  sum by (destination_app, source_app, instance) (rate(istio_requests_total{response_code=~&#34;2.*&#34;}[1m]))/sum by (destination_app, source_app, instance) (rate(istio_requests_total[1m])) &lt; 0.999
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHighRequestLatency
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: rate(istio_request_duration_milliseconds_sum{reporter=&#34;destination&#34;}[1m]) / rate(istio_request_duration_milliseconds_count{reporter=&#34;destination&#34;}[1m]) &gt; 5s
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: Istio high request latency (instance {{ $labels.instance }} on clusterID {{ $labels.clusterID }} and region {{ $labels.region }})
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Istio average requests execution is longer than 5s.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioAbnormalResponseSize
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>:  <span style=color:#f1fa8c>&#34;Istio response size is too low&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>descrition</span>:  <span style=color:#f1fa8c>&#34;Istio responses size between {{ $labels.source_app }} and {{ $labels.destination_app }} is lower than usual for last 5 minutes&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  sum by (destination_app, source_app, instance) (istio_response_bytes_sum offset 5m)/ sum by (destination_app, source_app, instance) (istio_response_bytes_count offset 5m) &gt; 1.5 * sum by (destination_app, source_app, instance)(istio_response_bytes_sum - istio_response_bytes_sum offset 5m)/sum by (destination_app, source_app, instance)(istio_response_bytes_count - istio_response_bytes_count offset 5m)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioLowRequestDuration
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:  
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio request duration is too low&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Istio request duration between {{ $labels.source_app }} and {{ $labels.destination_app }} is lower than usual for last 5 minutes&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  sum by (destination_app, source_app, instance) ( istio_request_duration_milliseconds_sum - istio_request_duration_milliseconds_sum offset 5m )/ sum by (destination_app, source_app, instance) ( istio_request_duration_milliseconds_count - istio_request_duration_milliseconds_count offset 5m)  &lt;  0.3 * sum by (destination_app, source_app, instance) (istio_request_duration_milliseconds_sum offset 5m)/sum by (destination_app, source_app, instance) (istio_request_duration_milliseconds_count offset 5m)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  for: 1m</span>  
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHighRequestDuration
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Istio request duration is too high&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Istio request duration between {{ $labels.source_app }} and {{ $labels.destination_app }} is higher than usual in last 5 minutes&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  sum by (destination_app, source_app, instance) ( istio_request_duration_milliseconds_sum - istio_request_duration_milliseconds_sum offset 5m )/ sum by (destination_app, source_app, instance) ( istio_request_duration_milliseconds_count - istio_request_duration_milliseconds_count offset 5m) &gt; 2 * sum by (destination_app, source_app, instance) (istio_request_duration_milliseconds_sum offset 5m)/sum by (destination_app, source_app, instance) (istio_request_duration_milliseconds_count offset 5m)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  for: 1m</span>  
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioHighTotalRequestRate
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(rate(istio_requests_total{reporter=&#34;destination&#34;}[1m])) &gt; 1000
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: Istio high total request rate (instance {{ $labels.instance }})
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Global request rate in the service mesh is unusually high.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioLowTotalRequestRate
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(rate(istio_requests_total{reporter=&#34;destination&#34;}[1m])) &lt; 10
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: warning
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: Istio low total request rate (instance {{ $labels.instance }})
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Global request rate in the service mesh is unusually low.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioGlobalRequestRateHigh
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Istio Global Request Rate High&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description: &#39;Istio global request rate is unusually high during the last 1m (current value</span>: <span style=color:#ff79c6>*{{</span> printf &#34;%2.0f%%&#34; $value }}*). The amount of traffic being generated inside the service mesh is higher than normal&#39;
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    </span>    round(sum(irate(istio_requests_total{reporter=&#34;destination&#34;}[1m])), 0.001) &gt; 1000
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioGlobalRequestRateLow
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#39;Istio global request rate too low&#39;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description: &#39;Istio global request rate is unusually low during the last 1m (current value</span>: <span style=color:#ff79c6>*{{</span> printf &#34;%2.0f%%&#34; $value }}*). The amount of traffic being generated inside the service mesh has dropped below usual levels&#39;
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    </span>    round(sum(irate(istio_requests_total{reporter=&#34;destination&#34;}[1m])), 0.001) &lt; 10
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span></code></pre></div><p><img src=/images/2022-11-10-istio-metrics-alert/13.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl -n istio-system <span style=color:#8be9fd;font-style:italic>exec</span> -it istiod-dfdd5ff77-zp7k7  --  curl localhost:15014/metrics | grep pilot_
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP pilot_conflict_inbound_listener Number of conflicting inbound listeners.</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE pilot_conflict_inbound_listener gauge</span>
+</span></span><span style=display:flex><span>pilot_conflict_inbound_listener <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP pilot_conflict_outbound_listener_http_over_current_tcp Number of conflicting wildcard http listeners with current wildcard tcp listener.</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE pilot_conflict_outbound_listener_http_over_current_tcp gauge</span>
+</span></span><span style=display:flex><span>pilot_conflict_outbound_listener_http_over_current_tcp <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP pilot_conflict_outbound_listener_tcp_over_current_http Number of conflicting wildcard tcp listeners with current wildcard http listener.</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE pilot_conflict_outbound_listener_tcp_over_current_http gauge</span>
+</span></span><span style=display:flex><span>pilot_conflict_outbound_listener_tcp_over_current_http <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP pilot_conflict_outbound_listener_tcp_over_current_tcp Number of conflicting tcp listeners with current tcp listener.</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE pilot_conflict_outbound_listener_tcp_over_current_tcp gauge</span>
+</span></span><span style=display:flex><span>pilot_conflict_outbound_listener_tcp_over_current_tcp <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># HELP pilot_debounce_time Delay in seconds between the first config enters debouncing and the merged push request is pushed into the push queue.</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TYPE pilot_debounce_time histogram</span>
+</span></span><span style=display:flex><span>...
+</span></span></code></pre></div><p>控制平面告警示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#6272a4># Pilot </span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotPodNotInEndpointTable
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot pods not found in the endpoint table&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Pods not found in the endpoint table, possibly invalid&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; pilot_no_ip &gt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotEndpointNotReady
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>: 
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot endpoint found in unready state&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Pilot endpoint found in unready state for 30 second&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; pilot_endpoint_not_ready &gt; 0
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 30s
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotDestruleSubsetsException
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot pilot_destrule_subsets is greater than 0&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;pilot_destrule_subsets Duplicate subsets across destination rules for same host&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; pilot_destrule_subsets &gt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotDuplicateEnvoyClustersException
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot pilot_duplicate_envoy_clusters is greater than 0&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;pilot_duplicate_envoy_clusters Duplicate envoy clusters caused by service entries with same hostname&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; pilot_duplicate_envoy_clusters &gt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotDuplicateEntry
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: sum(rate(pilot_duplicate_envoy_clusters{}[1m])) &gt; 0
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>for</span>: 1m
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>severity</span>: critical
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: Istio Pilot Duplicate Entry on clusterID {{ $labels.clusterID }} and region {{ $labels.region }})
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Istio pilot duplicate entry error.\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotEndpointNoPodException
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot endpoint_no_pod is greater than 0&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;endpoint_no_pod Endpoints without an associated pod&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; endpoint_no_pod &gt; 0
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotEdsNoInstancesException 
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot pilot_eds_no_instances is greater than 0&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;pilot_eds_no_instances Number of clusters without instances&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; pilot_eds_no_instances &gt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioPilotVserviceDupDomainException    
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Pilot pilot_vservice_dup_domain is greater than 0&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;pilot_vservice_dup_domain Virtual services with dup domains&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt; pilot_vservice_dup_domain &gt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># CITADEL</span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioCitadelRootCertError
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Citadel root certificate internal error occured&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Citadel root certificate internal error occured on clusterID {{ $labels.clusterID }} and region {{ $labels.region }}&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  citadel_server_root_cert_expiry_timestamp &lt; 0
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioCitadelCertIssuanceFailure
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Citadel certificate issuance failed&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Citadel certificate issuance failed in last 1 minutes&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  (citadel_server_csr_count - citadel_server_success_cert_issuance_count) &gt; (citadel_server_csr_count offset 1m - citadel_server_success_cert_issuance_count offset 1m)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioCitadelCsrSignError
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Citadel CSR signing error&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Citadel CSR signing error occured in last 1 minutes on clusterID {{ $labels.clusterID }} and region {{ $labels.region }}&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  (absent(citadel_server_csr_sign_err_count offset 1m) == 1 and citadel_server_csr_sign_err_count &gt; 0) or (citadel_server_csr_sign_err_count - citadel_server_csr_sign_err_count offset 1m &gt; 0)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># GALLEY</span>
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>alert</span>: IstioGalleyValidationFailed
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>summary</span>: <span style=color:#f1fa8c>&#34;Galley validation failed&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>description</span>: <span style=color:#f1fa8c>&#34;Galley validation failed in last 1 minutes&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>expr</span>: &gt;<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  </span>  (absent(galley_validation_failed offset 1m) == 1 and galley_validation_failed &gt; 0) or (galley_validation_failed - galley_validation_failed offset 1m &gt; 0)
+</span></span></code></pre></div><p>模拟触发告警，告警消息示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>尊敬的用户：您有一条报警，请登录Prometheus系统查看。 
+</span></span><span style=display:flex><span>报警合并：策略IstioNo200ResponseCodeRate共产生2个告警事件
+</span></span><span style=display:flex><span>告警等级：通知
+</span></span><span style=display:flex><span>事件状态：未恢复1个，已恢复1个
+</span></span><span style=display:flex><span>告警时段：11-10 16:57:47 - 02-20 16:58:17
+</span></span><span style=display:flex><span>告警详情：告警值：0.06666666666666667
+</span></span><span style=display:flex><span>告警内容：Detected a high rate of non-200 response codes in Istio within a <span style=color:#bd93f9>5</span> second window
+</span></span></code></pre></div><p>至此，我们完成了 Prometheus 的告警配置，更多的告警规则，请参考 <a href=https://prometheus.io/docs/prometheus/latest/getting_started/>Promehtues 官方文档</a>。</p><h1 id=参考>参考</h1><ol><li><a href=https://istio.io/latest/docs/tasks/observability/metrics/>https://istio.io/latest/docs/tasks/observability/metrics/</a></li><li><a href=https://istio.io/latest/docs/ops/configuration/telemetry/envoy-stats/>https://istio.io/latest/docs/ops/configuration/telemetry/envoy-stats/</a></li><li><a href=https://github.com/openrca/orca/issues/65>https://github.com/openrca/orca/issues/65</a></li><li><a href=https://samber.github.io/awesome-prometheus-alerts/rules#istio>https://samber.github.io/awesome-prometheus-alerts/rules#istio</a></li><li><a href=https://discuss.istio.io/t/prometheus-alerting-on-istio-components/2167/28>https://discuss.istio.io/t/prometheus-alerting-on-istio-components/2167/28</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2022-11-01-istio-metrics/ data-toggle=tooltip data-placement=top title="Istio 控制平面与数据平面核心指标">&larr;
+Previous Post</a></li><li class=next><a href=/post/2022-11-18-istio-questions-1/ data-toggle=tooltip data-placement=top title="使用 Istio 过程中遇到的常见问题与解决方法（一）">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2024</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
