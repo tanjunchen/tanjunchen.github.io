@@ -1,0 +1,708 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="pwru: 一款基于 eBPF 的细粒度网络数据包排查工具"><meta property="og:title" content="pwru: 一款基于 eBPF 的细粒度网络数据包排查工具"><meta property="twitter:title" content="pwru: 一款基于 eBPF 的细粒度网络数据包排查工具"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>pwru: 一款基于 eBPF 的细粒度网络数据包排查工具 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2023-11-11-ebpf-pwru/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/ebpf title=eBPF>eBPF</a></div><h1>pwru: 一款基于 eBPF 的细粒度网络数据包排查工具</h1><h2 class=subheading>在 eBPF（Extended Berkeley Packet Filter）中，pwru 的主要功能是进行性能分析，它可以帮助理解系统中各种内核和用户空间任务的行为。这是通过在内核中执行 eBPF 程序并收集有关系统行为的数据来实现的。</h2><span class=meta>Posted by
+陈谭军
+on
+Saturday, November 11, 2023
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2023-11-11-ebpf-pwru/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 4620 字</span>，阅读约 <span class=more-meta>10 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=介绍>介绍</h1><p>Linux 中的网络是个很复杂的问题！！！我们常常会遇见以下问题。</p><ul><li>网络命名空间（network）使网络变得更加复杂；</li><li>当一个数据包丢失时，作为网络工程师，如何确切知道问题出在Linux内核的哪个地方；</li><li>一旦融合eBPF和XDP网络程序，如何确切知道需要查看的所有可能的代码路径？</li><li>如何知道你不知道的事情？</li></ul><p>pwru 是 Cilium 推出的基于 eBPF 开发的网络数据包排查工具，它提供了更细粒度的网络数据包排查方案。本文将介绍 pwru 的使用方法和经典场景，并介绍其实现原理。<a href=https://github.com/cilium/pwru>https://github.com/cilium/pwru</a> 是一种基于eBPF的工具，用于在Linux内核中追踪网络数据包，并具有高级过滤能力。它允许对内核状态进行细粒度的跟踪，并可以用来调试网络连接性问题。</p><h1 id=部署与安装>部署与安装</h1><p>pwru 需要 5.3+ 版本的内核才能运行，对于 &ndash;output-skb，需要 5.9+ 版本的内核，对于 &ndash;backend=kprobe-multi，需要 5.18+ 版本的内核。
+debugfs 必须挂载在 /sys/kernel/debug 下，如果该文件夹为空，可以使用以下命令进行挂载：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mount -t debugfs none /sys/kernel/debug
+</span></span></code></pre></div><p>需要以下的内核配置：</p><table><thead><tr><th>Option</th><th>Backend</th><th>Note</th></tr></thead><tbody><tr><td>CONFIG_DEBUG_INFO_BTF=y</td><td>both</td><td>available since >= 5.3</td></tr><tr><td>CONFIG_KPROBES=y</td><td>both</td><td></td></tr><tr><td>CONFIG_PERF_EVENTS=y</td><td>both</td><td></td></tr><tr><td>CONFIG_BPF=y</td><td>both</td><td></td></tr><tr><td>CONFIG_BPF_SYSCALL=y</td><td>both</td><td></td></tr><tr><td>CONFIG_FUNCTION_TRACER=y</td><td>kprobe-multi</td><td>/sys/kernel/debug/tracing/available_filter_functions</td></tr><tr><td>CONFIG_FPROBE=y</td><td>kprobe-multi</td><td>available since >= 5.18</td></tr></tbody></table><p>可以从以下页面 <a href=https://github.com/cilium/pwru/releases>https://github.com/cilium/pwru/releases</a> 下载x86_64和arm64可执行文件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen# ./pwru --help
+</span></span><span style=display:flex><span>Usage: ./pwru <span style=color:#ff79c6>[</span>options<span style=color:#ff79c6>]</span> <span style=color:#ff79c6>[</span>pcap-filter<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>    Available pcap-filter: see <span style=color:#f1fa8c>&#34;man 7 pcap-filter&#34;</span>
+</span></span><span style=display:flex><span>    Available options:
+</span></span><span style=display:flex><span>      --all-kmods                 attach to all available kernel modules
+</span></span><span style=display:flex><span>      --backend string            Tracing backend<span style=color:#ff79c6>(</span><span style=color:#f1fa8c>&#39;kprobe&#39;</span>, <span style=color:#f1fa8c>&#39;kprobe-multi&#39;</span><span style=color:#ff79c6>)</span>. Will auto-detect <span style=color:#ff79c6>if</span> not specified.
+</span></span><span style=display:flex><span>      --filter-func string        filter kernel functions to be probed by name <span style=color:#ff79c6>(</span>exact match, supports RE2 regular expression<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>      --filter-ifname string      filter skb ifname in --filter-netns <span style=color:#ff79c6>(</span><span style=color:#ff79c6>if</span> not specified, use current netns<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>      --filter-mark uint32        filter skb mark
+</span></span><span style=display:flex><span>      --filter-netns string       filter netns <span style=color:#ff79c6>(</span><span style=color:#f1fa8c>&#34;/proc/&lt;pid&gt;/ns/net&#34;</span>, <span style=color:#f1fa8c>&#34;inode:&lt;inode&gt;&#34;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>      --filter-trace-tc           trace TC bpf progs
+</span></span><span style=display:flex><span>      --filter-track-skb          trace a packet even <span style=color:#ff79c6>if</span> it does not match given filters <span style=color:#ff79c6>(</span>e.g., after NAT or tunnel decapsulation<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>  -h, --help                      display this message and <span style=color:#8be9fd;font-style:italic>exit</span>
+</span></span><span style=display:flex><span>      --kernel-btf string         specify kernel BTF file
+</span></span><span style=display:flex><span>      --kmods strings             list of kernel modules names to attach to
+</span></span><span style=display:flex><span>      --output-file string        write traces to file
+</span></span><span style=display:flex><span>      --output-limit-lines uint   <span style=color:#8be9fd;font-style:italic>exit</span> the program after the number of events has been received/printed
+</span></span><span style=display:flex><span>      --output-meta               print skb metadata
+</span></span><span style=display:flex><span>      --output-skb                print skb
+</span></span><span style=display:flex><span>      --output-stack              print stack
+</span></span><span style=display:flex><span>      --output-tuple              print L4 tuple
+</span></span><span style=display:flex><span>      --timestamp string          print timestamp per skb <span style=color:#ff79c6>(</span><span style=color:#f1fa8c>&#34;current&#34;</span>, <span style=color:#f1fa8c>&#34;relative&#34;</span>, <span style=color:#f1fa8c>&#34;absolute&#34;</span>, <span style=color:#f1fa8c>&#34;none&#34;</span><span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>default <span style=color:#f1fa8c>&#34;none&#34;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>      --version                   show pwru version and <span style=color:#8be9fd;font-style:italic>exit</span>
+</span></span></code></pre></div><p>更多的详情可参考 <a href=https://github.com/cilium/pwru>https://github.com/cilium/pwru</a> 。</p><h1 id=使用示例>使用示例</h1><p>环境基础信息如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen# uname -a
+</span></span><span style=display:flex><span>Linux instance-820epr0w 5.15.0-72-generic <span style=color:#6272a4>#79-Ubuntu SMP Wed Apr 19 08:22:18 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux</span>
+</span></span></code></pre></div><p>以下示例展示修改 netfilter 表规则后，如何定位 curl 请求的数据包被丢弃。我们要测试的 iptables 规则如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>iptables -t filter -I OUTPUT <span style=color:#bd93f9>1</span> -m tcp --proto tcp --dst 1.1.1.1/32 -j DROP
+</span></span><span style=display:flex><span>iptables -t filter -D OUTPUT -m tcp --proto tcp --dst 1.1.1.1/32 -j DROP
+</span></span></code></pre></div><p>没有添加 iptables 规则前，pwru 的输出如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen# ./pwru <span style=color:#f1fa8c>&#39;dst host 1.1.1.1 and tcp and dst port 80&#39;</span>
+</span></span><span style=display:flex><span>2024/03/18 11:19:07 Attaching kprobes <span style=color:#ff79c6>(</span>via kprobe<span style=color:#ff79c6>)</span>...
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1477</span> / <span style=color:#bd93f9>1477</span> <span style=color:#ff79c6>[</span>---------------------------------------------------------------------------------------------------<span style=color:#ff79c6>]</span> 100.00% <span style=color:#bd93f9>80</span> p/s
+</span></span><span style=display:flex><span>2024/03/18 11:19:26 Attached <span style=color:#ff79c6>(</span>ignored 0<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>2024/03/18 11:19:26 Listening <span style=color:#ff79c6>for</span> events..
+</span></span><span style=display:flex><span>               SKB    CPU          PROCESS                     FUNC
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>             ip_local_out
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>           __ip_local_out
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>                ip_output
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>  apparmor_ipv4_postroute
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>         ip_finish_output
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span> __cgroup_bpf_run_filter_skb
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>       __ip_finish_output
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>        ip_finish_output2
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>           dev_queue_xmit
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>         __dev_queue_xmit
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>       qdisc_pkt_len_init
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>      netdev_core_pick_tx
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>           netdev_pick_tx
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>      __get_xps_queue_idx
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>          sch_direct_xmit
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>   validate_xmit_skb_list
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>        validate_xmit_skb
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>       netif_skb_features
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>  passthru_features_check
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>     skb_network_protocol
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>       validate_xmit_vlan
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>  skb_csum_hwoffload_help
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>       validate_xmit_xfrm
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>      dev_hard_start_xmit
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>   skb_clone_tx_timestamp
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>             skb_to_sgvec
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>2</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3378123<span style=color:#ff79c6>)]</span>           __skb_to_sgvec
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         napi_consume_skb
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>   skb_release_head_state
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>                tcp_wfree
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         skb_release_data
+</span></span><span style=display:flex><span>0xff18015deb5c36e0      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             kfree_skbmem
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             ip_local_out
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>           __ip_local_out
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>                ip_output
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>  apparmor_ipv4_postroute
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         ip_finish_output
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span> __cgroup_bpf_run_filter_skb
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>       __ip_finish_output
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>        ip_finish_output2
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>           dev_queue_xmit
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         __dev_queue_xmit
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>       qdisc_pkt_len_init
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>      netdev_core_pick_tx
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>           netdev_pick_tx
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>      __get_xps_queue_idx
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>          sch_direct_xmit
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>   validate_xmit_skb_list
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>        validate_xmit_skb
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>       netif_skb_features
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>  passthru_features_check
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>     skb_network_protocol
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>       validate_xmit_vlan
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>  skb_csum_hwoffload_help
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>       validate_xmit_xfrm
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>      dev_hard_start_xmit
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>   skb_clone_tx_timestamp
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             skb_to_sgvec
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>4</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>           __skb_to_sgvec
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>1</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         napi_consume_skb
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>1</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>   skb_release_head_state
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>1</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             __sock_wfree
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>1</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         skb_release_data
+</span></span><span style=display:flex><span>0xff18015e9c940100      <span style=color:#bd93f9>1</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>            skb_free_head
+</span></span><span style=display:flex><span>2024/03/18 11:19:36 Received signal, exiting program..
+</span></span></code></pre></div><p>在设置 iptables 规则之后，输出如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen# iptables -t filter -I OUTPUT <span style=color:#bd93f9>1</span> -m tcp --proto tcp --dst 1.1.1.1/32 -j DROP
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen# ./pwru <span style=color:#f1fa8c>&#39;dst host 1.1.1.1 and tcp and dst port 80&#39;</span>
+</span></span><span style=display:flex><span>2024/03/18 11:22:13 Attaching kprobes <span style=color:#ff79c6>(</span>via kprobe<span style=color:#ff79c6>)</span>...
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1477</span> / <span style=color:#bd93f9>1477</span> <span style=color:#ff79c6>[</span>---------------------------------------------------------------------------------------------------<span style=color:#ff79c6>]</span> 100.00% <span style=color:#bd93f9>80</span> p/s
+</span></span><span style=display:flex><span>2024/03/18 11:22:31 Attached <span style=color:#ff79c6>(</span>ignored 0<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>2024/03/18 11:22:31 Listening <span style=color:#ff79c6>for</span> events..
+</span></span><span style=display:flex><span>               SKB    CPU          PROCESS                     FUNC
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>             ip_local_out
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>           __ip_local_out
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span> kfree_skb_reason<span style=color:#ff79c6>(</span>SKB_DROP_REASON_NETFILTER_DROP<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>   skb_release_head_state
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>                tcp_wfree
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>         skb_release_data
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>[</span>curl<span style=color:#ff79c6>(</span>3381789<span style=color:#ff79c6>)]</span>             kfree_skbmem
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>              __skb_clone
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>        __copy_skb_header
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             ip_local_out
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>           __ip_local_out
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span> kfree_skb_reason<span style=color:#ff79c6>(</span>SKB_DROP_REASON_NETFILTER_DROP<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>   skb_release_head_state
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>                tcp_wfree
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         skb_release_data
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             kfree_skbmem
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>              __skb_clone
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>        __copy_skb_header
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             ip_local_out
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>           __ip_local_out
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             nf_hook_slow
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span> kfree_skb_reason<span style=color:#ff79c6>(</span>SKB_DROP_REASON_NETFILTER_DROP<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>   skb_release_head_state
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>                tcp_wfree
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>         skb_release_data
+</span></span><span style=display:flex><span>0xff180162daa02ae0      <span style=color:#bd93f9>0</span>     <span style=color:#ff79c6>[</span>&lt;empty&gt;<span style=color:#ff79c6>(</span>0<span style=color:#ff79c6>)]</span>             kfree_skbmem
+</span></span><span style=display:flex><span>^C2024/03/18 11:22:43 Received signal, exiting program..
+</span></span><span style=display:flex><span>2024/03/18 11:22:43 Detaching kprobes...
+</span></span></code></pre></div><p>在 nf_hook_slow 处看到 kfree_skb_reason(SKB_DROP_REASON_NETFILTER_DROP) 函数被调用，出现了丢包。
+上述输出内容中，有很多重点的内核函数，如下所示：</p><ol><li>ip_local_out和__ip_local_out：这两个函数主要用于处理本地生成的IP数据包，它们将数据包传递给路由子系统以确定数据包的目标，然后将数据包加入到输出队列等待传输。</li><li>nf_hook_slow：这是netfilter框架中的一个函数，它用于调用在网络钩子上注册的所有函数，以便将数据包传递给它们进行处理。这是实现防火墙功能的关键部分。</li><li>ip_output：这个函数用于处理需要通过网络接口发送的IP数据包。</li><li>apparmor_ipv4_postroute：这是AppArmor安全模块的一部分，用于处理路由后的IPv4数据包。</li><li>ip_finish_output：这个函数负责将路由后的数据包发送到网络接口。</li><li>__cgroup_bpf_run_filter_skb：这个函数用于运行eBPF程序，处理sk_buff结构的网络数据包。</li><li>dev_queue_xmit和__dev_queue_xmit：这两个函数负责将数据包加入到设备的发送队列。</li><li>qdisc_pkt_len_init：这个函数用于初始化数据包的队列规则。</li><li>netdev_core_pick_tx和netdev_pick_tx：这两个函数用于在多队列网络设备中选择适合发送数据包的队列。</li><li>__get_xps_queue_idx：此函数用于获取XPS队列索引。</li><li>sch_direct_xmit：此函数用于直接发送数据包。</li><li>validate_xmit_skb_list和validate_xmit_skb：这些函数用于验证要发送的数据包的各种特性和条件。</li><li>netif_skb_features：这个函数用于获取网络设备支持的数据包特性。</li><li>skb_network_protocol：此函数用于获取数据包的网络协议。</li><li>dev_hard_start_xmit：此函数用于开始对数据包的硬件传输。</li><li>skb_clone_tx_timestamp：此函数用于复制数据包的发送时间戳。</li><li>skb_to_sgvec和__skb_to_sgvec：这两个函数用于将数据包从sk_buff结构转换为scatter/gather向量，用于DMA数据传输。</li><li>napi_consume_skb：此函数用于在数据包处理完成后释放sk_buff结构。</li><li>skb_release_head_state和skb_release_data：这两个函数用于释放sk_buff结构的头部和数据部分。</li><li>tcp_wfree：此函数用于在TCP数据包发送后释放其内存。</li><li>kfree_skbmem：此函数用于释放sk_buff结构占用的内存。</li><li>kfree_skb_reason(SKB_DROP_REASON_NETFILTER_DROP)：这个函数用于释放由于被Netfilter（Linux内核网络过滤模块）丢弃的网络数据包所占用的内存资源。SKB_DROP_REASON_NETFILTER_DROP是一个常量，它指示网络数据包是由于Netfilter而被丢弃的。</li><li>skb_release_head_state：这个函数用于释放网络数据包的头部状态。在网络数据包被处理后，协议栈会调用这个函数来释放数据包头部状态所占用的资源。</li><li>tcp_wfree：这个函数用于在TCP数据包被发送后释放其内存。在TCP数据包被成功发送后，协议栈会调用这个函数来释放数据包所占用的内存资源。</li><li>skb_release_data：这个函数用于释放网络数据包的数据部分。在数据包被处理后，协议栈会调用这个函数来释放数据部分所占用的资源。</li></ol><p>Kernel 5.15 内核 nf_hook_slow 的源码如下所示：（kfree_skb_reason 是在 5.10 版本的内核中被引入的）。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#6272a4>/* Returns 1 if okfn() needs to be executed by the caller,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * -EPERM for NF_DROP, 0 otherwise.  Caller must hold rcu_read_lock. */</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> <span style=color:#50fa7b>nf_hook_slow</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#ff79c6>struct</span> nf_hook_state <span style=color:#ff79c6>*</span>state,
+</span></span><span style=display:flex><span>		 <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>struct</span> nf_hook_entries <span style=color:#ff79c6>*</span>e, <span style=color:#8be9fd>unsigned</span> <span style=color:#8be9fd>int</span> s)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>unsigned</span> <span style=color:#8be9fd>int</span> verdict;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> (; s <span style=color:#ff79c6>&lt;</span> e<span style=color:#ff79c6>-&gt;</span>num_hook_entries; s<span style=color:#ff79c6>++</span>) {
+</span></span><span style=display:flex><span>		verdict <span style=color:#ff79c6>=</span> nf_hook_entry_hookfn(<span style=color:#ff79c6>&amp;</span>e<span style=color:#ff79c6>-&gt;</span>hooks[s], skb, state);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>switch</span> (verdict <span style=color:#ff79c6>&amp;</span> NF_VERDICT_MASK) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#8be9fd;font-style:italic>NF_ACCEPT</span>:
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#8be9fd;font-style:italic>NF_DROP</span>:
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>// 内存 kfree_skb_reason 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			kfree_skb_reason(skb,
+</span></span><span style=display:flex><span>					 SKB_DROP_REASON_NETFILTER_DROP);
+</span></span><span style=display:flex><span>			ret <span style=color:#ff79c6>=</span> NF_DROP_GETERR(verdict);
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> (ret <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span>				ret <span style=color:#ff79c6>=</span> <span style=color:#ff79c6>-</span>EPERM;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#8be9fd;font-style:italic>NF_QUEUE</span>:
+</span></span><span style=display:flex><span>			ret <span style=color:#ff79c6>=</span> nf_queue(skb, state, s, verdict);
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> (ret <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>1</span>)
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>default</span><span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>			<span style=color:#6272a4>/* Implicit handling for NF_STOLEN, as well as any other
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>			 * non conventional verdicts.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>			 */</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>1</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>Kernel 5.10 内核 nf_hook_slow 的源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#6272a4>/* Returns 1 if okfn() needs to be executed by the caller,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4> * -EPERM for NF_DROP, 0 otherwise.  Caller must hold rcu_read_lock. */</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> <span style=color:#50fa7b>nf_hook_slow</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#ff79c6>struct</span> nf_hook_state <span style=color:#ff79c6>*</span>state,
+</span></span><span style=display:flex><span>		 <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>struct</span> nf_hook_entries <span style=color:#ff79c6>*</span>e, <span style=color:#8be9fd>unsigned</span> <span style=color:#8be9fd>int</span> s)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>unsigned</span> <span style=color:#8be9fd>int</span> verdict;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>int</span> ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> (; s <span style=color:#ff79c6>&lt;</span> e<span style=color:#ff79c6>-&gt;</span>num_hook_entries; s<span style=color:#ff79c6>++</span>) {
+</span></span><span style=display:flex><span>		verdict <span style=color:#ff79c6>=</span> nf_hook_entry_hookfn(<span style=color:#ff79c6>&amp;</span>e<span style=color:#ff79c6>-&gt;</span>hooks[s], skb, state);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>switch</span> (verdict <span style=color:#ff79c6>&amp;</span> NF_VERDICT_MASK) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#8be9fd;font-style:italic>NF_ACCEPT</span>:
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>break</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#8be9fd;font-style:italic>NF_DROP</span>:
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>// 内存 kfree_skb  
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			kfree_skb(skb);
+</span></span><span style=display:flex><span>			ret <span style=color:#ff79c6>=</span> NF_DROP_GETERR(verdict);
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> (ret <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span>				ret <span style=color:#ff79c6>=</span> <span style=color:#ff79c6>-</span>EPERM;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#8be9fd;font-style:italic>NF_QUEUE</span>:
+</span></span><span style=display:flex><span>			ret <span style=color:#ff79c6>=</span> nf_queue(skb, state, s, verdict);
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> (ret <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>1</span>)
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>default</span><span style=color:#ff79c6>:</span>
+</span></span><span style=display:flex><span>			<span style=color:#6272a4>/* Implicit handling for NF_STOLEN, as well as any other
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>			 * non conventional verdicts.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>			 */</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>1</span>;
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 id=原理与源码>原理与源码</h1><p>pwru 本质上是向 kprobe 注册了一些 eBPF 代码，根据 pwru 传入的参数可以更新 eBPF Map，改变限制条件，从而更新输出。在 FilterCfg 里面设置了过滤的 IP 地址和协议等条件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span>type FilterCfg <span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>	FilterNetns   uint32
+</span></span><span style=display:flex><span>	FilterMark    uint32
+</span></span><span style=display:flex><span>	FilterIfindex uint32
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// TODO: if there are more options later, then you can consider using a bit map
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	OutputMeta  uint8
+</span></span><span style=display:flex><span>	OutputTuple uint8
+</span></span><span style=display:flex><span>	OutputSkb   uint8
+</span></span><span style=display:flex><span>	OutputStack uint8
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	IsSet    byte
+</span></span><span style=display:flex><span>	TrackSkb byte
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>会根据 pwru 传入的参数更新过滤条件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>GetConfig</span>(flags <span style=color:#ff79c6>*</span>Flags) (cfg FilterCfg, err <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	cfg = FilterCfg{
+</span></span><span style=display:flex><span>		FilterMark: flags.FilterMark,
+</span></span><span style=display:flex><span>		IsSet:      <span style=color:#bd93f9>1</span>,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> flags.OutputSkb {
+</span></span><span style=display:flex><span>		cfg.OutputSkb = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> flags.OutputMeta {
+</span></span><span style=display:flex><span>		cfg.OutputMeta = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> flags.OutputTuple {
+</span></span><span style=display:flex><span>		cfg.OutputTuple = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> flags.OutputStack {
+</span></span><span style=display:flex><span>		cfg.OutputStack = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> flags.FilterTrackSkb {
+</span></span><span style=display:flex><span>		cfg.TrackSkb = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	netnsID, ns, err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>parseNetns</span>(flags.FilterNetns)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		err = fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;Failed to retrieve netns %s: %w&#34;</span>, flags.FilterNetns, err)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> flags.FilterIfname <span style=color:#ff79c6>!=</span> <span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#ff79c6>||</span> flags.FilterNetns <span style=color:#ff79c6>!=</span> <span style=color:#f1fa8c>&#34;&#34;</span> {
+</span></span><span style=display:flex><span>		cfg.FilterNetns = netnsID
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> cfg.FilterIfindex, err = <span style=color:#50fa7b>parseIfindex</span>(flags.FilterIfname, ns); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>eBPF 内核态的代码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-c data-lang=c><span style=display:flex><span><span style=color:#6272a4>// SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#6272a4>/* Copyright Martynas Pumputis */</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>/* Copyright Authors of Cilium */</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#include</span> <span style=color:#ff79c6>&#34;vmlinux.h&#34;</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#include</span> <span style=color:#ff79c6>&#34;bpf/bpf_helpers.h&#34;</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#include</span> <span style=color:#ff79c6>&#34;bpf/bpf_core_read.h&#34;</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#include</span> <span style=color:#ff79c6>&#34;bpf/bpf_tracing.h&#34;</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#include</span> <span style=color:#ff79c6>&#34;bpf/bpf_ipv6.h&#34;</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define PRINT_SKB_STR_SIZE    2048
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define ETH_P_IP              0x800
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#define ETH_P_IPV6            0x86dd
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>const</span> <span style=color:#ff79c6>static</span> <span style=color:#8be9fd>bool</span> TRUE <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>true</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>volatile</span> <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>static</span> __u64 BPF_PROG_ADDR <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>union</span> addr {
+</span></span><span style=display:flex><span>	u32 v4addr;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>		u64 d1;
+</span></span><span style=display:flex><span>		u64 d2;
+</span></span><span style=display:flex><span>	} v6addr;
+</span></span><span style=display:flex><span>} __attribute__((packed));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>struct</span> skb_meta {
+</span></span><span style=display:flex><span>	u32 netns;
+</span></span><span style=display:flex><span>	u32 mark;
+</span></span><span style=display:flex><span>	u32 ifindex;
+</span></span><span style=display:flex><span>	u32 len;
+</span></span><span style=display:flex><span>	u32 mtu;
+</span></span><span style=display:flex><span>	u16 protocol;
+</span></span><span style=display:flex><span>	u16 pad;
+</span></span><span style=display:flex><span>} __attribute__((packed));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>struct</span> tuple {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>union</span> addr saddr;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>union</span> addr daddr;
+</span></span><span style=display:flex><span>	u16 sport;
+</span></span><span style=display:flex><span>	u16 dport;
+</span></span><span style=display:flex><span>	u16 l3_proto;
+</span></span><span style=display:flex><span>	u8 l4_proto;
+</span></span><span style=display:flex><span>	u8 pad;
+</span></span><span style=display:flex><span>} __attribute__((packed));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>u64 print_skb_id <span style=color:#ff79c6>=</span> <span style=color:#bd93f9>0</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>struct</span> event_t {
+</span></span><span style=display:flex><span>	u32 pid;
+</span></span><span style=display:flex><span>	u32 type;
+</span></span><span style=display:flex><span>	u64 addr;
+</span></span><span style=display:flex><span>	u64 skb_addr;
+</span></span><span style=display:flex><span>	u64 ts;
+</span></span><span style=display:flex><span>	typeof(print_skb_id) print_skb_id;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> skb_meta meta;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> tuple tuple;
+</span></span><span style=display:flex><span>	s64 print_stack_id;
+</span></span><span style=display:flex><span>	u64 param_second;
+</span></span><span style=display:flex><span>	u32 cpu_id;
+</span></span><span style=display:flex><span>} __attribute__((packed));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define MAX_QUEUE_ENTRIES 10000
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>	__uint(type, BPF_MAP_TYPE_QUEUE);
+</span></span><span style=display:flex><span>	__type(value, <span style=color:#ff79c6>struct</span> event_t);
+</span></span><span style=display:flex><span>	__uint(max_entries, MAX_QUEUE_ENTRIES);
+</span></span><span style=display:flex><span>} events SEC(<span style=color:#f1fa8c>&#34;.maps&#34;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define MAX_TRACK_SIZE 1024
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>	__uint(type, BPF_MAP_TYPE_HASH);
+</span></span><span style=display:flex><span>	__type(key, __u64);
+</span></span><span style=display:flex><span>	__type(value, <span style=color:#8be9fd>bool</span>);
+</span></span><span style=display:flex><span>	__uint(max_entries, MAX_TRACK_SIZE);
+</span></span><span style=display:flex><span>} skb_addresses SEC(<span style=color:#f1fa8c>&#34;.maps&#34;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>struct</span> config {
+</span></span><span style=display:flex><span>	u32 netns;
+</span></span><span style=display:flex><span>	u32 mark;
+</span></span><span style=display:flex><span>	u32 ifindex;
+</span></span><span style=display:flex><span>	u8 output_meta;
+</span></span><span style=display:flex><span>	u8 output_tuple;
+</span></span><span style=display:flex><span>	u8 output_skb;
+</span></span><span style=display:flex><span>	u8 output_stack;
+</span></span><span style=display:flex><span>	u8 is_set;
+</span></span><span style=display:flex><span>	u8 track_skb;
+</span></span><span style=display:flex><span>} __attribute__((packed));
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> <span style=color:#ff79c6>volatile</span> <span style=color:#ff79c6>const</span> <span style=color:#ff79c6>struct</span> config CFG;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define cfg (&amp;CFG)
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define MAX_STACK_DEPTH 50
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>	__uint(type, BPF_MAP_TYPE_STACK_TRACE);
+</span></span><span style=display:flex><span>	__uint(max_entries, <span style=color:#bd93f9>256</span>);
+</span></span><span style=display:flex><span>	__uint(key_size, <span style=color:#ff79c6>sizeof</span>(u32));
+</span></span><span style=display:flex><span>	__uint(value_size, MAX_STACK_DEPTH <span style=color:#ff79c6>*</span> <span style=color:#ff79c6>sizeof</span>(u64));
+</span></span><span style=display:flex><span>} print_stack_map SEC(<span style=color:#f1fa8c>&#34;.maps&#34;</span>);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef OUTPUT_SKB
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span><span style=color:#ff79c6>struct</span> {
+</span></span><span style=display:flex><span>	__uint(type, BPF_MAP_TYPE_ARRAY);
+</span></span><span style=display:flex><span>	__uint(max_entries, <span style=color:#bd93f9>256</span>);
+</span></span><span style=display:flex><span>	__type(key, u32);
+</span></span><span style=display:flex><span>	__type(value, <span style=color:#8be9fd>char</span>[PRINT_SKB_STR_SIZE]);
+</span></span><span style=display:flex><span>} print_skb_map SEC(<span style=color:#f1fa8c>&#34;.maps&#34;</span>);
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline u32
+</span></span><span style=display:flex><span><span style=color:#50fa7b>get_netns</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb) {
+</span></span><span style=display:flex><span>	u32 netns <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, dev, nd_net.net, ns.inum);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// if skb-&gt;dev is not initialized, try to get ns from sk-&gt;__sk_common.skc_net.net-&gt;ns.inum
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> (netns <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span>)	{
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>struct</span> sock <span style=color:#ff79c6>*</span>sk <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, sk);
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (sk <span style=color:#ff79c6>!=</span> <span style=color:#8be9fd;font-style:italic>NULL</span>)	{
+</span></span><span style=display:flex><span>			netns <span style=color:#ff79c6>=</span> BPF_CORE_READ(sk, __sk_common.skc_net.net, ns.inum);
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> netns;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter_meta</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>netns <span style=color:#ff79c6>&amp;&amp;</span> get_netns(skb) <span style=color:#ff79c6>!=</span> cfg<span style=color:#ff79c6>-&gt;</span>netns) {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>false</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>mark <span style=color:#ff79c6>&amp;&amp;</span> BPF_CORE_READ(skb, mark) <span style=color:#ff79c6>!=</span> cfg<span style=color:#ff79c6>-&gt;</span>mark) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>false</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>ifindex <span style=color:#ff79c6>!=</span> <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>&amp;&amp;</span> BPF_CORE_READ(skb, dev, ifindex) <span style=color:#ff79c6>!=</span> cfg<span style=color:#ff79c6>-&gt;</span>ifindex) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>false</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>true</span>;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __noinline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter_pcap_ebpf_l3</span>(<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>_skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>__skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>___skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>data, <span style=color:#8be9fd>void</span><span style=color:#ff79c6>*</span> data_end)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> data <span style=color:#ff79c6>!=</span> data_end <span style=color:#ff79c6>&amp;&amp;</span> _skb <span style=color:#ff79c6>==</span> __skb <span style=color:#ff79c6>&amp;&amp;</span> __skb <span style=color:#ff79c6>==</span> ___skb;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter_pcap_l3</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>skb_head <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, head);
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>data <span style=color:#ff79c6>=</span> skb_head <span style=color:#ff79c6>+</span> BPF_CORE_READ(skb, network_header);
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>data_end <span style=color:#ff79c6>=</span> skb_head <span style=color:#ff79c6>+</span> BPF_CORE_READ(skb, tail);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> filter_pcap_ebpf_l3((<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>)skb, (<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>)skb, (<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>)skb, data, data_end);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __noinline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter_pcap_ebpf_l2</span>(<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>_skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>__skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>___skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>data, <span style=color:#8be9fd>void</span><span style=color:#ff79c6>*</span> data_end)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> data <span style=color:#ff79c6>!=</span> data_end <span style=color:#ff79c6>&amp;&amp;</span> _skb <span style=color:#ff79c6>==</span> __skb <span style=color:#ff79c6>&amp;&amp;</span> __skb <span style=color:#ff79c6>==</span> ___skb;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter_pcap_l2</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb)
+</span></span><span style=display:flex><span>{
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>skb_head <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, head);
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>data <span style=color:#ff79c6>=</span> skb_head <span style=color:#ff79c6>+</span> BPF_CORE_READ(skb, mac_header);
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>data_end <span style=color:#ff79c6>=</span> skb_head <span style=color:#ff79c6>+</span> BPF_CORE_READ(skb, tail);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> filter_pcap_ebpf_l2((<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>)skb, (<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>)skb, (<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>)skb, data, data_end);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter_pcap</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (BPF_CORE_READ(skb, mac_len) <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span>)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> filter_pcap_l3(skb);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> filter_pcap_l2(skb);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>filter</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> filter_pcap(skb) <span style=color:#ff79c6>&amp;&amp;</span> filter_meta(skb);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>void</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>set_meta</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#ff79c6>struct</span> skb_meta <span style=color:#ff79c6>*</span>meta) {
+</span></span><span style=display:flex><span>	meta<span style=color:#ff79c6>-&gt;</span>netns <span style=color:#ff79c6>=</span> get_netns(skb);
+</span></span><span style=display:flex><span>	meta<span style=color:#ff79c6>-&gt;</span>mark <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, mark);
+</span></span><span style=display:flex><span>	meta<span style=color:#ff79c6>-&gt;</span>len <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, len);
+</span></span><span style=display:flex><span>	meta<span style=color:#ff79c6>-&gt;</span>protocol <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, protocol);
+</span></span><span style=display:flex><span>	meta<span style=color:#ff79c6>-&gt;</span>ifindex <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, dev, ifindex);
+</span></span><span style=display:flex><span>	meta<span style=color:#ff79c6>-&gt;</span>mtu <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, dev, mtu);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>void</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>set_tuple</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#ff79c6>struct</span> tuple <span style=color:#ff79c6>*</span>tpl) {
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>skb_head <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, head);
+</span></span><span style=display:flex><span>	u16 l3_off <span style=color:#ff79c6>=</span> BPF_CORE_READ(skb, network_header);
+</span></span><span style=display:flex><span>	u16 l4_off;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> iphdr <span style=color:#ff79c6>*</span>l3_hdr <span style=color:#ff79c6>=</span> (<span style=color:#ff79c6>struct</span> iphdr <span style=color:#ff79c6>*</span>) (skb_head <span style=color:#ff79c6>+</span> l3_off);
+</span></span><span style=display:flex><span>	u8 ip_vsn <span style=color:#ff79c6>=</span> BPF_CORE_READ_BITFIELD_PROBED(l3_hdr, version);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (ip_vsn <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>4</span>) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>struct</span> iphdr <span style=color:#ff79c6>*</span>ip4 <span style=color:#ff79c6>=</span> (<span style=color:#ff79c6>struct</span> iphdr <span style=color:#ff79c6>*</span>) l3_hdr;
+</span></span><span style=display:flex><span>		BPF_CORE_READ_INTO(<span style=color:#ff79c6>&amp;</span>tpl<span style=color:#ff79c6>-&gt;</span>saddr, ip4, saddr);
+</span></span><span style=display:flex><span>		BPF_CORE_READ_INTO(<span style=color:#ff79c6>&amp;</span>tpl<span style=color:#ff79c6>-&gt;</span>daddr, ip4, daddr);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>l4_proto <span style=color:#ff79c6>=</span> BPF_CORE_READ(ip4, protocol);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>l3_proto <span style=color:#ff79c6>=</span> ETH_P_IP;
+</span></span><span style=display:flex><span>		l4_off <span style=color:#ff79c6>=</span> l3_off <span style=color:#ff79c6>+</span> BPF_CORE_READ_BITFIELD_PROBED(ip4, ihl) <span style=color:#ff79c6>*</span> <span style=color:#bd93f9>4</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	} <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> (ip_vsn <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>6</span>) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>struct</span> ipv6hdr <span style=color:#ff79c6>*</span>ip6 <span style=color:#ff79c6>=</span> (<span style=color:#ff79c6>struct</span> ipv6hdr <span style=color:#ff79c6>*</span>) l3_hdr;
+</span></span><span style=display:flex><span>		BPF_CORE_READ_INTO(<span style=color:#ff79c6>&amp;</span>tpl<span style=color:#ff79c6>-&gt;</span>saddr, ip6, saddr);
+</span></span><span style=display:flex><span>		BPF_CORE_READ_INTO(<span style=color:#ff79c6>&amp;</span>tpl<span style=color:#ff79c6>-&gt;</span>daddr, ip6, daddr);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>l4_proto <span style=color:#ff79c6>=</span> BPF_CORE_READ(ip6, nexthdr); <span style=color:#6272a4>// TODO: ipv6 l4 protocol
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		tpl<span style=color:#ff79c6>-&gt;</span>l3_proto <span style=color:#ff79c6>=</span> ETH_P_IPV6;
+</span></span><span style=display:flex><span>		l4_off <span style=color:#ff79c6>=</span> l3_off <span style=color:#ff79c6>+</span> ipv6_hdrlen(ip6);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (tpl<span style=color:#ff79c6>-&gt;</span>l4_proto <span style=color:#ff79c6>==</span> IPPROTO_TCP) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>struct</span> tcphdr <span style=color:#ff79c6>*</span>tcp <span style=color:#ff79c6>=</span> (<span style=color:#ff79c6>struct</span> tcphdr <span style=color:#ff79c6>*</span>) (skb_head <span style=color:#ff79c6>+</span> l4_off);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>sport<span style=color:#ff79c6>=</span> BPF_CORE_READ(tcp, source);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>dport<span style=color:#ff79c6>=</span> BPF_CORE_READ(tcp, dest);
+</span></span><span style=display:flex><span>	} <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> (tpl<span style=color:#ff79c6>-&gt;</span>l4_proto <span style=color:#ff79c6>==</span> IPPROTO_UDP) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>struct</span> udphdr <span style=color:#ff79c6>*</span>udp <span style=color:#ff79c6>=</span> (<span style=color:#ff79c6>struct</span> udphdr <span style=color:#ff79c6>*</span>) (skb_head <span style=color:#ff79c6>+</span> l4_off);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>sport<span style=color:#ff79c6>=</span> BPF_CORE_READ(udp, source);
+</span></span><span style=display:flex><span>		tpl<span style=color:#ff79c6>-&gt;</span>dport<span style=color:#ff79c6>=</span> BPF_CORE_READ(udp, dest);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>void</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>set_skb_btf</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, typeof(print_skb_id) <span style=color:#ff79c6>*</span>event_id) {
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef OUTPUT_SKB
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>	<span style=color:#ff79c6>static</span> <span style=color:#ff79c6>struct</span> btf_ptr p <span style=color:#ff79c6>=</span> {};
+</span></span><span style=display:flex><span>	typeof(print_skb_id) id;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>char</span> <span style=color:#ff79c6>*</span>str;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	p.type_id <span style=color:#ff79c6>=</span> bpf_core_type_id_kernel(<span style=color:#ff79c6>struct</span> sk_buff);
+</span></span><span style=display:flex><span>	p.ptr <span style=color:#ff79c6>=</span> skb;
+</span></span><span style=display:flex><span>	id <span style=color:#ff79c6>=</span> __sync_fetch_and_add(<span style=color:#ff79c6>&amp;</span>print_skb_id, <span style=color:#bd93f9>1</span>) <span style=color:#ff79c6>%</span> <span style=color:#bd93f9>256</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	str <span style=color:#ff79c6>=</span> bpf_map_lookup_elem(<span style=color:#ff79c6>&amp;</span>print_skb_map, (u32 <span style=color:#ff79c6>*</span>) <span style=color:#ff79c6>&amp;</span>id);
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>str) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (bpf_snprintf_btf(str, PRINT_SKB_STR_SIZE, <span style=color:#ff79c6>&amp;</span>p, <span style=color:#ff79c6>sizeof</span>(p), <span style=color:#bd93f9>0</span>) <span style=color:#ff79c6>&lt;</span> <span style=color:#bd93f9>0</span>) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span>;
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>*</span>event_id <span style=color:#ff79c6>=</span> id;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#endif
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>void</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>set_output</span>(<span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>ctx, <span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#ff79c6>struct</span> event_t <span style=color:#ff79c6>*</span>event) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>output_meta) {
+</span></span><span style=display:flex><span>		set_meta(skb, <span style=color:#ff79c6>&amp;</span>event<span style=color:#ff79c6>-&gt;</span>meta);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>output_tuple) {
+</span></span><span style=display:flex><span>		set_tuple(skb, <span style=color:#ff79c6>&amp;</span>event<span style=color:#ff79c6>-&gt;</span>tuple);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>output_skb) {
+</span></span><span style=display:flex><span>		set_skb_btf(skb, <span style=color:#ff79c6>&amp;</span>event<span style=color:#ff79c6>-&gt;</span>print_skb_id);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>output_stack) {
+</span></span><span style=display:flex><span>		event<span style=color:#ff79c6>-&gt;</span>print_stack_id <span style=color:#ff79c6>=</span> bpf_get_stackid(ctx, <span style=color:#ff79c6>&amp;</span>print_stack_map, BPF_F_FAST_STACK_CMP);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __noinline <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>handle_everything</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#8be9fd>void</span> <span style=color:#ff79c6>*</span>ctx, <span style=color:#ff79c6>struct</span> event_t <span style=color:#ff79c6>*</span>event) {
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd>bool</span> tracked <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>false</span>;
+</span></span><span style=display:flex><span>	u64 skb_addr <span style=color:#ff79c6>=</span> (u64) skb;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>is_set) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>track_skb <span style=color:#ff79c6>&amp;&amp;</span> bpf_map_lookup_elem(<span style=color:#ff79c6>&amp;</span>skb_addresses, <span style=color:#ff79c6>&amp;</span>skb_addr)) {
+</span></span><span style=display:flex><span>			tracked <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>true</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>goto</span> cont;
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>filter(skb)) {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>false</span>;
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cont</span>:
+</span></span><span style=display:flex><span>		set_output(ctx, skb, event);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (cfg<span style=color:#ff79c6>-&gt;</span>track_skb <span style=color:#ff79c6>&amp;&amp;</span> <span style=color:#ff79c6>!</span>tracked) {
+</span></span><span style=display:flex><span>		bpf_map_update_elem(<span style=color:#ff79c6>&amp;</span>skb_addresses, <span style=color:#ff79c6>&amp;</span>skb_addr, <span style=color:#ff79c6>&amp;</span>TRUE, BPF_ANY);
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	event<span style=color:#ff79c6>-&gt;</span>pid <span style=color:#ff79c6>=</span> bpf_get_current_pid_tgid() <span style=color:#ff79c6>&gt;&gt;</span> <span style=color:#bd93f9>32</span>;
+</span></span><span style=display:flex><span>	event<span style=color:#ff79c6>-&gt;</span>ts <span style=color:#ff79c6>=</span> bpf_ktime_get_ns();
+</span></span><span style=display:flex><span>	event<span style=color:#ff79c6>-&gt;</span>cpu_id <span style=color:#ff79c6>=</span> bpf_get_smp_processor_id();
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>true</span>;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>int</span>
+</span></span><span style=display:flex><span><span style=color:#50fa7b>kprobe_skb</span>(<span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb, <span style=color:#ff79c6>struct</span> pt_regs <span style=color:#ff79c6>*</span>ctx, <span style=color:#8be9fd>bool</span> has_get_func_ip) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> event_t event <span style=color:#ff79c6>=</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>handle_everything(skb, ctx, <span style=color:#ff79c6>&amp;</span>event))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> BPF_OK;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	event.skb_addr <span style=color:#ff79c6>=</span> (u64) skb;
+</span></span><span style=display:flex><span>	event.addr <span style=color:#ff79c6>=</span> has_get_func_ip <span style=color:#ff79c6>?</span> bpf_get_func_ip(ctx) <span style=color:#ff79c6>:</span> PT_REGS_IP(ctx);
+</span></span><span style=display:flex><span>	event.param_second <span style=color:#ff79c6>=</span> PT_REGS_PARM2(ctx);
+</span></span><span style=display:flex><span>	bpf_map_push_elem(<span style=color:#ff79c6>&amp;</span>events, <span style=color:#ff79c6>&amp;</span>event, BPF_EXIST);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> BPF_OK;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#ifdef HAS_KPROBE_MULTI
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#define PWRU_KPROBE_TYPE &#34;kprobe.multi&#34;
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#define PWRU_HAS_GET_FUNC_IP true
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#else
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#define PWRU_KPROBE_TYPE &#34;kprobe&#34;
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#define PWRU_HAS_GET_FUNC_IP false
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#endif </span><span style=color:#6272a4>/* HAS_KPROBE_MULTI */</span><span style=color:#ff79c6>
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#define PWRU_ADD_KPROBE(X)                                                     \
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>  SEC(PWRU_KPROBE_TYPE &#34;/skb-&#34; #X)                                             \
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>  int kprobe_skb_##X(struct pt_regs *ctx) {                                    \
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>    struct sk_buff *skb = (struct sk_buff *) PT_REGS_PARM##X(ctx);             \
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>    return kprobe_skb(skb, ctx, PWRU_HAS_GET_FUNC_IP);                         \
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>  }
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span>PWRU_ADD_KPROBE(<span style=color:#bd93f9>1</span>)
+</span></span><span style=display:flex><span>PWRU_ADD_KPROBE(<span style=color:#bd93f9>2</span>)
+</span></span><span style=display:flex><span>PWRU_ADD_KPROBE(<span style=color:#bd93f9>3</span>)
+</span></span><span style=display:flex><span>PWRU_ADD_KPROBE(<span style=color:#bd93f9>4</span>)
+</span></span><span style=display:flex><span>PWRU_ADD_KPROBE(<span style=color:#bd93f9>5</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>#undef PWRU_KPROBE
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#undef PWRU_HAS_GET_FUNC_IP
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6>#undef PWRU_KPROBE_TYPE
+</span></span></span><span style=display:flex><span><span style=color:#ff79c6></span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;kprobe/skb_lifetime_termination&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> kprobe_skb_lifetime_termination(<span style=color:#ff79c6>struct</span> pt_regs <span style=color:#ff79c6>*</span>ctx) {
+</span></span><span style=display:flex><span>	u64 skb <span style=color:#ff79c6>=</span> (u64) PT_REGS_PARM1(ctx);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	bpf_map_delete_elem(<span style=color:#ff79c6>&amp;</span>skb_addresses, <span style=color:#ff79c6>&amp;</span>skb);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> BPF_OK;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>static</span> __always_inline <span style=color:#8be9fd>int</span>
+</span></span><span style=display:flex><span>track_skb_clone(u64 old, u64 new) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (bpf_map_lookup_elem(<span style=color:#ff79c6>&amp;</span>skb_addresses, <span style=color:#ff79c6>&amp;</span>old))
+</span></span><span style=display:flex><span>		bpf_map_update_elem(<span style=color:#ff79c6>&amp;</span>skb_addresses, <span style=color:#ff79c6>&amp;</span>new, <span style=color:#ff79c6>&amp;</span>TRUE, BPF_ANY);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> BPF_OK;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;fexit/skb_clone&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> BPF_PROG(fexit_skb_clone, u64 old, gfp_t mask, u64 new) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> track_skb_clone(old, new);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;fexit/skb_copy&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> BPF_PROG(fexit_skb_copy, u64 old, gfp_t mask, u64 new) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> track_skb_clone(old, new);
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>SEC(<span style=color:#f1fa8c>&#34;fentry/tc&#34;</span>)
+</span></span><span style=display:flex><span><span style=color:#8be9fd>int</span> BPF_PROG(fentry_tc, <span style=color:#ff79c6>struct</span> sk_buff <span style=color:#ff79c6>*</span>skb) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>struct</span> event_t event <span style=color:#ff79c6>=</span> {};
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> (<span style=color:#ff79c6>!</span>handle_everything(skb, ctx, <span style=color:#ff79c6>&amp;</span>event))
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> BPF_OK;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	event.skb_addr <span style=color:#ff79c6>=</span> (u64) skb;
+</span></span><span style=display:flex><span>	event.addr <span style=color:#ff79c6>=</span> BPF_PROG_ADDR;
+</span></span><span style=display:flex><span>	bpf_map_push_elem(<span style=color:#ff79c6>&amp;</span>events, <span style=color:#ff79c6>&amp;</span>event, BPF_EXIST);
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> BPF_OK;
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd>char</span> __license[] SEC(<span style=color:#f1fa8c>&#34;license&#34;</span>) <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#34;Dual BSD/GPL&#34;</span>;
+</span></span></code></pre></div><p>我们在上述的代码中看到配置执行了 bpf_map_lookup_elem，然后执行 filter 过滤功能。
+pwru 借助 <a href=github.com/cilium/ebpf/cmd/bpf2go>github.com/cilium/ebpf/cmd/bpf2go</a> 进行编译，build.go 源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// SPDX-License-Identifier: Apache-2.0
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Copyright (C) 2021 Authors of Cilium */
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>//go:generate sh -c &#34;echo Generating for $TARGET_GOARCH&#34;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target $TARGET_GOARCH -cc clang -no-strip KProbePWRU ./bpf/kprobe_pwru.c -- -DOUTPUT_SKB -I./bpf/headers -Wno-address-of-packed-member
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target $TARGET_GOARCH -cc clang -no-strip KProbeMultiPWRU ./bpf/kprobe_pwru.c -- -DOUTPUT_SKB -DHAS_KPROBE_MULTI -I./bpf/headers -Wno-address-of-packed-member
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target $TARGET_GOARCH -cc clang -no-strip KProbePWRUWithoutOutputSKB ./bpf/kprobe_pwru.c -- -I./bpf/headers -Wno-address-of-packed-member
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//go:generate go run github.com/cilium/ebpf/cmd/bpf2go -target $TARGET_GOARCH -cc clang -no-strip KProbeMultiPWRUWithoutOutputSKB ./bpf/kprobe_pwru.c -- -D HAS_KPROBE_MULTI -I./bpf/headers -Wno-address-of-packed-member
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>package</span> main
+</span></span></code></pre></div><p>用户态使用 perf-event 输出 Map 中的数据如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>main</span>(){
+</span></span><span style=display:flex><span>    printSkbMap <span style=color:#ff79c6>:=</span> coll.Maps[<span style=color:#f1fa8c>&#34;print_skb_map&#34;</span>]
+</span></span><span style=display:flex><span>	printStackMap <span style=color:#ff79c6>:=</span> coll.Maps[<span style=color:#f1fa8c>&#34;print_stack_map&#34;</span>]
+</span></span><span style=display:flex><span>	output, err <span style=color:#ff79c6>:=</span> pwru.<span style=color:#50fa7b>NewOutput</span>(<span style=color:#ff79c6>&amp;</span>flags, printSkbMap, printStackMap, addr2name, useKprobeMulti, btfSpec)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		log.<span style=color:#50fa7b>Fatalf</span>(<span style=color:#f1fa8c>&#34;Failed to create outputer: %s&#34;</span>, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> output.<span style=color:#50fa7b>Close</span>()
+</span></span><span style=display:flex><span>	output.<span style=color:#50fa7b>PrintHeader</span>()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !flags.OutputJson {
+</span></span><span style=display:flex><span>		output.<span style=color:#50fa7b>PrintHeader</span>()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>defer</span> <span style=color:#8be9fd;font-style:italic>func</span>() {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>select</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>case</span> <span style=color:#ff79c6>&lt;-</span>ctx.<span style=color:#50fa7b>Done</span>():
+</span></span><span style=display:flex><span>			log.<span style=color:#50fa7b>Println</span>(<span style=color:#f1fa8c>&#34;Received signal, exiting program..&#34;</span>)
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>default</span>:
+</span></span><span style=display:flex><span>			log.<span style=color:#50fa7b>Printf</span>(<span style=color:#f1fa8c>&#34;Printed %d events, exiting program..\n&#34;</span>, flags.OutputLimitLines)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}()
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 id=参考>参考</h1><ol><li><a href=https://fosdem.org/2024/events/attachments/fosdem-2024-2364-packet-where-are-you-an-ebpf-based-tool-for-diagnosing-linux-networking/slides/22481/FOSDEM_2024_Packet_Where_aRe_You_HGLqMLe.pdf>https://fosdem.org/2024/events/attachments/fosdem-2024-2364-packet-where-are-you-an-ebpf-based-tool-for-diagnosing-linux-networking/slides/22481/FOSDEM_2024_Packet_Where_aRe_You_HGLqMLe.pdf</a></li><li><a href="https://github.com/cilium/pwru?tab=readme-ov-file">https://github.com/cilium/pwru?tab=readme-ov-file</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2023-11-04-ebpf-ecosystem/ data-toggle=tooltip data-placement=top title="eBPF 周边生态圈明星产品">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2024</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
