@@ -1,0 +1,1143 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）"><meta property="og:title" content="深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）"><meta property="twitter:title" content="深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>深入理解 Kubernetes Scheduler Framework 调度框架（Part 3） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2024-04-08-scheduler-framework-03/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/scheduler-framework title="Scheduler Framework">Scheduler Framework</a></div><h1>深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）</h1><h2 class=subheading>基于 Scheduler Framework 进行插件拓展的案例</h2><span class=meta>Posted by
+陈谭军
+on
+Monday, April 8, 2024
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2024-04-08-scheduler-framework-03/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 6387 字</span>，阅读约 <span class=more-meta>13 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>Scheduler 分两个 cycle：Scheduling Cycle 和 Binding Cycle。在 Scheduling Cycle 中为了提升效率的一个重要原则就是 Pod、 Node 等信息从本地缓存中获取，而具体的实现原理就是先使用 list 获取所有 Node、Pod 的信息，然后再 watch 他们的变化更新本地缓存。在 Bind Cycle 中，会有两次外部 api 调用：调用 pv controller 绑定 pv 和调用 kube-apiserver 绑定 Node，api 调用是耗时的，所以将 bind 扩展点拆分出来，另起一个 go 协程进行 bind。调度周期是串行，绑定周期是并行的。本文主要介绍基于 Scheduler Framework 进行插件拓展的案例。</p><p><a href=https://tanjunchen.github.io/post/2024-04-08-scheduler-framework-03/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）</a><br><a href=https://tanjunchen.github.io/post/2024-04-07-scheduler-framework-02/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 2）</a><br><a href=https://tanjunchen.github.io/post/2024-04-06-scheduler-framework-01/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 1）</a></p><h1 id=自定义拓展点>自定义拓展点</h1><p>Framework 是一个接口，里面定义了一系列方法。frameworkImpl 的成员主要是各个扩展点插件数组，用来存放该扩展点插件。
+frameworkImpl 实现 Framework 这个接口，可以通过 RunxxPlugins() 这样的方法来执行 frameworkImpl 中的插件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// frameworkImpl is the component responsible for initializing and running scheduler
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> frameworkImpl <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	registry             Registry
+</span></span><span style=display:flex><span>	snapshotSharedLister framework.SharedLister
+</span></span><span style=display:flex><span>	waitingPods          <span style=color:#ff79c6>*</span>waitingPodsMap
+</span></span><span style=display:flex><span>	scorePluginWeight    <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]<span style=color:#8be9fd>int</span>
+</span></span><span style=display:flex><span>	preEnqueuePlugins    []framework.PreEnqueuePlugin
+</span></span><span style=display:flex><span>	enqueueExtensions    []framework.EnqueueExtensions
+</span></span><span style=display:flex><span>	queueSortPlugins     []framework.QueueSortPlugin
+</span></span><span style=display:flex><span>	preFilterPlugins     []framework.PreFilterPlugin
+</span></span><span style=display:flex><span>	filterPlugins        []framework.FilterPlugin
+</span></span><span style=display:flex><span>	postFilterPlugins    []framework.PostFilterPlugin
+</span></span><span style=display:flex><span>	preScorePlugins      []framework.PreScorePlugin
+</span></span><span style=display:flex><span>	scorePlugins         []framework.ScorePlugin
+</span></span><span style=display:flex><span>	reservePlugins       []framework.ReservePlugin
+</span></span><span style=display:flex><span>	preBindPlugins       []framework.PreBindPlugin
+</span></span><span style=display:flex><span>	bindPlugins          []framework.BindPlugin
+</span></span><span style=display:flex><span>	postBindPlugins      []framework.PostBindPlugin
+</span></span><span style=display:flex><span>	permitPlugins        []framework.PermitPlugin
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// pluginsMap contains all plugins, by name.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	pluginsMap <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]framework.Plugin
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	clientSet       clientset.Interface
+</span></span><span style=display:flex><span>	kubeConfig      <span style=color:#ff79c6>*</span>restclient.Config
+</span></span><span style=display:flex><span>	eventRecorder   events.EventRecorder
+</span></span><span style=display:flex><span>	informerFactory informers.SharedInformerFactory
+</span></span><span style=display:flex><span>	logger          klog.Logger
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	metricsRecorder          <span style=color:#ff79c6>*</span>metrics.MetricAsyncRecorder
+</span></span><span style=display:flex><span>	profileName              <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span>	percentageOfNodesToScore <span style=color:#ff79c6>*</span><span style=color:#8be9fd>int32</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	extenders []framework.Extender
+</span></span><span style=display:flex><span>	framework.PodNominator
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	parallelizer parallelize.Parallelizer
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>看下 ScorePlugin 拓展点数组类型，如以下代码，要实现一个 ScorePlugin 扩展点插件，只需要实现 Score、Name、ScoreExtensions 方法即可，其他插件类似。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// Plugin is the parent type for all the scheduling framework plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> Plugin <span style=color:#8be9fd;font-style:italic>interface</span> {
+</span></span><span style=display:flex><span>	<span style=color:#50fa7b>Name</span>() <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// ScorePlugin is an interface that must be implemented by &#34;Score&#34; plugins to rank
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// nodes that passed the filtering phase.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> ScorePlugin <span style=color:#8be9fd;font-style:italic>interface</span> {
+</span></span><span style=display:flex><span>	Plugin
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// Score is called on each filtered node. It must return success and an integer
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// indicating the rank of the node. All scoring plugins must return success or
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// the pod will be rejected.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#50fa7b>Score</span>(ctx context.Context, state <span style=color:#ff79c6>*</span>CycleState, p <span style=color:#ff79c6>*</span>v1.Pod, nodeName <span style=color:#8be9fd>string</span>) (<span style=color:#8be9fd>int64</span>, <span style=color:#ff79c6>*</span>Status)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// ScoreExtensions returns a ScoreExtensions interface if it implements one, or nil if does not.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#50fa7b>ScoreExtensions</span>() ScoreExtensions
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 id=registry-注册>Registry 注册</h1><p>Registry 是一个 map: key 是插件的名称，value 是 PluginFactory 类型的函数，这个函数返回 framework.Plugin。
+这个 Plugin 就是上面说接口，实现这个接口的对象就可以作为插件被调用。所以 PluginFactory 的作用就是新建一个 Plugin 类型的对象。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// pkg/scheduler/apis/config/types.go#L192
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Plugin specifies a plugin name and its weight when applicable. Weight is used only for Score plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> Plugin <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// Name defines the name of plugin
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	Name <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// Weight defines the weight of plugin, only used for Score plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	Weight <span style=color:#8be9fd>int32</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// PluginFactory is a function that builds a plugin.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> PluginFactory = <span style=color:#8be9fd;font-style:italic>func</span>(ctx context.Context, configuration runtime.Object, f framework.Handle) (framework.Plugin, <span style=color:#8be9fd>error</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// PluginFactoryWithFts is a function that builds a plugin with certain feature gates.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> PluginFactoryWithFts <span style=color:#8be9fd;font-style:italic>func</span>(context.Context, runtime.Object, framework.Handle, plfeature.Features) (framework.Plugin, <span style=color:#8be9fd>error</span>)
+</span></span></code></pre></div><p>Scheduler 启动前会遍历这个 map，执行这个 map 的 value 代表的函数，将函数返回值写入 frameworkImpl 对应的扩展点数组。
+执行某个扩展点插件流程：遍历 frameworkImpl 中这个扩展点数组的所有对象，执行它即可。
+内置插件的注册叫 InTreeRegistry, 用户自定义插件的注册叫 OutOfTreeRegistry。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// New returns a Scheduler
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>New</span>(ctx context.Context,
+</span></span><span style=display:flex><span>	client clientset.Interface,
+</span></span><span style=display:flex><span>	informerFactory informers.SharedInformerFactory,
+</span></span><span style=display:flex><span>	dynInformerFactory dynamicinformer.DynamicSharedInformerFactory,
+</span></span><span style=display:flex><span>	recorderFactory profile.RecorderFactory,
+</span></span><span style=display:flex><span>	opts <span style=color:#ff79c6>...</span>Option) (<span style=color:#ff79c6>*</span>Scheduler, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 内置插件
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    registry <span style=color:#ff79c6>:=</span> frameworkplugins.<span style=color:#50fa7b>NewInTreeRegistry</span>()
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 合并用户自定义插件
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> registry.<span style=color:#50fa7b>Merge</span>(options.frameworkOutOfTreeRegistry); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>/</span> Registry is a collection of all available plugins. The framework uses a
+</span></span><span style=display:flex><span><span style=color:#6272a4>// registry to enable and initialize configured plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// All plugins must be in the registry before initializing the framework.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> Registry <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]PluginFactory
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Register adds a new plugin to the registry. If a plugin with the same name
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// exists, it returns an error.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (r Registry) <span style=color:#50fa7b>Register</span>(name <span style=color:#8be9fd>string</span>, factory PluginFactory) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> _, ok <span style=color:#ff79c6>:=</span> r[name]; ok {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;a plugin named %v already exists&#34;</span>, name)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	r[name] = factory
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Unregister removes an existing plugin from the registry. If no plugin with
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// the provided name exists, it returns an error.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (r Registry) <span style=color:#50fa7b>Unregister</span>(name <span style=color:#8be9fd>string</span>) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> _, ok <span style=color:#ff79c6>:=</span> r[name]; !ok {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;no plugin named %v exists&#34;</span>, name)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>delete</span>(r, name)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Merge merges the provided registry to the current one.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (r Registry) <span style=color:#50fa7b>Merge</span>(in Registry) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> name, factory <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> in {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>Register</span>(name, factory); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// NewInTreeRegistry builds the registry with all the in-tree plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// A scheduler that runs out of tree plugins can register additional plugins
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// through the WithFrameworkOutOfTreeRegistry option.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewInTreeRegistry</span>() runtime.Registry {
+</span></span><span style=display:flex><span>	fts <span style=color:#ff79c6>:=</span> plfeature.Features{
+</span></span><span style=display:flex><span>		EnableDynamicResourceAllocation:              feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.DynamicResourceAllocation),
+</span></span><span style=display:flex><span>		EnableVolumeCapacityPriority:                 feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.VolumeCapacityPriority),
+</span></span><span style=display:flex><span>		EnableNodeInclusionPolicyInPodTopologySpread: feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.NodeInclusionPolicyInPodTopologySpread),
+</span></span><span style=display:flex><span>		EnableMatchLabelKeysInPodTopologySpread:      feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.MatchLabelKeysInPodTopologySpread),
+</span></span><span style=display:flex><span>		EnablePodDisruptionConditions:                feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.PodDisruptionConditions),
+</span></span><span style=display:flex><span>		EnableInPlacePodVerticalScaling:              feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.InPlacePodVerticalScaling),
+</span></span><span style=display:flex><span>		EnableSidecarContainers:                      feature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.SidecarContainers),
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	registry <span style=color:#ff79c6>:=</span> runtime.Registry{
+</span></span><span style=display:flex><span>		dynamicresources.Name:                runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, dynamicresources.New),
+</span></span><span style=display:flex><span>		imagelocality.Name:                   imagelocality.New,
+</span></span><span style=display:flex><span>		tainttoleration.Name:                 tainttoleration.New,
+</span></span><span style=display:flex><span>		nodename.Name:                        nodename.New,
+</span></span><span style=display:flex><span>		nodeports.Name:                       nodeports.New,
+</span></span><span style=display:flex><span>		nodeaffinity.Name:                    nodeaffinity.New,
+</span></span><span style=display:flex><span>		podtopologyspread.Name:               runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, podtopologyspread.New),
+</span></span><span style=display:flex><span>		nodeunschedulable.Name:               nodeunschedulable.New,
+</span></span><span style=display:flex><span>		noderesources.Name:                   runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, noderesources.NewFit),
+</span></span><span style=display:flex><span>		noderesources.BalancedAllocationName: runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, noderesources.NewBalancedAllocation),
+</span></span><span style=display:flex><span>		volumebinding.Name:                   runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, volumebinding.New),
+</span></span><span style=display:flex><span>		volumerestrictions.Name:              runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, volumerestrictions.New),
+</span></span><span style=display:flex><span>		volumezone.Name:                      volumezone.New,
+</span></span><span style=display:flex><span>		nodevolumelimits.CSIName:             runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, nodevolumelimits.NewCSI),
+</span></span><span style=display:flex><span>		nodevolumelimits.EBSName:             runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, nodevolumelimits.NewEBS),
+</span></span><span style=display:flex><span>		nodevolumelimits.GCEPDName:           runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, nodevolumelimits.NewGCEPD),
+</span></span><span style=display:flex><span>		nodevolumelimits.AzureDiskName:       runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, nodevolumelimits.NewAzureDisk),
+</span></span><span style=display:flex><span>		nodevolumelimits.CinderName:          runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, nodevolumelimits.NewCinder),
+</span></span><span style=display:flex><span>		interpodaffinity.Name:                interpodaffinity.New,
+</span></span><span style=display:flex><span>		queuesort.Name:                       queuesort.New,
+</span></span><span style=display:flex><span>		defaultbinder.Name:                   defaultbinder.New,
+</span></span><span style=display:flex><span>		defaultpreemption.Name:               runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, defaultpreemption.New),
+</span></span><span style=display:flex><span>		schedulinggates.Name:                 schedulinggates.New,
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> registry
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>函数 NewInTreeRegistry 返回一个 registry，这个 registry 包含了所有内置插件对象的创建方法。
+Merge 函数将 NewInTreeRegistry 返回的 registry 和 options.frameworkOutOfTreeRegistry 合并。
+其中 registry.Merge(options.frameworkOutOfTreeRegistry) 表示的是 Registry 自定义插件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// PluginFactory is a function that builds a plugin.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> PluginFactory = <span style=color:#8be9fd;font-style:italic>func</span>(ctx context.Context, configuration runtime.Object, f framework.Handle) (framework.Plugin, <span style=color:#8be9fd>error</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Registry is a collection of all available plugins. The framework uses a
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// registry to enable and initialize configured plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// All plugins must be in the registry before initializing the framework.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> Registry <span style=color:#8be9fd;font-style:italic>map</span>[<span style=color:#8be9fd>string</span>]PluginFactory
+</span></span></code></pre></div><p>pkg/scheduler/scheduler.go 中的 frameworkOutOfTreeRegistry() 是通过 cmd/kube-scheduler/app/server.go 中的 NewSchedulerCommand 函数的入参进行初始化的。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// NewSchedulerCommand creates a *cobra.Command object with default parameters and registryOptions
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewSchedulerCommand</span>(registryOptions <span style=color:#ff79c6>...</span>Option) <span style=color:#ff79c6>*</span>cobra.Command {
+</span></span><span style=display:flex><span>	opts <span style=color:#ff79c6>:=</span> options.<span style=color:#50fa7b>NewOptions</span>()
+</span></span><span style=display:flex><span>    cmd <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&amp;</span>cobra.Command{
+</span></span><span style=display:flex><span>		Use: <span style=color:#f1fa8c>&#34;kube-scheduler&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>		RunE: <span style=color:#8be9fd;font-style:italic>func</span>(cmd <span style=color:#ff79c6>*</span>cobra.Command, args []<span style=color:#8be9fd>string</span>) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>runCommand</span>(cmd, opts, registryOptions<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>		},
+</span></span><span style=display:flex><span>		Args: <span style=color:#8be9fd;font-style:italic>func</span>(cmd <span style=color:#ff79c6>*</span>cobra.Command, args []<span style=color:#8be9fd>string</span>) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>for</span> _, arg <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> args {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(arg) &gt; <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>return</span> fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;%q does not take any arguments, got %q&#34;</span>, cmd.<span style=color:#50fa7b>CommandPath</span>(), args)
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>		},
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>......</span>       
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// runCommand runs the scheduler.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>runCommand</span>(cmd <span style=color:#ff79c6>*</span>cobra.Command, opts <span style=color:#ff79c6>*</span>options.Options, registryOptions <span style=color:#ff79c6>...</span>Option) <span style=color:#8be9fd>error</span> {
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>	cc, sched, err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>Setup</span>(ctx, opts, registryOptions<span style=color:#ff79c6>...</span>)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>Setup</span>(ctx context.Context, opts <span style=color:#ff79c6>*</span>options.Options, outOfTreeRegistryOptions <span style=color:#ff79c6>...</span>Option) (<span style=color:#ff79c6>*</span>schedulerserverconfig.CompletedConfig, <span style=color:#ff79c6>*</span>scheduler.Scheduler, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>    outOfTreeRegistry <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>(runtime.Registry)
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span> _, option <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> outOfTreeRegistryOptions {
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>option</span>(outOfTreeRegistry); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>        }
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span><span style=color:#6272a4>// WithFrameworkOutOfTreeRegistry sets the registry for out-of-tree plugins. Those plugins
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// will be appended to the default registry.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>WithFrameworkOutOfTreeRegistry</span>(registry frameworkruntime.Registry) Option {
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>func</span>(o <span style=color:#ff79c6>*</span>schedulerOptions) {
+</span></span><span style=display:flex><span>        o.frameworkOutOfTreeRegistry = registry
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>我们有两种方式可以拓展原生 Scheduler Framework，in-tree（直接修改源码）、out-of-tree（外置调度算法）。</p><h1 id=in-tree-自定义插件>in-tree 自定义插件</h1><p>在 k8s 代码目录 pkg/scheduler/framework/plugins 中， 跟内置调度器一起编译。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  kubernetes git:<span style=color:#ff79c6>(</span>v1.26.9-filter<span style=color:#ff79c6>)</span> ✗ ls pkg/scheduler/framework/plugins
+</span></span><span style=display:flex><span>defaultbinder
+</span></span><span style=display:flex><span>defaultpreemption
+</span></span><span style=display:flex><span>imagelocality
+</span></span><span style=display:flex><span>interpodaffinity
+</span></span><span style=display:flex><span>legacy_registry
+</span></span><span style=display:flex><span>nodeaffinity
+</span></span><span style=display:flex><span>nodelabel
+</span></span><span style=display:flex><span>nodename
+</span></span><span style=display:flex><span>nodeports
+</span></span><span style=display:flex><span>nodepreferavoidpods
+</span></span><span style=display:flex><span>noderesources
+</span></span><span style=display:flex><span>nodeunschedulable
+</span></span><span style=display:flex><span>nodevolumelimits
+</span></span><span style=display:flex><span>podtopologyspread
+</span></span><span style=display:flex><span>queuesort
+</span></span><span style=display:flex><span>selectorspread
+</span></span><span style=display:flex><span>serviceaffinity
+</span></span><span style=display:flex><span>tainttoleration
+</span></span><span style=display:flex><span>volumebinding
+</span></span><span style=display:flex><span>volumerestrictions
+</span></span><span style=display:flex><span>volumezone
+</span></span></code></pre></div><p>默认启用的插件实现了这些扩展点中的一个或多个:</p><ul><li>ImageLocality: 优先考虑已经拥有 Pod 运行的容器镜像的节点；扩展点：score。</li><li>TaintToleration: 实现污点和容忍；实现扩展点：filter, preScore, score。</li><li>NodeName: 检查Pod规格节点名称是否与当前节点匹配；扩展点：filter。</li><li>NodePorts: 检查节点是否有Pod请求的端口的空闲端口；扩展点：preFilter, filter。</li><li>NodeAffinity: 实现节点选择器和节点亲和性；扩展点：filter, score。</li><li>PodTopologySpread: 实现Pod拓扑扩展；扩展点：preFilter, filter, preScore, score。</li><li>NodeUnschedulable: 过滤出spec.unschedulable设置为true的节点；扩展点：filter。</li><li>NodeResourcesFit: 检查节点是否具有Pod请求的所有资源；得分可以使用三种策略之一：LeastAllocated（默认）、MostAllocated和RequestedToCapacityRatio；扩展点：preFilter, filter, score。</li><li>NodeResourcesBalancedAllocation: 偏向于如果Pod在那里调度，将获得更平衡资源使用的节点；扩展点：score。</li><li>VolumeBinding: 检查节点是否有或是否可以绑定请求的卷；扩展点：preFilter, filter, reserve, preBind, score。</li><li>VolumeRestrictions: 检查节点中安装的卷是否满足特定于卷提供程序的限制；扩展点：filter。</li><li>VolumeZone: 检查请求的卷是否满足它们可能具有的任何区域需求；扩展点：filter。</li><li>NodeVolumeLimits: 检查节点是否可以满足CSI卷限制；扩展点：filter。</li><li>EBSLimits: 检查节点是否可以满足AWS EBS卷限制；扩展点：filter。</li><li>GCEPDLimits: 检查节点是否可以满足GCP-PD卷限制；扩展点：filter。</li><li>AzureDiskLimits: 检查节点是否可以满足Azure磁盘卷限制；扩展点：filter。</li><li>InterPodAffinity: 实现Pod间的亲和性和反亲和性；扩展点：preFilter, filter, preScore, score。</li><li>PrioritySort: 提供默认的基于优先级的排序；扩展点：queueSort。</li><li>DefaultBinder: 提供默认的绑定机制；扩展点：bind。</li><li>DefaultPreemption: 提供默认的抢占机制；扩展点：postFilter。</li></ul><p>总结：in-tree 方式每次要添加新插件，或者修改原有插件，都需要修改 kube-scheduler 代码然后编译和重新部署 kube-scheduler，比较重量级。接下来，我们以 in-tree 的方式实现一个自定义插件，实现 Filter 扩展点。</p><p>1、克隆 Kubernetes Scheduler 源码</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git clone https://github.com/kubernetes/kubernetes.git -b v1.26.9
+</span></span></code></pre></div><p>2、然后进入 plugins 目录下创建自己的插件</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> kubernetes/pkg/scheduler/framework/plugins
+</span></span><span style=display:flex><span>mkdir nodefilter
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> nodefilter
+</span></span><span style=display:flex><span>touch nodefilter.go
+</span></span></code></pre></div><p>Filter 插件就是要过滤掉那些不符合 Pod 的 Node，留下符合的 Node，Filer 方法就是通过返回值 Status 来标识某个 Node 是否通过了这个插件的过滤，只要插件返回 nil 就表示 Node 通过了这个插件的过滤。如果 Node 无法通过这个插件的过滤，插件可以调用 framework.NewStatus 方法返回过滤失败详情。</p><p>3、实现 nodefilter 插件</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#ff79c6>package</span> nodefilter
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> (
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;context&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;fmt&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	v1 <span style=color:#f1fa8c>&#34;k8s.io/api/core/v1&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;k8s.io/apimachinery/pkg/runtime&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;k8s.io/klog/v2&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;k8s.io/kubernetes/pkg/scheduler/framework&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>const</span> Name = <span style=color:#f1fa8c>&#34;nodeFilter&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 定义这个插件的结构体
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> NodeFilter <span style=color:#8be9fd;font-style:italic>struct</span>{}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 实现 Name 方法
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (nodeFilter <span style=color:#ff79c6>*</span>NodeFilter) <span style=color:#50fa7b>Name</span>() <span style=color:#8be9fd>string</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> Name
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 实现 Filter 方法
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (nodeFilter <span style=color:#ff79c6>*</span>NodeFilter) <span style=color:#50fa7b>Filter</span>(ctx context.Context, _ <span style=color:#ff79c6>*</span>framework.CycleState, pod <span style=color:#ff79c6>*</span>v1.Pod, nodeInfo <span style=color:#ff79c6>*</span>framework.NodeInfo) <span style=color:#ff79c6>*</span>framework.Status {
+</span></span><span style=display:flex><span>	cpu <span style=color:#ff79c6>:=</span> nodeInfo.Allocatable.MilliCPU
+</span></span><span style=display:flex><span>	memory <span style=color:#ff79c6>:=</span> nodeInfo.Allocatable.Memory
+</span></span><span style=display:flex><span>	fmt.<span style=color:#50fa7b>Println</span>(<span style=color:#f1fa8c>&#34;====nodeFilter filter===&#34;</span>)
+</span></span><span style=display:flex><span>	klog.<span style=color:#50fa7b>InfoS</span>(<span style=color:#f1fa8c>&#34;nodeFilter filter&#34;</span>, <span style=color:#f1fa8c>&#34;pod_name&#34;</span>, pod.Name, <span style=color:#f1fa8c>&#34;current node&#34;</span>, nodeInfo.<span style=color:#50fa7b>Node</span>().Name, <span style=color:#f1fa8c>&#34;cpu&#34;</span>, cpu, <span style=color:#f1fa8c>&#34;memory&#34;</span>, memory)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 编写 New 函数
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>New</span>(_ runtime.Object, _ framework.Handle) (framework.Plugin, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>NodeFilter{}, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><ul><li>定义插件的结构体，实现插件需要实现的方法；</li><li>实现 Name 方法；</li><li>实现 Filter 方法，打印 Node 的 CPU 与内存资源；</li><li>编写 New 函数，这个函数会初始化的时候被注册在 framework 中，告诉 framework 怎么创建这个插件对象；</li></ul><p>4、在 main 函数中传递定义的插件的 nodefilter New 函数</p><p>使用 app.WithPlugin 方法返回一个 Option 类型的对象，Option 类型正好是 NewSchedulerCommand 方法的参数类型，这样就传递了自定义的插件对象新建方法。在后续初始化 scheduler 的过程中，这个 New 方法会被调用， New 返回的结果存放在 frameworkImpl 对象的 Filter 扩展点插件数组中，以便后续遍历 Filter 扩展点插件数组时调用插件对象上的 Filter 方法。在 Kubernetes Scheduler（cmd/kube-scheduler/scheduler.go）启动时添加自定义插件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#ff79c6>package</span> main
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> (
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;os&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;k8s.io/component-base/cli&#34;</span>
+</span></span><span style=display:flex><span>	_ <span style=color:#f1fa8c>&#34;k8s.io/component-base/logs/json/register&#34;</span> <span style=color:#6272a4>// for JSON log format registration
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	_ <span style=color:#f1fa8c>&#34;k8s.io/component-base/metrics/prometheus/clientgo&#34;</span>
+</span></span><span style=display:flex><span>	_ <span style=color:#f1fa8c>&#34;k8s.io/component-base/metrics/prometheus/version&#34;</span> <span style=color:#6272a4>// for version metric registration
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#f1fa8c>&#34;k8s.io/kubernetes/cmd/kube-scheduler/app&#34;</span>
+</span></span><span style=display:flex><span>	<span style=color:#f1fa8c>&#34;k8s.io/kubernetes/pkg/scheduler/framework/plugins/nodefilter&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>main</span>() {
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// 自定义插件
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	myPlugin <span style=color:#ff79c6>:=</span> app.<span style=color:#50fa7b>WithPlugin</span>(nodefilter.Name, nodefilter.New)
+</span></span><span style=display:flex><span>	command <span style=color:#ff79c6>:=</span> app.<span style=color:#50fa7b>NewSchedulerCommand</span>(myPlugin)
+</span></span><span style=display:flex><span>	code <span style=color:#ff79c6>:=</span> cli.<span style=color:#50fa7b>Run</span>(command)
+</span></span><span style=display:flex><span>	os.<span style=color:#50fa7b>Exit</span>(code)
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>5、在 Kubernetes root 根目录下重新编译Kubernetes Scheduler 调度器。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>// 镜像
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/kubernetes# make clean
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/kubernetes# <span style=color:#8be9fd;font-style:italic>KUBE_DOCKER_REGISTRY</span><span style=color:#ff79c6>=</span>docker.io/tanjunchen  <span style=color:#8be9fd;font-style:italic>KUBE_BUILD_PLATFORMS</span><span style=color:#ff79c6>=</span>linux/amd64 <span style=color:#8be9fd;font-style:italic>KUBE_BUILD_CONFORMANCE</span><span style=color:#ff79c6>=</span>n <span style=color:#8be9fd;font-style:italic>KUBE_BUILD_HYPERKUBE</span><span style=color:#ff79c6>=</span>n make  <span style=color:#8be9fd;font-style:italic>WHAT</span><span style=color:#ff79c6>=</span>cmd/kube-scheduler release-images <span style=color:#8be9fd;font-style:italic>GOFLAGS</span><span style=color:#ff79c6>=</span>-v <span style=color:#8be9fd;font-style:italic>GOGCFLAGS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;-N -l&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>// 在 /root/tanjunchen/kubernetes/_output/release-images/amd64 目录下存在以下文件
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/kubernetes/_output/release-images/amd64# ls
+</span></span><span style=display:flex><span>kube-apiserver.tar  kube-controller-manager.tar  kube-proxy.tar  kube-scheduler.tar
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/kubernetes/_output/release-images/amd64# docker load -i kube-scheduler.tar 
+</span></span><span style=display:flex><span>Loaded image: k8s.gcr.io/kube-scheduler-amd64:v1.26.9-filter
+</span></span><span style=display:flex><span>Loaded image: docker.io/tanjunchen/kube-scheduler-amd64:v1.26.9-filter
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>// 二进制
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/kubernetes# <span style=color:#8be9fd;font-style:italic>KUBE_BUILD_PLATFORMS</span><span style=color:#ff79c6>=</span>linux/amd64 make <span style=color:#8be9fd;font-style:italic>WHAT</span><span style=color:#ff79c6>=</span>cmd/kube-apiserver  quick-release
+</span></span><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/kubernetes# <span style=color:#8be9fd;font-style:italic>KUBE_BUILD_PLATFORMS</span><span style=color:#ff79c6>=</span>linux/amd64 make <span style=color:#8be9fd;font-style:italic>WHAT</span><span style=color:#ff79c6>=</span>cmd/kube-apiserver <span style=color:#8be9fd;font-style:italic>GOFLAGS</span><span style=color:#ff79c6>=</span>-v <span style=color:#8be9fd;font-style:italic>GOGCFLAGS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;-N -l&#34;</span>
+</span></span></code></pre></div><p>6、在配置文件中添加我们的自定义插件，kube-scheduler 启动命令配置文件路径，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: KubeSchedulerConfiguration
+</span></span><span style=display:flex><span><span style=color:#ff79c6>clientConnection</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>acceptContentTypes</span>: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>burst</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>contentType</span>: application/vnd.kubernetes.protobuf
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>kubeconfig</span>: /etc/kubernetes/scheduler.conf
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>qps</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>profiles</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>schedulerName</span>: my-scheduler
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>plugins</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>enabled</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: nodeFilter
+</span></span></code></pre></div><p>更改 Kubernetes Scheduler 静态 Static Pod 部署 kube-scheduler yaml 文件，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Pod
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scheduler.alpha.kubernetes.io/critical-pod</span>: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>creationTimestamp</span>: <span style=color:#ff79c6>null</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>component</span>: kube-scheduler
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tier</span>: control-plane
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: kube-scheduler
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: kube-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>command</span>:
+</span></span><span style=display:flex><span>        - kube-scheduler
+</span></span><span style=display:flex><span>        - --master=https://192.168.0.198:6443
+</span></span><span style=display:flex><span>        - --feature-gates=MixedProtocolLBService=true
+</span></span><span style=display:flex><span>        - --kubeconfig=/etc/kubernetes/scheduler.conf
+</span></span><span style=display:flex><span>        - --authorization-always-allow-paths=/metrics,/healthz,/readyz,/livez
+</span></span><span style=display:flex><span>        - --leader-elect=true
+</span></span><span style=display:flex><span>        - --kube-api-qps=100
+</span></span><span style=display:flex><span>        - --kube-api-burst=100
+</span></span><span style=display:flex><span>        - --bind-address=0.0.0.0
+</span></span><span style=display:flex><span>        - --profiling
+</span></span><span style=display:flex><span>        - --v=2
+</span></span><span style=display:flex><span>        <span style=color:#6272a4>#增加的配置文件</span>
+</span></span><span style=display:flex><span>        - --config=/etc/kubernetes/scheduler_config.yaml
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/kube-scheduler-amd64:v1.26.9-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: kube-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>volumeMounts</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>mountPath</span>: /etc/kubernetes
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: kubernetes
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>mountPath</span>: /etc/localtime
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: localtime
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hostNetwork</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>priorityClassName</span>: system-cluster-critical
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>volumes</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>hostPath</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>path</span>: /etc/kubernetes
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>type</span>: DirectoryOrCreate
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: kubernetes
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>hostPath</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>path</span>: /etc/localtime
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>type</span>: File
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: localtime
+</span></span></code></pre></div><p>7、部署测试示例 nginx</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>schedulerName</span>: my-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>image</span>: nginx:1.17.3
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>8、查看 scheduler 调度日志，终端打印了我们插件中编写的代码逻辑。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  ~ kubectl -n kube-system logs -f kube-scheduler-192.168.0.198
+</span></span><span style=display:flex><span>W0415 19:07:28.009796       <span style=color:#bd93f9>1</span> feature_gate.go:241<span style=color:#ff79c6>]</span> Setting GA feature gate <span style=color:#8be9fd;font-style:italic>MixedProtocolLBService</span><span style=color:#ff79c6>=</span>true. It will be removed in a future release. 
+</span></span><span style=display:flex><span>I0415 19:07:28.010048       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --allow-metric-labels<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;[]&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010071       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-kubeconfig<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010121       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-skip-lookup<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010129       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-token-webhook-cache-ttl<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10s&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010166       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-tolerate-lookup-failure<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;true&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010208       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-always-allow-paths<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;[/metrics,/healthz,/readyz,/livez]&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010239       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-kubeconfig<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010278       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-webhook-cache-authorized-ttl<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10s&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010303       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-webhook-cache-unauthorized-ttl<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10s&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010329       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --bind-address<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;0.0.0.0&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010362       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --cert-dir<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010390       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --client-ca-file<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:28.010413       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --config<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;/etc/kubernetes/scheduler_config.yaml&#34;</span>
+</span></span><span style=display:flex><span>......
+</span></span><span style=display:flex><span>W0415 19:07:29.246961       <span style=color:#bd93f9>1</span> authorization.go:226<span style=color:#ff79c6>]</span> failed to <span style=color:#8be9fd;font-style:italic>read</span> in-cluster kubeconfig <span style=color:#ff79c6>for</span> delegated authorization: open /var/run/secrets/kubernetes.io/serviceaccount/token: no such file or directory
+</span></span><span style=display:flex><span>W0415 19:07:29.246975       <span style=color:#bd93f9>1</span> authorization.go:194<span style=color:#ff79c6>]</span> No authorization-kubeconfig provided, so SubjectAccessReview of authorization tokens won&#39;t work.
+</span></span><span style=display:flex><span>I0415 19:07:29.265066       <span style=color:#bd93f9>1</span> configfile.go:105<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Using component config&#34;</span> <span style=color:#8be9fd;font-style:italic>config</span><span style=color:#ff79c6>=</span>&lt;
+</span></span><span style=display:flex><span>	apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	clientConnection:
+</span></span><span style=display:flex><span>	  acceptContentTypes: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>	  burst: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	  contentType: application/vnd.kubernetes.protobuf
+</span></span><span style=display:flex><span>	  kubeconfig: /etc/kubernetes/scheduler.conf
+</span></span><span style=display:flex><span>	  qps: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	enableContentionProfiling: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	enableProfiling: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	kind: KubeSchedulerConfiguration
+</span></span><span style=display:flex><span>	leaderElection:
+</span></span><span style=display:flex><span>	  leaderElect: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	  leaseDuration: 15s
+</span></span><span style=display:flex><span>	  renewDeadline: 10s
+</span></span><span style=display:flex><span>	  resourceLock: leases
+</span></span><span style=display:flex><span>	  resourceName: kube-scheduler
+</span></span><span style=display:flex><span>	  resourceNamespace: kube-system
+</span></span><span style=display:flex><span>	  retryPeriod: 2s
+</span></span><span style=display:flex><span>	parallelism: <span style=color:#bd93f9>16</span>
+</span></span><span style=display:flex><span>	percentageOfNodesToScore: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	podInitialBackoffSeconds: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	podMaxBackoffSeconds: <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>	profiles:
+</span></span><span style=display:flex><span>	- pluginConfig:
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: DefaultPreemptionArgs
+</span></span><span style=display:flex><span>	      minCandidateNodesAbsolute: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	      minCandidateNodesPercentage: <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>	    name: DefaultPreemption
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      hardPodAffinityWeight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      kind: InterPodAffinityArgs
+</span></span><span style=display:flex><span>	    name: InterPodAffinity
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeAffinityArgs
+</span></span><span style=display:flex><span>	    name: NodeAffinity
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeResourcesBalancedAllocationArgs
+</span></span><span style=display:flex><span>	      resources:
+</span></span><span style=display:flex><span>	      - name: cpu
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: memory
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	    name: NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeResourcesFitArgs
+</span></span><span style=display:flex><span>	      scoringStrategy:
+</span></span><span style=display:flex><span>	        resources:
+</span></span><span style=display:flex><span>	        - name: cpu
+</span></span><span style=display:flex><span>	          weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	        - name: memory
+</span></span><span style=display:flex><span>	          weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	        type: LeastAllocated
+</span></span><span style=display:flex><span>	    name: NodeResourcesFit
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      defaultingType: System
+</span></span><span style=display:flex><span>	      kind: PodTopologySpreadArgs
+</span></span><span style=display:flex><span>	    name: PodTopologySpread
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      bindTimeoutSeconds: <span style=color:#bd93f9>600</span>
+</span></span><span style=display:flex><span>	      kind: VolumeBindingArgs
+</span></span><span style=display:flex><span>	    name: VolumeBinding
+</span></span><span style=display:flex><span>	  plugins:
+</span></span><span style=display:flex><span>	    bind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    filter:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: nodeFilter
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    multiPoint:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: PrioritySort
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeUnschedulable
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeName
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: TaintToleration
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>	      - name: NodeAffinity
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: NodePorts
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeResourcesFit
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: VolumeRestrictions
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: EBSLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: GCEPDLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeVolumeLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: AzureDiskLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: VolumeBinding
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: VolumeZone
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: PodTopologySpread
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: InterPodAffinity
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: DefaultPreemption
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: ImageLocality
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: DefaultBinder
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    permit: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    postBind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    postFilter: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preBind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preEnqueue: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preFilter: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preScore: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    queueSort: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    reserve: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    score: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	  schedulerName: my-scheduler
+</span></span><span style=display:flex><span> &gt;
+</span></span><span style=display:flex><span>I0415 19:07:29.267567       <span style=color:#bd93f9>1</span> server.go:152<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Starting Kubernetes Scheduler&#34;</span> <span style=color:#8be9fd;font-style:italic>version</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v1.26.9-scheduler&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.267603       <span style=color:#bd93f9>1</span> server.go:154<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Golang settings&#34;</span> <span style=color:#8be9fd;font-style:italic>GOGC</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#8be9fd;font-style:italic>GOMAXPROCS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#8be9fd;font-style:italic>GOTRACEBACK</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.270604       <span style=color:#bd93f9>1</span> tlsconfig.go:200<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Loaded serving cert&#34;</span> <span style=color:#8be9fd;font-style:italic>certName</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;Generated self signed cert&#34;</span> <span style=color:#8be9fd;font-style:italic>certDetail</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;\&#34;localhost@1713179248\&#34; [serving] validServingFor=[127.0.0.1,localhost,localhost] issuer=\&#34;localhost-ca@1713179248\&#34; (2024-04-15 10:07:28 +0000 UTC to 2025-04-15 10:07:28 +0000 UTC (now=2024-04-15 11:07:29.27057216 +0000 UTC))&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.271646       <span style=color:#bd93f9>1</span> named_certificates.go:53<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Loaded SNI cert&#34;</span> <span style=color:#8be9fd;font-style:italic>index</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> <span style=color:#8be9fd;font-style:italic>certName</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;self-signed loopback&#34;</span> <span style=color:#8be9fd;font-style:italic>certDetail</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;\&#34;apiserver-loopback-client@1713179249\&#34; [serving] validServingFor=[apiserver-loopback-client] issuer=\&#34;apiserver-loopback-client-ca@1713179248\&#34; (2024-04-15 10:07:28 +0000 UTC to 2025-04-15 10:07:28 +0000 UTC (now=2024-04-15 11:07:29.271614794 +0000 UTC))&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.271701       <span style=color:#bd93f9>1</span> secure_serving.go:210<span style=color:#ff79c6>]</span> Serving securely on <span style=color:#ff79c6>[</span>::<span style=color:#ff79c6>]</span>:10259
+</span></span><span style=display:flex><span>I0415 19:07:29.272116       <span style=color:#bd93f9>1</span> tlsconfig.go:240<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Starting DynamicServingCertificateController&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.294827       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.198&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.296534       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.296661       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.200&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.296739       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.201&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0415 19:07:29.372008       <span style=color:#bd93f9>1</span> leaderelection.go:248<span style=color:#ff79c6>]</span> attempting to acquire leader lease kube-system/kube-scheduler...
+</span></span><span style=display:flex><span>I0415 19:07:29.377329       <span style=color:#bd93f9>1</span> leaderelection.go:258<span style=color:#ff79c6>]</span> successfully acquired lease kube-system/kube-scheduler
+</span></span><span style=display:flex><span><span style=color:#ff79c6>====</span>nodeFilter <span style=color:#8be9fd;font-style:italic>filter</span><span style=color:#ff79c6>===</span>
+</span></span><span style=display:flex><span>I0415 19:10:21.748791       <span style=color:#bd93f9>1</span> nodefilter.go:28<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;nodeFilter filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-6497887b7c-2mdmd&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020500480</span>
+</span></span><span style=display:flex><span>I0415 19:10:21.748942       <span style=color:#bd93f9>1</span> nodefilter.go:28<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;nodeFilter filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-6497887b7c-2mdmd&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.200&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020508672</span>
+</span></span><span style=display:flex><span>I0415 19:10:21.748980       <span style=color:#bd93f9>1</span> nodefilter.go:28<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;nodeFilter filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-6497887b7c-2mdmd&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.201&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>8020508672</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>====</span>nodeFilter <span style=color:#8be9fd;font-style:italic>filter</span><span style=color:#ff79c6>===</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>====</span>nodeFilter <span style=color:#8be9fd;font-style:italic>filter</span><span style=color:#ff79c6>===</span>
+</span></span><span style=display:flex><span>I0415 19:10:21.756151       <span style=color:#bd93f9>1</span> schedule_one.go:252<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Successfully bound pod to node&#34;</span> <span style=color:#8be9fd;font-style:italic>pod</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default/nginx-6497887b7c-2mdmd&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>evaluatedNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>4</span> <span style=color:#8be9fd;font-style:italic>feasibleNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>3</span>
+</span></span></code></pre></div><p>上述内容，可参见 <a href=https://github.com/tanjunchen/kubernetes/commit/b411c1886d0c5013e824d9ca83a33dad44b1c8e8>源码</a> 。</p><h1 id=out-of-tree-自定义插件>out-of-tree 自定义插件</h1><p>out-of-tree plugins 由用户自己编写和维护，独立部署，不需要对 k8s 做任何代码或配置改动。本质上 out-of-tree plugins 也是跟 kube-scheduler 代码一起编译的，不过 kube-scheduler 相关代码已经抽出来作为一个独立项 <a href=github.com/kubernetes-sigs/scheduler-plugins>scheduler-plugins</a>。 用户只需要引用这个包，编写自己的调度器插件，然后以普通 pod 方式部署就行（binary 部署也行）。编译之后是个包含默认调度器和所有 out-of-tree 插件的总调度器程序。它有内置调度器的功能，也包括了 out-of-tree 调度器的功能。</p><p>两种部署方式：</p><ul><li>跟现有调度器并行部署，只管理特定的某些 pods；</li><li>取代现有调度器，因为它功能也是全的；</li></ul><h2 id=单调度器>单调度器</h2><p>1、克隆 <a href=https://github.com/tanjunchen/tanjunchen-scheduler.git>https://github.com/tanjunchen/tanjunchen-scheduler.git</a> 源码（是基于 Kubernetes 1.26.9 实现的）</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git clone https://github.com/tanjunchen/tanjunchen-scheduler.git
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> tanjunchen-scheduler
+</span></span></code></pre></div><p>2、在 tanjunchen-scheduler 根目录下重新编译 Kubernetes Scheduler 调度器。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~/tanjunchen/tanjunchen-scheduler# make image
+</span></span><span style=display:flex><span>mkdir -p _output/bin
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>CGO_ENABLED</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> <span style=color:#8be9fd;font-style:italic>GOOS</span><span style=color:#ff79c6>=</span>linux <span style=color:#8be9fd;font-style:italic>GOARCH</span><span style=color:#ff79c6>=</span>amd64 go build -o<span style=color:#ff79c6>=</span>_output/bin/tanjunchen-scheduler ./cmd/scheduler
+</span></span><span style=display:flex><span>docker build --no-cache . -t tanjunchen-scheduler:v1.26.9-scheduler
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>+<span style=color:#ff79c6>]</span> Building 3.8s <span style=color:#ff79c6>(</span>8/8<span style=color:#ff79c6>)</span> FINISHED                                                                                                                                       docker:default
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load build definition from Dockerfile                                                                                                                             0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; transferring dockerfile: 173B                                                                                                                                             0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load .dockerignore                                                                                                                                                0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; transferring context: 2B                                                                                                                                                  0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load metadata <span style=color:#ff79c6>for</span> docker.io/library/debian:stretch-slim                                                                                                           2.1s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>auth<span style=color:#ff79c6>]</span> library/debian:pull token <span style=color:#ff79c6>for</span> registry-1.docker.io                                                                                                                    0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load build context                                                                                                                                                0.4s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; transferring context: 77.56MB                                                                                                                                             0.4s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; CACHED <span style=color:#ff79c6>[</span>1/3<span style=color:#ff79c6>]</span> FROM docker.io/library/debian:stretch-slim@sha256:abaa313c7e1dfe16069a1a42fa254014780f165d4fd084844602edbe29915e70                                              0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>2/3<span style=color:#ff79c6>]</span> COPY _output/bin/tanjunchen-scheduler /usr/local/bin                                                                                                                   0.9s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; exporting to image                                                                                                                                                           0.3s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; exporting layers                                                                                                                                                          0.3s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; writing image sha256:77e0c775f8fa19f941fe178d5bb52cce4873bc75935a18f29ef931c62dd03008                                                                                     0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; naming to docker.io/library/tanjunchen-scheduler:v1.26.9-scheduler    
+</span></span></code></pre></div><p>3、在配置文件中添加我们的自定义插件，kube-scheduler 启动命令配置文件路径，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: KubeSchedulerConfiguration
+</span></span><span style=display:flex><span><span style=color:#ff79c6>clientConnection</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>acceptContentTypes</span>: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>burst</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>contentType</span>: application/vnd.kubernetes.protobuf
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>kubeconfig</span>: /etc/kubernetes/scheduler.conf
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>qps</span>: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>profiles</span>:
+</span></span><span style=display:flex><span>- <span style=color:#ff79c6>schedulerName</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>plugins</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>filter</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>enabled</span>:
+</span></span><span style=display:flex><span>      - <span style=color:#ff79c6>name</span>: nodeFilter
+</span></span></code></pre></div><p>4、更改 Kubernetes Scheduler 静态 Static Pod 部署 kube-scheduler yaml 文件，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Pod
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>annotations</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>scheduler.alpha.kubernetes.io/critical-pod</span>: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>creationTimestamp</span>: <span style=color:#ff79c6>null</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>component</span>: kube-scheduler
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>tier</span>: control-plane
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: kube-scheduler
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: kube-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>command</span>:
+</span></span><span style=display:flex><span>        - tanjunchen-scheduler
+</span></span><span style=display:flex><span>        - --master=https://192.168.0.198:6443
+</span></span><span style=display:flex><span>        - --feature-gates=MixedProtocolLBService=true
+</span></span><span style=display:flex><span>        - --kubeconfig=/etc/kubernetes/scheduler.conf
+</span></span><span style=display:flex><span>        - --authorization-always-allow-paths=/metrics,/healthz,/readyz,/livez
+</span></span><span style=display:flex><span>        - --leader-elect=true
+</span></span><span style=display:flex><span>        - --kube-api-qps=100
+</span></span><span style=display:flex><span>        - --kube-api-burst=100
+</span></span><span style=display:flex><span>        - --bind-address=0.0.0.0
+</span></span><span style=display:flex><span>        - --profiling
+</span></span><span style=display:flex><span>        - --v=2
+</span></span><span style=display:flex><span>        - --config=/etc/kubernetes/scheduler_config.yaml
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/kube-scheduler-amd64-out-of-tree:v1.26.9-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: kube-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>volumeMounts</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>mountPath</span>: /etc/kubernetes
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: kubernetes
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>mountPath</span>: /etc/localtime
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>name</span>: localtime
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>hostNetwork</span>: <span style=color:#ff79c6>true</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>priorityClassName</span>: system-cluster-critical
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>volumes</span>:
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>hostPath</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>path</span>: /etc/kubernetes
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>type</span>: DirectoryOrCreate
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: kubernetes
+</span></span><span style=display:flex><span>    - <span style=color:#ff79c6>hostPath</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>path</span>: /etc/localtime
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>type</span>: File
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>name</span>: localtime
+</span></span></code></pre></div><p>5、部署测试示例 nginx</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>schedulerName</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/nginx:1.17.3
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>6、查看 scheduler 调度日志，终端打印了我们插件中编写的代码逻辑。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  ~ kubectl -n kube-system  logs -f kube-scheduler-192.168.0.198
+</span></span><span style=display:flex><span>W0416 15:42:35.308144       <span style=color:#bd93f9>1</span> feature_gate.go:241<span style=color:#ff79c6>]</span> Setting GA feature gate <span style=color:#8be9fd;font-style:italic>MixedProtocolLBService</span><span style=color:#ff79c6>=</span>true. It will be removed in a future release.
+</span></span><span style=display:flex><span>I0416 15:42:35.308258       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --allow-metric-labels<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;[]&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308273       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-kubeconfig<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308279       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-skip-lookup<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308284       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-token-webhook-cache-ttl<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10s&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308290       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-tolerate-lookup-failure<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;true&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308293       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-always-allow-paths<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;[/metrics,/healthz,/readyz,/livez]&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308354       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-kubeconfig<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308359       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-webhook-cache-authorized-ttl<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10s&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308363       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authorization-webhook-cache-unauthorized-ttl<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;10s&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308366       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --bind-address<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;0.0.0.0&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308372       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --cert-dir<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308375       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --client-ca-file<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.308378       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --config<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;/etc/kubernetes/scheduler_config.yaml&#34;</span>
+</span></span><span style=display:flex><span>......
+</span></span><span style=display:flex><span>W0416 15:42:35.960902       <span style=color:#bd93f9>1</span> authorization.go:194<span style=color:#ff79c6>]</span> No authorization-kubeconfig provided, so SubjectAccessReview of authorization tokens won&#39;t work.
+</span></span><span style=display:flex><span>I0416 15:42:35.970916       <span style=color:#bd93f9>1</span> configfile.go:105<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Using component config&#34;</span> <span style=color:#8be9fd;font-style:italic>config</span><span style=color:#ff79c6>=</span>&lt;
+</span></span><span style=display:flex><span>	apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	clientConnection:
+</span></span><span style=display:flex><span>	  acceptContentTypes: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>	  burst: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	  contentType: application/vnd.kubernetes.protobuf
+</span></span><span style=display:flex><span>	  kubeconfig: /etc/kubernetes/scheduler.conf
+</span></span><span style=display:flex><span>	  qps: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	enableContentionProfiling: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	enableProfiling: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	kind: KubeSchedulerConfiguration
+</span></span><span style=display:flex><span>	leaderElection:
+</span></span><span style=display:flex><span>	  leaderElect: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	  leaseDuration: 15s
+</span></span><span style=display:flex><span>	  renewDeadline: 10s
+</span></span><span style=display:flex><span>	  resourceLock: leases
+</span></span><span style=display:flex><span>	  resourceName: kube-scheduler
+</span></span><span style=display:flex><span>	  resourceNamespace: kube-system
+</span></span><span style=display:flex><span>	  retryPeriod: 2s
+</span></span><span style=display:flex><span>	parallelism: <span style=color:#bd93f9>16</span>
+</span></span><span style=display:flex><span>	percentageOfNodesToScore: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	podInitialBackoffSeconds: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	podMaxBackoffSeconds: <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>	profiles:
+</span></span><span style=display:flex><span>	- pluginConfig:
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: DefaultPreemptionArgs
+</span></span><span style=display:flex><span>	      minCandidateNodesAbsolute: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	      minCandidateNodesPercentage: <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>	    name: DefaultPreemption
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      hardPodAffinityWeight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      kind: InterPodAffinityArgs
+</span></span><span style=display:flex><span>	    name: InterPodAffinity
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeAffinityArgs
+</span></span><span style=display:flex><span>	    name: NodeAffinity
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeResourcesBalancedAllocationArgs
+</span></span><span style=display:flex><span>	      resources:
+</span></span><span style=display:flex><span>	      - name: cpu
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: memory
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	    name: NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeResourcesFitArgs
+</span></span><span style=display:flex><span>	      scoringStrategy:
+</span></span><span style=display:flex><span>	        resources:
+</span></span><span style=display:flex><span>	        - name: cpu
+</span></span><span style=display:flex><span>	          weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	        - name: memory
+</span></span><span style=display:flex><span>	          weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	        type: LeastAllocated
+</span></span><span style=display:flex><span>	    name: NodeResourcesFit
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      defaultingType: System
+</span></span><span style=display:flex><span>	      kind: PodTopologySpreadArgs
+</span></span><span style=display:flex><span>	    name: PodTopologySpread
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      bindTimeoutSeconds: <span style=color:#bd93f9>600</span>
+</span></span><span style=display:flex><span>	      kind: VolumeBindingArgs
+</span></span><span style=display:flex><span>	    name: VolumeBinding
+</span></span><span style=display:flex><span>	  plugins:
+</span></span><span style=display:flex><span>	    bind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    filter:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: nodeFilter
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    multiPoint:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: PrioritySort
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeUnschedulable
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeName
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: TaintToleration
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>	      - name: NodeAffinity
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: NodePorts
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeResourcesFit
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: VolumeRestrictions
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: EBSLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: GCEPDLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeVolumeLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: AzureDiskLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: VolumeBinding
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: VolumeZone
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: PodTopologySpread
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: InterPodAffinity
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: DefaultPreemption
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: ImageLocality
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: DefaultBinder
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    permit: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    postBind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    postFilter: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preBind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preEnqueue: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preFilter: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preScore: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    queueSort: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    reserve: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    score: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	  schedulerName: tanjunchen-scheduler
+</span></span><span style=display:flex><span> &gt;
+</span></span><span style=display:flex><span>I0416 15:42:35.971419       <span style=color:#bd93f9>1</span> server.go:152<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Starting Kubernetes Scheduler&#34;</span> <span style=color:#8be9fd;font-style:italic>version</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v0.0.0-master+</span><span style=color:#8be9fd;font-style:italic>$Format</span><span style=color:#f1fa8c>:%H</span>$<span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.971429       <span style=color:#bd93f9>1</span> server.go:154<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Golang settings&#34;</span> <span style=color:#8be9fd;font-style:italic>GOGC</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#8be9fd;font-style:italic>GOMAXPROCS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#8be9fd;font-style:italic>GOTRACEBACK</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.972506       <span style=color:#bd93f9>1</span> tlsconfig.go:200<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Loaded serving cert&#34;</span> <span style=color:#8be9fd;font-style:italic>certName</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;Generated self signed cert&#34;</span> <span style=color:#8be9fd;font-style:italic>certDetail</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;\&#34;localhost@1713253355\&#34; [serving] validServingFor=[127.0.0.1,localhost,localhost] issuer=\&#34;localhost-ca@1713253355\&#34; (2024-04-16 06:42:35 +0000 UTC to 2025-04-16 06:42:35 +0000 UTC (now=2024-04-16 07:42:35.972474703 +0000 UTC))&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.972669       <span style=color:#bd93f9>1</span> named_certificates.go:53<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Loaded SNI cert&#34;</span> <span style=color:#8be9fd;font-style:italic>index</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> <span style=color:#8be9fd;font-style:italic>certName</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;self-signed loopback&#34;</span> <span style=color:#8be9fd;font-style:italic>certDetail</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;\&#34;apiserver-loopback-client@1713253355\&#34; [serving] validServingFor=[apiserver-loopback-client] issuer=\&#34;apiserver-loopback-client-ca@1713253355\&#34; (2024-04-16 06:42:35 +0000 UTC to 2025-04-16 06:42:35 +0000 UTC (now=2024-04-16 07:42:35.972648501 +0000 UTC))&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.972717       <span style=color:#bd93f9>1</span> secure_serving.go:210<span style=color:#ff79c6>]</span> Serving securely on <span style=color:#ff79c6>[</span>::<span style=color:#ff79c6>]</span>:10259
+</span></span><span style=display:flex><span>I0416 15:42:35.973029       <span style=color:#bd93f9>1</span> tlsconfig.go:240<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Starting DynamicServingCertificateController&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.993626       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.201&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.993816       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.198&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.993979       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:35.994063       <span style=color:#bd93f9>1</span> node_tree.go:65<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Added node in listed group to NodeTree&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.200&#34;</span> <span style=color:#8be9fd;font-style:italic>zone</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;gz:\x00:zoneC&#34;</span>
+</span></span><span style=display:flex><span>I0416 15:42:36.073746       <span style=color:#bd93f9>1</span> leaderelection.go:248<span style=color:#ff79c6>]</span> attempting to acquire leader lease kube-system/kube-scheduler...
+</span></span><span style=display:flex><span>I0416 15:42:36.079082       <span style=color:#bd93f9>1</span> leaderelection.go:258<span style=color:#ff79c6>]</span> successfully acquired lease kube-system/kube-scheduler
+</span></span><span style=display:flex><span>I0416 16:15:31.233364       <span style=color:#bd93f9>1</span> nodefilter.go:26<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler nodeFilter filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-58c5764c9f-lwcsr&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.201&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020508672</span>
+</span></span><span style=display:flex><span>I0416 16:15:31.233416       <span style=color:#bd93f9>1</span> nodefilter.go:26<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler nodeFilter filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-58c5764c9f-lwcsr&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020500480</span>
+</span></span><span style=display:flex><span>I0416 16:15:31.233433       <span style=color:#bd93f9>1</span> nodefilter.go:26<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler nodeFilter filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-58c5764c9f-lwcsr&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.200&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020508672</span>
+</span></span><span style=display:flex><span>I0416 16:15:31.246951       <span style=color:#bd93f9>1</span> schedule_one.go:252<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Successfully bound pod to node&#34;</span> <span style=color:#8be9fd;font-style:italic>pod</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default/nginx-58c5764c9f-lwcsr&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>evaluatedNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>4</span> <span style=color:#8be9fd;font-style:italic>feasibleNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>3</span>
+</span></span></code></pre></div><h2 id=多调度器>多调度器</h2><p>1、克隆源码（是基于 Kubernetes 1.26.9 实现的）</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git clone https://github.com/tanjunchen/tanjunchen-scheduler.git
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>cd</span> multiple-tanjunchen-scheduler
+</span></span></code></pre></div><p>2、在 tanjunchen-scheduler 根目录下重新编译 Kubernetes Scheduler 调度器。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  multiple-tanjunchen-scheduler git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> ✗ make image
+</span></span><span style=display:flex><span>mkdir -p _output/bin
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>CGO_ENABLED</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> <span style=color:#8be9fd;font-style:italic>GOOS</span><span style=color:#ff79c6>=</span>linux <span style=color:#8be9fd;font-style:italic>GOARCH</span><span style=color:#ff79c6>=</span>amd64 go build -o<span style=color:#ff79c6>=</span>_output/bin/tanjunchen-scheduler ./cmd/scheduler
+</span></span><span style=display:flex><span>docker build --no-cache . -t docker.io/tanjunchen/tanjunchen-scheduler:multiple-v1.26.9-scheduler
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>+<span style=color:#ff79c6>]</span> Building 8.2s <span style=color:#ff79c6>(</span>8/8<span style=color:#ff79c6>)</span> <span style=color:#8be9fd;font-style:italic>FINISHED</span>                                                                          
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load .dockerignore                                                                    0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; transferring context: 2B                                                                      0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load build definition from Dockerfile                                                 0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; transferring dockerfile: 173B                                                                 0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load metadata <span style=color:#ff79c6>for</span> docker.io/library/debian:stretch-slim                               6.3s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>auth<span style=color:#ff79c6>]</span> library/debian:pull token <span style=color:#ff79c6>for</span> registry-1.docker.io                                        0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>internal<span style=color:#ff79c6>]</span> load build context                                                                    1.3s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; transferring context: 77.67MB                                                                 1.3s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; CACHED <span style=color:#ff79c6>[</span>1/3<span style=color:#ff79c6>]</span> FROM docker.io/library/debian:stretch-slim@sha256:abaa313c7e1dfe16069a1a42fa254014  0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>[</span>2/3<span style=color:#ff79c6>]</span> COPY _output/bin/tanjunchen-scheduler /usr/local/bin                                       0.4s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; exporting to image                                                                               0.1s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; exporting layers                                                                              0.1s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; writing image sha256:b37612f90ef806188cfca443456054c1f81ef8073c4eac824bab64bc4aa9556a         0.0s
+</span></span><span style=display:flex><span> <span style=color:#ff79c6>=</span>&gt; <span style=color:#ff79c6>=</span>&gt; naming to docker.io/tanjunchen/tanjunchen-scheduler:multiple-v1.26.9-scheduler  
+</span></span></code></pre></div><p>3、在配置文件中添加我们的自定义插件，kube-scheduler 启动命令配置文件路径，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: ConfigMap
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: tanjunchen-scheduler-config
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: kube-system
+</span></span><span style=display:flex><span><span style=color:#ff79c6>data</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>scheduler-config.yaml</span>: |<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    apiVersion: kubescheduler.config.k8s.io/v1
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    kind: KubeSchedulerConfiguration
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    leaderElection:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>      leaderElect: false
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    clientConnection:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>      acceptContentTypes: &#34;&#34;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>      burst: 100
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>      contentType: application/vnd.kubernetes.protobuf
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>      qps: 100
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    profiles:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    - schedulerName: tanjunchen-scheduler
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>      plugins:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        preFilter:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          enabled:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          - name: &#34;example&#34;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        filter:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          enabled:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          - name: &#34;example&#34;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        preBind:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          enabled:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>          - name: &#34;example&#34;</span>    
+</span></span></code></pre></div><p>4、部署 kube-scheduler yaml 文件，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>namespace</span>: kube-system
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>component</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>component</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>component</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>serviceAccount</span>: tanjunchen-scheduler-sa
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>priorityClassName</span>: system-cluster-critical
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>volumes</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: scheduler-config
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>configMap</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>name</span>: tanjunchen-scheduler-config
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: scheduler-ctrl
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/kube-scheduler-amd64-out-of-tree:multiple-v1.26.9-scheduler
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>imagePullPolicy</span>: Always
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>args</span>:
+</span></span><span style=display:flex><span>            - tanjunchen-scheduler
+</span></span><span style=display:flex><span>            - --config=/etc/kubernetes/scheduler-config.yaml
+</span></span><span style=display:flex><span>            - --v=3
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>resources</span>:
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>requests</span>:
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>cpu</span>: <span style=color:#f1fa8c>&#34;50m&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>volumeMounts</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>name</span>: scheduler-config
+</span></span><span style=display:flex><span>              <span style=color:#ff79c6>mountPath</span>: /etc/kubernetes
+</span></span></code></pre></div><p>5、部署测试示例 nginx（tanjunchen-scheduler 调度器）</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>schedulerName</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/nginx:1.17.3
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>6、查看 tanjunchen scheduler 调度日志，终端打印了我们插件中编写的代码逻辑。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  tanjunchen-scheduler git:<span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> ✗ kubectl -n kube-system logs -f tanjunchen-scheduler-75456df696-4xzfg
+</span></span><span style=display:flex><span>I0416 12:54:53.922028       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --allow-metric-labels<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;[]&#34;</span>
+</span></span><span style=display:flex><span>I0416 12:54:53.922087       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-kubeconfig<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 12:54:53.922092       <span style=color:#bd93f9>1</span> flags.go:64<span style=color:#ff79c6>]</span> FLAG: --authentication-skip-lookup<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>W0416 12:54:54.188278       <span style=color:#bd93f9>1</span> client_config.go:618<span style=color:#ff79c6>]</span> Neither --kubeconfig nor --master was specified.  Using the inClusterConfig.  This might not work.
+</span></span><span style=display:flex><span>I0416 12:54:54.587616       <span style=color:#bd93f9>1</span> requestheader_controller.go:244<span style=color:#ff79c6>]</span> Loaded a new request header values <span style=color:#ff79c6>for</span> RequestHeaderAuthRequestController
+</span></span><span style=display:flex><span>I0416 12:54:54.593957       <span style=color:#bd93f9>1</span> configfile.go:105<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Using component config&#34;</span> <span style=color:#8be9fd;font-style:italic>config</span><span style=color:#ff79c6>=</span>&lt;
+</span></span><span style=display:flex><span>	apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	clientConnection:
+</span></span><span style=display:flex><span>	  acceptContentTypes: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>	  burst: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	  contentType: application/vnd.kubernetes.protobuf
+</span></span><span style=display:flex><span>	  kubeconfig: <span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>	  qps: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	enableContentionProfiling: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	enableProfiling: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	kind: KubeSchedulerConfiguration
+</span></span><span style=display:flex><span>	leaderElection:
+</span></span><span style=display:flex><span>	  leaderElect: <span style=color:#8be9fd;font-style:italic>false</span>
+</span></span><span style=display:flex><span>	  leaseDuration: 15s
+</span></span><span style=display:flex><span>	  renewDeadline: 10s
+</span></span><span style=display:flex><span>	  resourceLock: leases
+</span></span><span style=display:flex><span>	  resourceName: kube-scheduler
+</span></span><span style=display:flex><span>	  resourceNamespace: kube-system
+</span></span><span style=display:flex><span>	  retryPeriod: 2s
+</span></span><span style=display:flex><span>	parallelism: <span style=color:#bd93f9>16</span>
+</span></span><span style=display:flex><span>	percentageOfNodesToScore: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	podInitialBackoffSeconds: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	podMaxBackoffSeconds: <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>	profiles:
+</span></span><span style=display:flex><span>	- pluginConfig:
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: DefaultPreemptionArgs
+</span></span><span style=display:flex><span>	      minCandidateNodesAbsolute: <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>	      minCandidateNodesPercentage: <span style=color:#bd93f9>10</span>
+</span></span><span style=display:flex><span>	    name: DefaultPreemption
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      hardPodAffinityWeight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      kind: InterPodAffinityArgs
+</span></span><span style=display:flex><span>	    name: InterPodAffinity
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeAffinityArgs
+</span></span><span style=display:flex><span>	    name: NodeAffinity
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeResourcesBalancedAllocationArgs
+</span></span><span style=display:flex><span>	      resources:
+</span></span><span style=display:flex><span>	      - name: cpu
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: memory
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	    name: NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      kind: NodeResourcesFitArgs
+</span></span><span style=display:flex><span>	      scoringStrategy:
+</span></span><span style=display:flex><span>	        resources:
+</span></span><span style=display:flex><span>	        - name: cpu
+</span></span><span style=display:flex><span>	          weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	        - name: memory
+</span></span><span style=display:flex><span>	          weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	        type: LeastAllocated
+</span></span><span style=display:flex><span>	    name: NodeResourcesFit
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      defaultingType: System
+</span></span><span style=display:flex><span>	      kind: PodTopologySpreadArgs
+</span></span><span style=display:flex><span>	    name: PodTopologySpread
+</span></span><span style=display:flex><span>	  - args:
+</span></span><span style=display:flex><span>	      apiVersion: kubescheduler.config.k8s.io/v1
+</span></span><span style=display:flex><span>	      bindTimeoutSeconds: <span style=color:#bd93f9>600</span>
+</span></span><span style=display:flex><span>	      kind: VolumeBindingArgs
+</span></span><span style=display:flex><span>	    name: VolumeBinding
+</span></span><span style=display:flex><span>	  plugins:
+</span></span><span style=display:flex><span>	    bind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    filter:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: example
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    multiPoint:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: PrioritySort
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeUnschedulable
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeName
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: TaintToleration
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>	      - name: NodeAffinity
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: NodePorts
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeResourcesFit
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: VolumeRestrictions
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: EBSLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: GCEPDLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeVolumeLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: AzureDiskLimits
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: VolumeBinding
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: VolumeZone
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: PodTopologySpread
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: InterPodAffinity
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>	      - name: DefaultPreemption
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	      - name: NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: ImageLocality
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>	      - name: DefaultBinder
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    permit: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    postBind: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    postFilter: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preBind:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: example
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    preEnqueue: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    preFilter:
+</span></span><span style=display:flex><span>	      enabled:
+</span></span><span style=display:flex><span>	      - name: example
+</span></span><span style=display:flex><span>	        weight: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	    preScore: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    queueSort: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    reserve: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	    score: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	  schedulerName: tanjunchen-scheduler
+</span></span><span style=display:flex><span> &gt;
+</span></span><span style=display:flex><span>I0416 12:54:54.594392       <span style=color:#bd93f9>1</span> server.go:152<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Starting Kubernetes Scheduler&#34;</span> <span style=color:#8be9fd;font-style:italic>version</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;v0.0.0-master+</span><span style=color:#8be9fd;font-style:italic>$Format</span><span style=color:#f1fa8c>:%H</span>$<span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>I0416 12:54:54.594407       <span style=color:#bd93f9>1</span> server.go:154<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Golang settings&#34;</span> <span style=color:#8be9fd;font-style:italic>GOGC</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#8be9fd;font-style:italic>GOMAXPROCS</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#8be9fd;font-style:italic>GOTRACEBACK</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;&#34;</span>
+</span></span><span style=display:flex><span>I0416 14:24:00.786590       <span style=color:#bd93f9>1</span> example.go:27<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler PreFilter pod: %v, node name: %v&#34;</span> nginx-58c5764c9f-q5ngg<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;(MISSING)&#34;</span>
+</span></span><span style=display:flex><span>I0416 14:24:00.786667       <span style=color:#bd93f9>1</span> example.go:34<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler Filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-58c5764c9f-q5ngg&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020500480</span>
+</span></span><span style=display:flex><span>I0416 14:24:00.786690       <span style=color:#bd93f9>1</span> example.go:34<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler Filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-58c5764c9f-q5ngg&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.201&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020508672</span>
+</span></span><span style=display:flex><span>I0416 14:24:00.786708       <span style=color:#bd93f9>1</span> example.go:34<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler Filter&#34;</span> <span style=color:#8be9fd;font-style:italic>pod_name</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;nginx-58c5764c9f-q5ngg&#34;</span> current <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.200&#34;</span> <span style=color:#8be9fd;font-style:italic>cpu</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1900</span> <span style=color:#8be9fd;font-style:italic>memory</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>8020508672</span>
+</span></span><span style=display:flex><span>I0416 14:24:00.787004       <span style=color:#bd93f9>1</span> example.go:46<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;tanjunchen-scheduler PreBind pod: %v, node name: %v&#34;</span> nginx-58c5764c9f-q5ngg<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span>
+</span></span><span style=display:flex><span>I0416 14:24:00.792801       <span style=color:#bd93f9>1</span> schedule_one.go:252<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Successfully bound pod to node&#34;</span> <span style=color:#8be9fd;font-style:italic>pod</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default/nginx-58c5764c9f-q5ngg&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>evaluatedNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>4</span> <span style=color:#8be9fd;font-style:italic>feasibleNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>3</span>
+</span></span></code></pre></div><p>7、部署测试示例 nginx（default-scheduler 调度器）</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: apps/v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: Deployment
+</span></span><span style=display:flex><span><span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>name</span>: default-nginx
+</span></span><span style=display:flex><span><span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>replicas</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>selector</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>matchLabels</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>template</span>:
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>metadata</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>labels</span>:
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>app</span>: nginx
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>spec</span>:
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>schedulerName</span>: tanjunchen-scheduler
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>containers</span>:
+</span></span><span style=display:flex><span>        - <span style=color:#ff79c6>name</span>: nginx
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>image</span>: docker.io/tanjunchen/nginx:1.17.3
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>ports</span>:
+</span></span><span style=display:flex><span>            - <span style=color:#ff79c6>containerPort</span>: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><p>8、查看 default scheduler 调度日志，日志如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl -n kube-system logs -f kube-scheduler-192.168.0.198
+</span></span><span style=display:flex><span>W0416 19:13:11.987494       <span style=color:#bd93f9>1</span> feature_gate.go:241<span style=color:#ff79c6>]</span> Setting GA feature gate <span style=color:#8be9fd;font-style:italic>MixedProtocolLBService</span><span style=color:#ff79c6>=</span>true. It will be removed in a future release.
+</span></span><span style=display:flex><span>I0416 22:29:40.953225       <span style=color:#bd93f9>1</span> schedule_one.go:252<span style=color:#ff79c6>]</span> <span style=color:#f1fa8c>&#34;Successfully bound pod to node&#34;</span> <span style=color:#8be9fd;font-style:italic>pod</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;default/nginx-84bfdb5dc4-9v84j&#34;</span> <span style=color:#8be9fd;font-style:italic>node</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;192.168.0.199&#34;</span> <span style=color:#8be9fd;font-style:italic>evaluatedNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>4</span> <span style=color:#8be9fd;font-style:italic>feasibleNodes</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>3</span>
+</span></span></code></pre></div><hr><ul class=pager><li class=previous><a href=/post/2024-04-07-scheduler-framework-02/ data-toggle=tooltip data-placement=top title="深入理解 Kubernetes Scheduler Framework 调度框架（Part 2）">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2024</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
