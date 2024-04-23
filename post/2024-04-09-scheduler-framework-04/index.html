@@ -1,0 +1,710 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="深入理解 Kubernetes Scheduler Framework 调度框架（Part 4）"><meta property="og:title" content="深入理解 Kubernetes Scheduler Framework 调度框架（Part 4）"><meta property="twitter:title" content="深入理解 Kubernetes Scheduler Framework 调度框架（Part 4）"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>深入理解 Kubernetes Scheduler Framework 调度框架（Part 4） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2024-04-09-scheduler-framework-04/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/scheduler-framework title="Scheduler Framework">Scheduler Framework</a></div><h1>深入理解 Kubernetes Scheduler Framework 调度框架（Part 4）</h1><h2 class=subheading>Scheduler Framework 内置调度算法与 out-of-tree 插件示例调度算法</h2><span class=meta>Posted by
+陈谭军
+on
+Tuesday, April 9, 2024
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2024-04-09-scheduler-framework-04/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 9184 字</span>，阅读约 <span class=more-meta>19 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>Scheduler 分两个 cycle：Scheduling Cycle 和 Binding Cycle。在 Scheduling Cycle 中为了提升效率的一个重要原则就是 Pod、 Node 等信息从本地缓存中获取，而具体的实现原理就是先使用 list 获取所有 Node、Pod 的信息，然后再 watch 他们的变化更新本地缓存。在 Bind Cycle 中，会有两次外部 api 调用：调用 pv controller 绑定 pv 和调用 kube-apiserver 绑定 Node，api 调用是耗时的，所以将 bind 扩展点拆分出来，另起一个 go 协程进行 bind。调度周期是串行，绑定周期是并行的。Scheduler Framework 内置调度算法与 out-of-tree 插件示例调度算法。</p><p><a href=https://tanjunchen.github.io/post/2024-04-09-scheduler-framework-04/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 4）</a><br><a href=https://tanjunchen.github.io/post/2024-04-08-scheduler-framework-03/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）</a><br><a href=https://tanjunchen.github.io/post/2024-04-07-scheduler-framework-02/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 2）</a><br><a href=https://tanjunchen.github.io/post/2024-04-06-scheduler-framework-01/>深入理解 Kubernetes Scheduler Framework 调度框架（Part 1）</a></p><h1 id=in-tree-内置调度算法>in-tree 内置调度算法</h1><h2 id=noderesources>noderesources</h2><p>在 pkg/scheduler/framework/plugins/noderesources.go 文件下存在以下资源调度策略，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// scorer is decorator for resourceAllocationScorer
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 资源分配打分装饰器 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> scorer <span style=color:#8be9fd;font-style:italic>func</span>(args <span style=color:#ff79c6>*</span>config.NodeResourcesFitArgs) <span style=color:#ff79c6>*</span>resourceAllocationScorer
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// resourceAllocationScorer contains information to calculate resource allocation score.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> resourceAllocationScorer <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	Name <span style=color:#8be9fd>string</span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// used to decide whether to use Requested or NonZeroRequested for
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// cpu and memory.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 根据 cpu 与内存判断使用 Requested 或者 NonZeroRequested 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	useRequested <span style=color:#8be9fd>bool</span>
+</span></span><span style=display:flex><span>	scorer       <span style=color:#8be9fd;font-style:italic>func</span>(requested, allocable []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>	resources    []config.ResourceSpec
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// score will use `scorer` function to calculate the score.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (r <span style=color:#ff79c6>*</span>resourceAllocationScorer) <span style=color:#50fa7b>score</span>(
+</span></span><span style=display:flex><span>	ctx context.Context,
+</span></span><span style=display:flex><span>	pod <span style=color:#ff79c6>*</span>v1.Pod,
+</span></span><span style=display:flex><span>	nodeInfo <span style=color:#ff79c6>*</span>framework.NodeInfo,
+</span></span><span style=display:flex><span>	podRequests []<span style=color:#8be9fd>int64</span>) (<span style=color:#8be9fd>int64</span>, <span style=color:#ff79c6>*</span>framework.Status) {
+</span></span><span style=display:flex><span>	logger <span style=color:#ff79c6>:=</span> klog.<span style=color:#50fa7b>FromContext</span>(ctx)
+</span></span><span style=display:flex><span>	node <span style=color:#ff79c6>:=</span> nodeInfo.<span style=color:#50fa7b>Node</span>()
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// resources not set, nothing scheduled,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 没有配置资源，配置 0 得分
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(r.resources) <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>, framework.<span style=color:#50fa7b>NewStatus</span>(framework.Error, <span style=color:#f1fa8c>&#34;resources not found&#34;</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	requested <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>([]<span style=color:#8be9fd>int64</span>, <span style=color:#8be9fd;font-style:italic>len</span>(r.resources))
+</span></span><span style=display:flex><span>	allocatable <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>([]<span style=color:#8be9fd>int64</span>, <span style=color:#8be9fd;font-style:italic>len</span>(r.resources))
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> r.resources {
+</span></span><span style=display:flex><span>		alloc, req <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>calculateResourceAllocatableRequest</span>(logger, nodeInfo, v1.<span style=color:#50fa7b>ResourceName</span>(r.resources[i].Name), podRequests[i])
+</span></span><span style=display:flex><span>		<span style=color:#6272a4>// Only fill the extended resource entry when it&#39;s non-zero.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		<span style=color:#ff79c6>if</span> alloc <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		allocatable[i] = alloc
+</span></span><span style=display:flex><span>		requested[i] = req
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	score <span style=color:#ff79c6>:=</span> r.<span style=color:#50fa7b>scorer</span>(requested, allocatable)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> loggerV <span style=color:#ff79c6>:=</span> logger.<span style=color:#50fa7b>V</span>(<span style=color:#bd93f9>10</span>); loggerV.<span style=color:#50fa7b>Enabled</span>() { <span style=color:#6272a4>// Serializing these maps is costly.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		loggerV.<span style=color:#50fa7b>Info</span>(<span style=color:#f1fa8c>&#34;Listed internal info for allocatable resources, requested resources and score&#34;</span>, <span style=color:#f1fa8c>&#34;pod&#34;</span>,
+</span></span><span style=display:flex><span>			klog.<span style=color:#50fa7b>KObj</span>(pod), <span style=color:#f1fa8c>&#34;node&#34;</span>, klog.<span style=color:#50fa7b>KObj</span>(node), <span style=color:#f1fa8c>&#34;resourceAllocationScorer&#34;</span>, r.Name,
+</span></span><span style=display:flex><span>			<span style=color:#f1fa8c>&#34;allocatableResource&#34;</span>, allocatable, <span style=color:#f1fa8c>&#34;requestedResource&#34;</span>, requested, <span style=color:#f1fa8c>&#34;resourceScore&#34;</span>, score,
+</span></span><span style=display:flex><span>		)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> score, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// calculateResourceAllocatableRequest returns 2 parameters:
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// - 1st param: quantity of allocatable resource on the node.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// - 2nd param: aggregated quantity of requested resource on the node.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Note: if it&#39;s an extended resource, and the pod doesn&#39;t request it, (0, 0) is returned.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 第一个返回值：节点上可分配资源的数量
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 第二个返回值：节点上请求资源的聚合数量
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (r <span style=color:#ff79c6>*</span>resourceAllocationScorer) <span style=color:#50fa7b>calculateResourceAllocatableRequest</span>(logger klog.Logger, nodeInfo <span style=color:#ff79c6>*</span>framework.NodeInfo, resource v1.ResourceName, podRequest <span style=color:#8be9fd>int64</span>) (<span style=color:#8be9fd>int64</span>, <span style=color:#8be9fd>int64</span>) {
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 节点可请求资源
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	requested <span style=color:#ff79c6>:=</span> nodeInfo.NonZeroRequested
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> r.useRequested {
+</span></span><span style=display:flex><span>		requested = nodeInfo.Requested
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// If it&#39;s an extended resource, and the pod doesn&#39;t request it. We return (0, 0)
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// as an implication to bypass scoring on this resource.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> podRequest <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>&amp;&amp;</span> schedutil.<span style=color:#50fa7b>IsScalarResourceName</span>(resource) {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>switch</span> resource {
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// CPU
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>case</span> v1.ResourceCPU:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nodeInfo.Allocatable.MilliCPU, (requested.MilliCPU <span style=color:#ff79c6>+</span> podRequest)
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// Memory 内存
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>case</span> v1.ResourceMemory:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nodeInfo.Allocatable.Memory, (requested.Memory <span style=color:#ff79c6>+</span> podRequest)
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// ResourceEphemeralStorage 存储资源
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>case</span> v1.ResourceEphemeralStorage:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nodeInfo.Allocatable.EphemeralStorage, (nodeInfo.Requested.EphemeralStorage <span style=color:#ff79c6>+</span> podRequest)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>default</span>:
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 默认情况 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		<span style=color:#ff79c6>if</span> _, exists <span style=color:#ff79c6>:=</span> nodeInfo.Allocatable.ScalarResources[resource]; exists {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> nodeInfo.Allocatable.ScalarResources[resource], (nodeInfo.Requested.ScalarResources[resource] <span style=color:#ff79c6>+</span> podRequest)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	logger.<span style=color:#50fa7b>V</span>(<span style=color:#bd93f9>10</span>).<span style=color:#50fa7b>Info</span>(<span style=color:#f1fa8c>&#34;Requested resource is omitted for node score calculation&#34;</span>, <span style=color:#f1fa8c>&#34;resourceName&#34;</span>, resource)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>, <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// calculatePodResourceRequest returns the total non-zero requests. If Overhead is defined for the pod
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// the Overhead is added to the result.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (r <span style=color:#ff79c6>*</span>resourceAllocationScorer) <span style=color:#50fa7b>calculatePodResourceRequest</span>(pod <span style=color:#ff79c6>*</span>v1.Pod, resourceName v1.ResourceName) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// owner: @vinaykul
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// kep: http://kep.k8s.io/1287
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// alpha: v1.27
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// Enables In-Place Pod Vertical Scaling
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// InPlacePodVerticalScaling featuregate.Feature = &#34;InPlacePodVerticalScaling&#34;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 是否开启 Pod 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span>	opts <span style=color:#ff79c6>:=</span> resourcehelper.PodResourcesOptions{
+</span></span><span style=display:flex><span>		InPlacePodVerticalScalingEnabled: utilfeature.DefaultFeatureGate.<span style=color:#50fa7b>Enabled</span>(features.InPlacePodVerticalScaling),
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// const (
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>//	// DefaultMilliCPURequest defines default milli cpu request number.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>//	DefaultMilliCPURequest int64 = 100 // 0.1 core
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>//	// DefaultMemoryRequest defines default memory request size.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>//	DefaultMemoryRequest int64 = 200 * 1024 * 1024 // 200 MB
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>//)
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// Pod 没有配置资源请求，默认给 0.1 core、200MB
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> !r.useRequested {
+</span></span><span style=display:flex><span>		opts.NonMissingContainerRequests = v1.ResourceList{
+</span></span><span style=display:flex><span>			v1.ResourceCPU:    <span style=color:#ff79c6>*</span>resource.<span style=color:#50fa7b>NewMilliQuantity</span>(schedutil.DefaultMilliCPURequest, resource.DecimalSI),
+</span></span><span style=display:flex><span>			v1.ResourceMemory: <span style=color:#ff79c6>*</span>resource.<span style=color:#50fa7b>NewQuantity</span>(schedutil.DefaultMemoryRequest, resource.DecimalSI),
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	requests <span style=color:#ff79c6>:=</span> resourcehelper.<span style=color:#50fa7b>PodRequests</span>(pod, opts)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	quantity <span style=color:#ff79c6>:=</span> requests[resourceName]
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> resourceName <span style=color:#ff79c6>==</span> v1.ResourceCPU {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> quantity.<span style=color:#50fa7b>MilliValue</span>()
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> quantity.<span style=color:#50fa7b>Value</span>()
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>func</span> (r <span style=color:#ff79c6>*</span>resourceAllocationScorer) <span style=color:#50fa7b>calculatePodResourceRequestList</span>(pod <span style=color:#ff79c6>*</span>v1.Pod, resources []config.ResourceSpec) []<span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	podRequests <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>([]<span style=color:#8be9fd>int64</span>, <span style=color:#8be9fd;font-style:italic>len</span>(resources))
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> resources {
+</span></span><span style=display:flex><span>		podRequests[i] = r.<span style=color:#50fa7b>calculatePodResourceRequest</span>(pod, v1.<span style=color:#50fa7b>ResourceName</span>(resources[i].Name))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> podRequests
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>注册内置插件，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span>registry <span style=color:#ff79c6>:=</span> runtime.Registry{
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>...</span>
+</span></span><span style=display:flex><span>	noderesources.Name:                   runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, noderesources.NewFit),
+</span></span><span style=display:flex><span>	noderesources.BalancedAllocationName: runtime.<span style=color:#50fa7b>FactoryAdapter</span>(fts, noderesources.NewBalancedAllocation),
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>...</span>
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>pkg/scheduler/framework/plugins/noderesources/balanced_allocation.go 表示资源（CPU与内存）使用是否均衡（标准差），如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// BalancedAllocation is a score plugin that calculates the difference between the cpu and memory fraction
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// of capacity, and prioritizes the host based on how close the two metrics are to each other.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> BalancedAllocation <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	handle framework.Handle
+</span></span><span style=display:flex><span>	resourceAllocationScorer
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>var</span> _ framework.PreScorePlugin = <span style=color:#ff79c6>&amp;</span>BalancedAllocation{}
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>var</span> _ framework.ScorePlugin = <span style=color:#ff79c6>&amp;</span>BalancedAllocation{}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// BalancedAllocationName is the name of the plugin used in the plugin registry and configurations.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>const</span> (
+</span></span><span style=display:flex><span>	BalancedAllocationName = names.NodeResourcesBalancedAllocation
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// balancedAllocationPreScoreStateKey is the key in CycleState to NodeResourcesBalancedAllocation pre-computed data for Scoring.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	balancedAllocationPreScoreStateKey = <span style=color:#f1fa8c>&#34;PreScore&#34;</span> <span style=color:#ff79c6>+</span> BalancedAllocationName
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// balancedAllocationPreScoreState computed at PreScore and used at Score.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// balancedAllocationPreScoreState 在 PreScore 与 Score 打分生效
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> balancedAllocationPreScoreState <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// podRequests have the same order of the resources defined in NodeResourcesFitArgs.Resources,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// same for other place we store a list like that.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	podRequests []<span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Clone implements the mandatory Clone interface. We don&#39;t really copy the data since
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// there is no need for that.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (s <span style=color:#ff79c6>*</span>balancedAllocationPreScoreState) <span style=color:#50fa7b>Clone</span>() framework.StateData {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> s
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// PreScore calculates incoming pod&#39;s resource requests and writes them to the cycle state used.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// PreScore 计算传入 pod 的资源请求并将其写入到使用的周期状态中
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (ba <span style=color:#ff79c6>*</span>BalancedAllocation) <span style=color:#50fa7b>PreScore</span>(ctx context.Context, cycleState <span style=color:#ff79c6>*</span>framework.CycleState, pod <span style=color:#ff79c6>*</span>v1.Pod, nodes []<span style=color:#ff79c6>*</span>v1.Node) <span style=color:#ff79c6>*</span>framework.Status {
+</span></span><span style=display:flex><span>	state <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>&amp;</span>balancedAllocationPreScoreState{
+</span></span><span style=display:flex><span>		podRequests: ba.<span style=color:#50fa7b>calculatePodResourceRequestList</span>(pod, ba.resources),
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	cycleState.<span style=color:#50fa7b>Write</span>(balancedAllocationPreScoreStateKey, state)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// getBalancedAllocationPreScoreState 获取负载均衡打分策略
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>getBalancedAllocationPreScoreState</span>(cycleState <span style=color:#ff79c6>*</span>framework.CycleState) (<span style=color:#ff79c6>*</span>balancedAllocationPreScoreState, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	c, err <span style=color:#ff79c6>:=</span> cycleState.<span style=color:#50fa7b>Read</span>(balancedAllocationPreScoreStateKey)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;reading %q from cycleState: %w&#34;</span>, balancedAllocationPreScoreStateKey, err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	s, ok <span style=color:#ff79c6>:=</span> c.(<span style=color:#ff79c6>*</span>balancedAllocationPreScoreState)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !ok {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;invalid PreScore state, got type %T&#34;</span>, c)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> s, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Name returns name of the plugin. It is used in logs, etc.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (ba <span style=color:#ff79c6>*</span>BalancedAllocation) <span style=color:#50fa7b>Name</span>() <span style=color:#8be9fd>string</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> BalancedAllocationName
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Score invoked at the score extension point.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Score 拓展点
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (ba <span style=color:#ff79c6>*</span>BalancedAllocation) <span style=color:#50fa7b>Score</span>(ctx context.Context, state <span style=color:#ff79c6>*</span>framework.CycleState, pod <span style=color:#ff79c6>*</span>v1.Pod, nodeName <span style=color:#8be9fd>string</span>) (<span style=color:#8be9fd>int64</span>, <span style=color:#ff79c6>*</span>framework.Status) {
+</span></span><span style=display:flex><span>	nodeInfo, err <span style=color:#ff79c6>:=</span> ba.handle.<span style=color:#50fa7b>SnapshotSharedLister</span>().<span style=color:#50fa7b>NodeInfos</span>().<span style=color:#50fa7b>Get</span>(nodeName)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>, framework.<span style=color:#50fa7b>AsStatus</span>(fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;getting node %q from Snapshot: %w&#34;</span>, nodeName, err))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	s, err <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>getBalancedAllocationPreScoreState</span>(state)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		s = <span style=color:#ff79c6>&amp;</span>balancedAllocationPreScoreState{podRequests: ba.<span style=color:#50fa7b>calculatePodResourceRequestList</span>(pod, ba.resources)}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// ba.score favors nodes with balanced resource usage rate.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// It calculates the standard deviation for those resources and prioritizes the node based on how close the usage of those resources is to each other.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// Detail: score = (1 - std) * MaxNodeScore, where std is calculated by the root square of Σ((fraction(i)-mean)^2)/len(resources)
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// The algorithm is partly inspired by:
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// &#34;Wei Huang et al. An Energy Efficient Virtual Machine Placement Algorithm with Balanced Resource Utilization&#34;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>return</span> ba.<span style=color:#50fa7b>score</span>(ctx, pod, nodeInfo, s.podRequests)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// ScoreExtensions of the Score plugin.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (ba <span style=color:#ff79c6>*</span>BalancedAllocation) <span style=color:#50fa7b>ScoreExtensions</span>() framework.ScoreExtensions {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// NewBalancedAllocation initializes a new plugin and returns it.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// NewBalancedAllocation 初始化 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewBalancedAllocation</span>(_ context.Context, baArgs runtime.Object, h framework.Handle, fts feature.Features) (framework.Plugin, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	args, ok <span style=color:#ff79c6>:=</span> baArgs.(<span style=color:#ff79c6>*</span>config.NodeResourcesBalancedAllocationArgs)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !ok {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;want args to be of type NodeResourcesBalancedAllocationArgs, got %T&#34;</span>, baArgs)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> validation.<span style=color:#50fa7b>ValidateNodeResourcesBalancedAllocationArgs</span>(<span style=color:#ff79c6>nil</span>, args); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>BalancedAllocation{
+</span></span><span style=display:flex><span>		handle: h,
+</span></span><span style=display:flex><span>		resourceAllocationScorer: resourceAllocationScorer{
+</span></span><span style=display:flex><span>			Name:         BalancedAllocationName,
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>// balancedResourceScorer 表示资源得分机制 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			scorer:       balancedResourceScorer,
+</span></span><span style=display:flex><span>			useRequested: <span style=color:#ff79c6>true</span>,
+</span></span><span style=display:flex><span>			resources:    args.Resources,
+</span></span><span style=display:flex><span>		},
+</span></span><span style=display:flex><span>	}, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// balancedResourceScorer 计算每种资源请求的比例（请求/可分配），然后计算了这些比例的标准差。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 标准差衡量了请求资源的比例与平均值之间的偏差程度，如果标准差越小，说明节点上各资源类型的利用率更均衡，这种节点更适合调度。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 最后，它返回一个分数，分数越高表示节点的资源分配越均衡。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>balancedResourceScorer</span>(requested, allocable []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> resourceToFractions []<span style=color:#8be9fd>float64</span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> totalFraction <span style=color:#8be9fd>float64</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 对于每种资源，计算请求的资源和可分配资源的比例，并将比例加入到 resourceToFractions 数组中。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 计算 resourceToFractions 数组中所有元素的总和 totalFraction。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> requested {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> allocable[i] <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		fraction <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>float64</span>(requested[i]) <span style=color:#ff79c6>/</span> <span style=color:#8be9fd;font-style:italic>float64</span>(allocable[i])
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> fraction &gt; <span style=color:#bd93f9>1</span> {
+</span></span><span style=display:flex><span>			fraction = <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		totalFraction <span style=color:#ff79c6>+=</span> fraction
+</span></span><span style=display:flex><span>		resourceToFractions = <span style=color:#8be9fd;font-style:italic>append</span>(resourceToFractions, fraction)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 标准差
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	std <span style=color:#ff79c6>:=</span> <span style=color:#bd93f9>0.0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// For most cases, resources are limited to cpu and memory, the std could be simplified to std := (fraction1-fraction2)/2
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// len(fractions) &gt; 2: calculate std based on the well-known formula - root square of Σ((fraction(i)-mean)^2)/len(fractions)
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// Otherwise, set the std to zero is enough.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 计算 resourceToFractions 数组的标准差
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(resourceToFractions) <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>2</span> {
+</span></span><span style=display:flex><span>		std = math.<span style=color:#50fa7b>Abs</span>((resourceToFractions[<span style=color:#bd93f9>0</span>] <span style=color:#ff79c6>-</span> resourceToFractions[<span style=color:#bd93f9>1</span>]) <span style=color:#ff79c6>/</span> <span style=color:#bd93f9>2</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	} <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>len</span>(resourceToFractions) &gt; <span style=color:#bd93f9>2</span> {
+</span></span><span style=display:flex><span>		mean <span style=color:#ff79c6>:=</span> totalFraction <span style=color:#ff79c6>/</span> <span style=color:#8be9fd;font-style:italic>float64</span>(<span style=color:#8be9fd;font-style:italic>len</span>(resourceToFractions))
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>var</span> sum <span style=color:#8be9fd>float64</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> _, fraction <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> resourceToFractions {
+</span></span><span style=display:flex><span>			sum = sum <span style=color:#ff79c6>+</span> (fraction<span style=color:#ff79c6>-</span>mean)<span style=color:#ff79c6>*</span>(fraction<span style=color:#ff79c6>-</span>mean)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		std = math.<span style=color:#50fa7b>Sqrt</span>(sum <span style=color:#ff79c6>/</span> <span style=color:#8be9fd;font-style:italic>float64</span>(<span style=color:#8be9fd;font-style:italic>len</span>(resourceToFractions)))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 返回一个分数，该分数等于 (1 - 标准差) * MaxNodeScore
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 这意味着，如果标准差越小（即资源利用更均衡），则返回的分数越高
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// STD (standard deviation) is always a positive value. 1-deviation lets the score to be higher for node which has least deviation and
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#6272a4>// multiplying it with `MaxNodeScore` provides the scaling factor needed.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>int64</span>((<span style=color:#bd93f9>1</span> <span style=color:#ff79c6>-</span> std) <span style=color:#ff79c6>*</span> <span style=color:#8be9fd;font-style:italic>float64</span>(framework.MaxNodeScore))
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>在 pkg/scheduler/framework/plugins/noderesources/fit.go 文件下初始化打分机制（最少资源使用、最多资源使用、资源占用比例等），如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// NewFit initializes a new plugin and returns it.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewFit</span>(_ context.Context, plArgs runtime.Object, h framework.Handle, fts feature.Features) (framework.Plugin, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	args, ok <span style=color:#ff79c6>:=</span> plArgs.(<span style=color:#ff79c6>*</span>config.NodeResourcesFitArgs)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !ok {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;want args to be of type NodeResourcesFitArgs, got %T&#34;</span>, plArgs)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>:=</span> validation.<span style=color:#50fa7b>ValidateNodeResourcesFitArgs</span>(<span style=color:#ff79c6>nil</span>, args); err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, err
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> args.ScoringStrategy <span style=color:#ff79c6>==</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;scoring strategy not specified&#34;</span>)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	strategy <span style=color:#ff79c6>:=</span> args.ScoringStrategy.Type
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// Node 节点资源调度策略 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	scorePlugin, exists <span style=color:#ff79c6>:=</span> nodeResourceStrategyTypeMap[strategy]
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !exists {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>, fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;scoring strategy %s is not supported&#34;</span>, strategy)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>Fit{
+</span></span><span style=display:flex><span>		ignoredResources:                sets.<span style=color:#50fa7b>New</span>(args.IgnoredResources<span style=color:#ff79c6>...</span>),
+</span></span><span style=display:flex><span>		ignoredResourceGroups:           sets.<span style=color:#50fa7b>New</span>(args.IgnoredResourceGroups<span style=color:#ff79c6>...</span>),
+</span></span><span style=display:flex><span>		enableInPlacePodVerticalScaling: fts.EnableInPlacePodVerticalScaling,
+</span></span><span style=display:flex><span>		enableSidecarContainers:         fts.EnableSidecarContainers,
+</span></span><span style=display:flex><span>		handle:                          h,
+</span></span><span style=display:flex><span>        <span style=color:#6272a4>// 打分机制
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		resourceAllocationScorer:        <span style=color:#ff79c6>*</span><span style=color:#50fa7b>scorePlugin</span>(args),
+</span></span><span style=display:flex><span>	}, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// nodeResourceStrategyTypeMap maps strategy to scorer implementation
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>var</span> nodeResourceStrategyTypeMap = <span style=color:#8be9fd;font-style:italic>map</span>[config.ScoringStrategyType]scorer{
+</span></span><span style=display:flex><span>	config.LeastAllocated: <span style=color:#8be9fd;font-style:italic>func</span>(args <span style=color:#ff79c6>*</span>config.NodeResourcesFitArgs) <span style=color:#ff79c6>*</span>resourceAllocationScorer {
+</span></span><span style=display:flex><span>		resources <span style=color:#ff79c6>:=</span> args.ScoringStrategy.Resources
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>resourceAllocationScorer{
+</span></span><span style=display:flex><span>			Name:      <span style=color:#8be9fd;font-style:italic>string</span>(config.LeastAllocated),
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>// 最少使用资源
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			scorer:    <span style=color:#50fa7b>leastResourceScorer</span>(resources),
+</span></span><span style=display:flex><span>			resources: resources,
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	},
+</span></span><span style=display:flex><span>	config.MostAllocated: <span style=color:#8be9fd;font-style:italic>func</span>(args <span style=color:#ff79c6>*</span>config.NodeResourcesFitArgs) <span style=color:#ff79c6>*</span>resourceAllocationScorer {
+</span></span><span style=display:flex><span>		resources <span style=color:#ff79c6>:=</span> args.ScoringStrategy.Resources
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>resourceAllocationScorer{
+</span></span><span style=display:flex><span>			Name:      <span style=color:#8be9fd;font-style:italic>string</span>(config.MostAllocated),
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>// 最多使用资源
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			scorer:    <span style=color:#50fa7b>mostResourceScorer</span>(resources),
+</span></span><span style=display:flex><span>			resources: resources,
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	},
+</span></span><span style=display:flex><span>	config.RequestedToCapacityRatio: <span style=color:#8be9fd;font-style:italic>func</span>(args <span style=color:#ff79c6>*</span>config.NodeResourcesFitArgs) <span style=color:#ff79c6>*</span>resourceAllocationScorer {
+</span></span><span style=display:flex><span>		resources <span style=color:#ff79c6>:=</span> args.ScoringStrategy.Resources
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>resourceAllocationScorer{
+</span></span><span style=display:flex><span>			Name:      <span style=color:#8be9fd;font-style:italic>string</span>(config.RequestedToCapacityRatio),
+</span></span><span style=display:flex><span>            <span style=color:#6272a4>// 资源利用率
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			scorer:    <span style=color:#50fa7b>requestedToCapacityRatioScorer</span>(resources, args.ScoringStrategy.RequestedToCapacityRatio.Shape),
+</span></span><span style=display:flex><span>			resources: resources,
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	},
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>pkg/scheduler/framework/plugins/noderesources/least_allocated.go 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// leastResourceScorer favors nodes with fewer requested resources.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// It calculates the percentage of memory, CPU and other resources requested by pods scheduled on the node, and
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// prioritizes based on the minimum of the average of the fraction of requested to capacity.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Details:
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// (cpu((capacity-requested)*MaxNodeScore*cpuWeight/capacity) + memory((capacity-requested)*MaxNodeScore*memoryWeight/capacity) + ...)/weightSum
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 计算了每种资源的未使用量（可分配-请求），然后根据每种资源的权重计算出一个加权平均分。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 最后，它返回一个分数，分数越高表示节点上未使用的资源越多。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>leastResourceScorer</span>(resources []config.ResourceSpec) <span style=color:#8be9fd;font-style:italic>func</span>([]<span style=color:#8be9fd>int64</span>, []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>func</span>(requested, allocable []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>var</span> nodeScore, weightSum <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>        <span style=color:#6272a4>// 对于每种资源，计算未使用的资源量，并乘以该资源的权重和一个最大分数（framework.MaxNodeScore），得到每种资源的得分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>        <span style=color:#6272a4>// 将所有资源的得分相加，然后除以所有资源权重的总和，得到一个平均分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>        <span style=color:#6272a4>// 返回这个平均分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>        
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> requested {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> allocable[i] <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			weight <span style=color:#ff79c6>:=</span> resources[i].Weight
+</span></span><span style=display:flex><span>			resourceScore <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>leastRequestedScore</span>(requested[i], allocable[i])
+</span></span><span style=display:flex><span>			nodeScore <span style=color:#ff79c6>+=</span> resourceScore <span style=color:#ff79c6>*</span> weight
+</span></span><span style=display:flex><span>			weightSum <span style=color:#ff79c6>+=</span> weight
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> weightSum <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nodeScore <span style=color:#ff79c6>/</span> weightSum
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// The unused capacity is calculated on a scale of 0-MaxNodeScore
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 0 being the lowest priority and `MaxNodeScore` being the highest.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// The more unused resources the higher the score is.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>leastRequestedScore</span>(requested, capacity <span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> capacity <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> requested &gt; capacity {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ((capacity <span style=color:#ff79c6>-</span> requested) <span style=color:#ff79c6>*</span> framework.MaxNodeScore) <span style=color:#ff79c6>/</span> capacity
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>pkg/scheduler/framework/plugins/noderesources/most_allocated.go 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// mostResourceScorer favors nodes with most requested resources.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// It calculates the percentage of memory and CPU requested by pods scheduled on the node, and prioritizes
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// based on the maximum of the average of the fraction of requested to capacity.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Details:
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// (cpu(MaxNodeScore * requested * cpuWeight / capacity) + memory(MaxNodeScore * requested * memoryWeight / capacity) + ...) / weightSum
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 它计算了每种资源已被请求的量（请求/可分配），然后根据每种资源的权重计算出一个加权平均分。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 最后，它返回一个分数，分数越高表示节点上已被请求使用的资源越多。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>mostResourceScorer</span>(resources []config.ResourceSpec) <span style=color:#8be9fd;font-style:italic>func</span>(requested, allocable []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>func</span>(requested, allocable []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>var</span> nodeScore, weightSum <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>        <span style=color:#6272a4>// 对于每种资源，计算已被请求的资源量，并乘以该资源的权重和一个最大分数（framework.MaxNodeScore），得到每种资源的得分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>        <span style=color:#6272a4>// 将所有资源的得分相加，然后除以所有资源权重的总和，得到一个平均分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>        <span style=color:#6272a4>// 返回这个平均分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> requested {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> allocable[i] <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			weight <span style=color:#ff79c6>:=</span> resources[i].Weight
+</span></span><span style=display:flex><span>			resourceScore <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>mostRequestedScore</span>(requested[i], allocable[i])
+</span></span><span style=display:flex><span>			nodeScore <span style=color:#ff79c6>+=</span> resourceScore <span style=color:#ff79c6>*</span> weight
+</span></span><span style=display:flex><span>			weightSum <span style=color:#ff79c6>+=</span> weight
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> weightSum <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nodeScore <span style=color:#ff79c6>/</span> weightSum
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// The used capacity is calculated on a scale of 0-MaxNodeScore (MaxNodeScore is
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// constant with value set to 100).
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 0 being the lowest priority and 100 being the highest.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// The more resources are used the higher the score is. This function
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// is almost a reversed version of noderesources.leastRequestedScore.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>mostRequestedScore</span>(requested, capacity <span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> capacity <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> requested &gt; capacity {
+</span></span><span style=display:flex><span>		<span style=color:#6272a4>// `requested` might be greater than `capacity` because pods with no
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		<span style=color:#6272a4>// requests get minimum values.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>		requested = capacity
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> (requested <span style=color:#ff79c6>*</span> framework.MaxNodeScore) <span style=color:#ff79c6>/</span> capacity
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>折线函数（Broken Linear Function）是一种分段线性函数，即这个函数是由多个线性函数（或称为线性段）组成的。在每个分段上，函数的形式都是线性的，即 y = ax + b 的形式，每个线性段在其端点处与相邻的线性段相接。在具体的应用场景中，在 Kubernetes 资源调度的例子中，折线函数可以用来表示不同资源利用率下对应的资源调度得分。利用率点（Utilization）是函数的参数，得分（Score）是函数的值。根据资源的利用率，可以在折线函数上找到对应的得分，从而实现根据资源使用情况的动态调整调度策略。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span>pkg<span style=color:#ff79c6>/</span>scheduler<span style=color:#ff79c6>/</span>framework<span style=color:#ff79c6>/</span>plugins<span style=color:#ff79c6>/</span>noderesources<span style=color:#ff79c6>/</span>requested_to_capacity_ratio.<span style=color:#ff79c6>go</span> 如下所示：
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>const</span> maxUtilization = <span style=color:#bd93f9>100</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// buildRequestedToCapacityRatioScorerFunction allows users to apply bin packing
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// on core resources like CPU, Memory as well as extended resources like accelerators.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// buildRequestedToCapacityRatioScorerFunction 函数接收一个打分函数形状（scoringFunctionShape）和资源规格列表（resources），返回一个接收请求资源和可分配资源的函数，该函数会计算出每种资源的得分，然后根据资源的权重进行加权平均，得出最终的节点得分。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>buildRequestedToCapacityRatioScorerFunction</span>(scoringFunctionShape helper.FunctionShape, resources []config.ResourceSpec) <span style=color:#8be9fd;font-style:italic>func</span>([]<span style=color:#8be9fd>int64</span>, []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	rawScoringFunction <span style=color:#ff79c6>:=</span> helper.<span style=color:#50fa7b>BuildBrokenLinearFunction</span>(scoringFunctionShape)
+</span></span><span style=display:flex><span>	resourceScoringFunction <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>func</span>(requested, capacity <span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> capacity <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>||</span> requested &gt; capacity {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>rawScoringFunction</span>(maxUtilization)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>rawScoringFunction</span>(requested <span style=color:#ff79c6>*</span> maxUtilization <span style=color:#ff79c6>/</span> capacity)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>func</span>(requested, allocable []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>var</span> nodeScore, weightSum <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> requested {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> allocable[i] <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>			weight <span style=color:#ff79c6>:=</span> resources[i].Weight
+</span></span><span style=display:flex><span>			resourceScore <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>resourceScoringFunction</span>(requested[i], allocable[i])
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> resourceScore &gt; <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>				nodeScore <span style=color:#ff79c6>+=</span> resourceScore <span style=color:#ff79c6>*</span> weight
+</span></span><span style=display:flex><span>				weightSum <span style=color:#ff79c6>+=</span> weight
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> weightSum <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>int64</span>(math.<span style=color:#50fa7b>Round</span>(<span style=color:#8be9fd;font-style:italic>float64</span>(nodeScore) <span style=color:#ff79c6>/</span> <span style=color:#8be9fd;font-style:italic>float64</span>(weightSum)))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// requestedToCapacityRatioScorer 函数接收资源规格列表和利用率形状点列表（shape），构造出打分函数形状，然后调用buildRequestedToCapacityRatioScorerFunction 函数，返回一个打分函数。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>requestedToCapacityRatioScorer</span>(resources []config.ResourceSpec, shape []config.UtilizationShapePoint) <span style=color:#8be9fd;font-style:italic>func</span>([]<span style=color:#8be9fd>int64</span>, []<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	shapes <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>make</span>([]helper.FunctionShapePoint, <span style=color:#bd93f9>0</span>, <span style=color:#8be9fd;font-style:italic>len</span>(shape))
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, point <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> shape {
+</span></span><span style=display:flex><span>		shapes = <span style=color:#8be9fd;font-style:italic>append</span>(shapes, helper.FunctionShapePoint{
+</span></span><span style=display:flex><span>			Utilization: <span style=color:#8be9fd;font-style:italic>int64</span>(point.Utilization),
+</span></span><span style=display:flex><span>			<span style=color:#6272a4>// MaxCustomPriorityScore may diverge from the max score used in the scheduler and defined by MaxNodeScore,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			<span style=color:#6272a4>// therefore we need to scale the score returned by requested to capacity ratio to the score range
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			<span style=color:#6272a4>// used by the scheduler.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>			Score: <span style=color:#8be9fd;font-style:italic>int64</span>(point.Score) <span style=color:#ff79c6>*</span> (framework.MaxNodeScore <span style=color:#ff79c6>/</span> config.MaxCustomPriorityScore),
+</span></span><span style=display:flex><span>		})
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#50fa7b>buildRequestedToCapacityRatioScorerFunction</span>(shapes, resources)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// FunctionShapePoint represents a shape point.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> FunctionShapePoint <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// Utilization is function argument.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	Utilization <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>	<span style=color:#6272a4>// Score is function value.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	Score <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 构建一种被称为&#34;折线函数&#34;（Broken Linear Function）的函数。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 这种函数由多个线性段组成，每个线性段在不同的利用率点上相交。具体的函数值取决于输入值在哪个线性段范围内。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// FunctionShapePoint结构体表示一个形状点，包含两个字段：Utilization和Score。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Utilization表示函数参数，即资源的利用率，而Score表示函数值，即根据资源利用率计算出的得分。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// BuildBrokenLinearFunction creates a function which is built using linear segments. Segments are defined via shape array.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Shape[i].Utilization slice represents points on &#34;Utilization&#34; axis where different segments meet.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Shape[i].Score represents function values at meeting points.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// BuildBrokenLinearFunction 函数接收一个形状数组shape，返回一个函数，这个函数根据输入的资源利用率计算得分。函数的计算规则如下：
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 如果资源利用率小于shape[0].Utilization，则返回shape[0].Score;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 如果资源利用率大于shape[n-1].Utilization，则返回shape[n-1].Score;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 如果资源利用率在shape[i-1].Utilization和shape[i].Utilization之间，则返回对应的线性插值得分;
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// function f(p) is defined as:
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//	shape[0].Score for p &lt; shape[0].Utilization
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//	shape[n-1].Score for p &gt; shape[n-1].Utilization
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>//
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// and linear between points (p &lt; shape[i].Utilization)
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>BuildBrokenLinearFunction</span>(shape FunctionShape) <span style=color:#8be9fd;font-style:italic>func</span>(<span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>func</span>(p <span style=color:#8be9fd>int64</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>:=</span> <span style=color:#bd93f9>0</span>; i &lt; <span style=color:#8be9fd;font-style:italic>len</span>(shape); i<span style=color:#ff79c6>++</span> {
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> p <span style=color:#ff79c6>&lt;=</span> <span style=color:#8be9fd;font-style:italic>int64</span>(shape[i].Utilization) {
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> i <span style=color:#ff79c6>==</span> <span style=color:#bd93f9>0</span> {
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>return</span> shape[<span style=color:#bd93f9>0</span>].Score
+</span></span><span style=display:flex><span>				}
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> shape[i<span style=color:#ff79c6>-</span><span style=color:#bd93f9>1</span>].Score <span style=color:#ff79c6>+</span> (shape[i].Score<span style=color:#ff79c6>-</span>shape[i<span style=color:#ff79c6>-</span><span style=color:#bd93f9>1</span>].Score)<span style=color:#ff79c6>*</span>(p<span style=color:#ff79c6>-</span>shape[i<span style=color:#ff79c6>-</span><span style=color:#bd93f9>1</span>].Utilization)<span style=color:#ff79c6>/</span>(shape[i].Utilization<span style=color:#ff79c6>-</span>shape[i<span style=color:#ff79c6>-</span><span style=color:#bd93f9>1</span>].Utilization)
+</span></span><span style=display:flex><span>			}
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> shape[<span style=color:#8be9fd;font-style:italic>len</span>(shape)<span style=color:#ff79c6>-</span><span style=color:#bd93f9>1</span>].Score
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h2 id=imagelocality>imagelocality</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// NewInTreeRegistry builds the registry with all the in-tree plugins.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// A scheduler that runs out of tree plugins can register additional plugins
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// through the WithFrameworkOutOfTreeRegistry option.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>NewInTreeRegistry</span>() runtime.Registry {
+</span></span><span style=display:flex><span>    registry <span style=color:#ff79c6>:=</span> runtime.Registry{
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>        imagelocality.Name:                   imagelocality.New,
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>......</span>
+</span></span><span style=display:flex><span>    }
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> registry
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><p>ImageLocality 是一个评分插件，它倾向于选择那些已经拥有请求的 pod 容器镜像的节点。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-go data-lang=go><span style=display:flex><span><span style=color:#6272a4>// The two thresholds are used as bounds for the image score range. They correspond to a reasonable size range for
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// container images compressed and stored in registries; 90%ile of images on dockerhub drops into this range.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 这两个阈值被用作镜像分数范围的界限。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 它们对应于压缩并存储在注册表中的容器镜像的合理大小范围；
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Docker Hub上的90%的镜像都落在这个范围内 230MB - 1GB
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>const</span> (
+</span></span><span style=display:flex><span>	mb                    <span style=color:#8be9fd>int64</span> = <span style=color:#bd93f9>1024</span> <span style=color:#ff79c6>*</span> <span style=color:#bd93f9>1024</span>
+</span></span><span style=display:flex><span>	minThreshold          <span style=color:#8be9fd>int64</span> = <span style=color:#bd93f9>23</span> <span style=color:#ff79c6>*</span> mb
+</span></span><span style=display:flex><span>	maxContainerThreshold <span style=color:#8be9fd>int64</span> = <span style=color:#bd93f9>1000</span> <span style=color:#ff79c6>*</span> mb
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// ImageLocality is a score plugin that favors nodes that already have requested pod container&#39;s images.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// ImageLocality 是一个评分插件，它倾向于选择那些已经拥有请求的 pod 容器镜像的节点
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>type</span> ImageLocality <span style=color:#8be9fd;font-style:italic>struct</span> {
+</span></span><span style=display:flex><span>	handle framework.Handle
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>var</span> _ framework.ScorePlugin = <span style=color:#ff79c6>&amp;</span>ImageLocality{}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Name is the name of the plugin used in the plugin registry and configurations.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>const</span> Name = names.ImageLocality
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Name returns name of the plugin. It is used in logs, etc.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (pl <span style=color:#ff79c6>*</span>ImageLocality) <span style=color:#50fa7b>Name</span>() <span style=color:#8be9fd>string</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> Name
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// Score invoked at the score extension point.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (pl <span style=color:#ff79c6>*</span>ImageLocality) <span style=color:#50fa7b>Score</span>(ctx context.Context, state <span style=color:#ff79c6>*</span>framework.CycleState, pod <span style=color:#ff79c6>*</span>v1.Pod, nodeName <span style=color:#8be9fd>string</span>) (<span style=color:#8be9fd>int64</span>, <span style=color:#ff79c6>*</span>framework.Status) {
+</span></span><span style=display:flex><span>	nodeInfo, err <span style=color:#ff79c6>:=</span> pl.handle.<span style=color:#50fa7b>SnapshotSharedLister</span>().<span style=color:#50fa7b>NodeInfos</span>().<span style=color:#50fa7b>Get</span>(nodeName)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>, framework.<span style=color:#50fa7b>AsStatus</span>(fmt.<span style=color:#50fa7b>Errorf</span>(<span style=color:#f1fa8c>&#34;getting node %q from Snapshot: %w&#34;</span>, nodeName, err))
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	nodeInfos, err <span style=color:#ff79c6>:=</span> pl.handle.<span style=color:#50fa7b>SnapshotSharedLister</span>().<span style=color:#50fa7b>NodeInfos</span>().<span style=color:#50fa7b>List</span>()
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err <span style=color:#ff79c6>!=</span> <span style=color:#ff79c6>nil</span> {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> <span style=color:#bd93f9>0</span>, framework.<span style=color:#50fa7b>AsStatus</span>(err)
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	totalNumNodes <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>len</span>(nodeInfos)
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 给定一个节点上请求镜像的总分数（sumScores），节点的优先级是通过用与总分数成比例的比率来缩放最大优先级值来获得的。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	imageScores <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>sumImageScores</span>(nodeInfo, pod, totalNumNodes)
+</span></span><span style=display:flex><span>	score <span style=color:#ff79c6>:=</span> <span style=color:#50fa7b>calculatePriority</span>(imageScores, <span style=color:#8be9fd;font-style:italic>len</span>(pod.Spec.InitContainers)<span style=color:#ff79c6>+</span><span style=color:#8be9fd;font-style:italic>len</span>(pod.Spec.Containers))
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> score, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// ScoreExtensions of the Score plugin.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> (pl <span style=color:#ff79c6>*</span>ImageLocality) <span style=color:#50fa7b>ScoreExtensions</span>() framework.ScoreExtensions {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// New initializes a new plugin and returns it.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>New</span>(_ context.Context, _ runtime.Object, h framework.Handle) (framework.Plugin, <span style=color:#8be9fd>error</span>) {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#ff79c6>&amp;</span>ImageLocality{handle: h}, <span style=color:#ff79c6>nil</span>
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// calculatePriority returns the priority of a node. Given the sumScores of requested images on the node, the node&#39;s
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// priority is obtained by scaling the maximum priority value with a ratio proportional to the sumScores.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>calculatePriority</span>(sumScores <span style=color:#8be9fd>int64</span>, numContainers <span style=color:#8be9fd>int</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 函数 calculatePriority 首先计算了一个最大阈值（maxThreshold），这个阈值是容器数量（numContainers）与设定的最大容器阈值（maxContainerThreshold）的乘积。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 然后，它会检查总分数（sumScores）是否在最小阈值（minThreshold）和最大阈值之间，如果不在这个范围，就会被调整到这个范围内。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    
+</span></span><span style=display:flex><span>	maxThreshold <span style=color:#ff79c6>:=</span> maxContainerThreshold <span style=color:#ff79c6>*</span> <span style=color:#8be9fd;font-style:italic>int64</span>(numContainers)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> sumScores &lt; minThreshold {
+</span></span><span style=display:flex><span>		sumScores = minThreshold
+</span></span><span style=display:flex><span>	} <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> sumScores &gt; maxThreshold {
+</span></span><span style=display:flex><span>		sumScores = maxThreshold
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>    <span style=color:#6272a4>// 然后，函数使用这个调整后的总分数，根据公式 (sumScores - minThreshold) / (maxThreshold - minThreshold) 计算出一个比率
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>    <span style=color:#6272a4>// 然后用这个比率来缩放最大优先级值（framework.MaxNodeScore），得到最终的节点优先级。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>	<span style=color:#ff79c6>return</span> framework.MaxNodeScore <span style=color:#ff79c6>*</span> (sumScores <span style=color:#ff79c6>-</span> minThreshold) <span style=color:#ff79c6>/</span> (maxThreshold <span style=color:#ff79c6>-</span> minThreshold)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 计算并返回一个节点上所有已存在的容器镜像的总分 
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// sumImageScores returns the sum of image scores of all the containers that are already on the node.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// Each image receives a raw score of its size, scaled by scaledImageScore. The raw scores are later used to calculate
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// the final score.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 函数 sumImageScores 遍历 pod 中的初始化容器 InitContainers 和其他容器 Containers，
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 对于每一个容器，它都会检查该容器的镜像是否已经存在于目标节点上。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 如果存在，它会调用 scaledImageScore 函数来计算这个镜像的得分，并将其累加到总分中。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>sumImageScores</span>(nodeInfo <span style=color:#ff79c6>*</span>framework.NodeInfo, pod <span style=color:#ff79c6>*</span>v1.Pod, totalNumNodes <span style=color:#8be9fd>int</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>var</span> sum <span style=color:#8be9fd>int64</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, container <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> pod.Spec.InitContainers {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> state, ok <span style=color:#ff79c6>:=</span> nodeInfo.ImageStates[<span style=color:#50fa7b>normalizedImageName</span>(container.Image)]; ok {
+</span></span><span style=display:flex><span>			sum <span style=color:#ff79c6>+=</span> <span style=color:#50fa7b>scaledImageScore</span>(state, totalNumNodes)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _, container <span style=color:#ff79c6>:=</span> <span style=color:#ff79c6>range</span> pod.Spec.Containers {
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> state, ok <span style=color:#ff79c6>:=</span> nodeInfo.ImageStates[<span style=color:#50fa7b>normalizedImageName</span>(container.Image)]; ok {
+</span></span><span style=display:flex><span>			sum <span style=color:#ff79c6>+=</span> <span style=color:#50fa7b>scaledImageScore</span>(state, totalNumNodes)
+</span></span><span style=display:flex><span>		}
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> sum
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// 这个得分是基于镜像的大小计算的，并且会根据节点的总数进行缩放。这样一来，镜像的大小和节点的数量都会影响到最终的得分。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 这有助于在进行 pod 调度时，优先选择那些已经拥有所需镜像的节点，从而可以减少镜像拉取的时间，加快 pod 的启动速度。
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// scaledImageScore returns an adaptively scaled score for the given state of an image.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// The size of the image is used as the base score, scaled by a factor which considers how much nodes the image has &#34;spread&#34; to.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// This heuristic aims to mitigate the undesirable &#34;node heating problem&#34;, i.e., pods get assigned to the same or
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// a few nodes due to image locality.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>scaledImageScore</span>(imageState <span style=color:#ff79c6>*</span>framework.ImageStateSummary, totalNumNodes <span style=color:#8be9fd>int</span>) <span style=color:#8be9fd>int64</span> {
+</span></span><span style=display:flex><span>	spread <span style=color:#ff79c6>:=</span> <span style=color:#8be9fd;font-style:italic>float64</span>(imageState.NumNodes) <span style=color:#ff79c6>/</span> <span style=color:#8be9fd;font-style:italic>float64</span>(totalNumNodes)
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> <span style=color:#8be9fd;font-style:italic>int64</span>(<span style=color:#8be9fd;font-style:italic>float64</span>(imageState.Size) <span style=color:#ff79c6>*</span> spread)
+</span></span><span style=display:flex><span>}
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>// normalizedImageName returns the CRI compliant name for a given image.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// TODO: cover the corner cases of missed matches, e.g,
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 1. Using Docker as runtime and docker.io/library/test:tag in pod spec, but only test:tag will present in node status
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// 2. Using the implicit registry, i.e., test:tag or library/test:tag in pod spec but only docker.io/library/test:tag
+</span></span></span><span style=display:flex><span><span style=color:#6272a4>// in node status; note that if users consistently use one registry format, this should not happen.
+</span></span></span><span style=display:flex><span><span style=color:#6272a4></span><span style=color:#8be9fd;font-style:italic>func</span> <span style=color:#50fa7b>normalizedImageName</span>(name <span style=color:#8be9fd>string</span>) <span style=color:#8be9fd>string</span> {
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> strings.<span style=color:#50fa7b>LastIndex</span>(name, <span style=color:#f1fa8c>&#34;:&#34;</span>) <span style=color:#ff79c6>&lt;=</span> strings.<span style=color:#50fa7b>LastIndex</span>(name, <span style=color:#f1fa8c>&#34;/&#34;</span>) {
+</span></span><span style=display:flex><span>		name = name <span style=color:#ff79c6>+</span> <span style=color:#f1fa8c>&#34;:latest&#34;</span>
+</span></span><span style=display:flex><span>	}
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> name
+</span></span><span style=display:flex><span>}
+</span></span></code></pre></div><h1 id=out-of-tree-外置算法>out-of-tree 外置算法</h1><p><a href=https://github.com/kubernetes-sigs/scheduler-plugins>scheduler-plugins</a> 是基于 Scheduler Framework 调度框架的 out-of-tree 插件实现。scheduler-plugins 提供了在大规模 Kubernetes 集群中使用的调度器插件，这些插件可以作为Golang SDK库进行引用，或者通过预构建的镜像或 Helm 进行开箱即用。此外，这个仓库还整合了编写高质量调度器插件的最佳实践和实用工具。</p><p>kube-scheduler 二进制文件包含以下插件列表，可以通过创建一个或多个调度器配置文件来配置它们。</p><ul><li>Capacity Scheduling</li><li>Coscheduling</li><li>Node Resources</li><li>Node Resource Topology</li><li>Preemption Toleration</li><li>Trimaran</li><li>Network-Aware Scheduling</li></ul><p>此外，kube-scheduler二进制文件还包含以下示例插件列表（不推荐生产环境使用）。</p><ul><li>Cross Node Preemption</li><li>Pod State</li><li>Quality of Service</li></ul><p><a href=https://github.com/kubernetes-sigs/scheduler-plugins/pull/282>Network-Aware</a> 是 KEP 设计文档。
+物联网（IoT）、多层次的网络服务和视频流服务这样的应用，将最大程度地从网络感知的调度策略中受益，
+这些策略除了考虑调度器使用的默认资源（CPU和内存）外，还考虑延迟和带宽等。</p><h1 id=进阶调度算法>进阶调度算法</h1><h2 id=capacity-scheduling>Capacity Scheduling</h2><p>越来越多的需求希望使用Kubernetes来管理批处理工作负载（ML/DL）。在这些情况下，一个挑战是在确保每个用户有合理的资源量的同时，提高集群的利用率。这个问题可以通过Kubernetes的ResourceQuota部分解决。原生的Kubernetes ResourceQuota API可以用来指定每个命名空间的最大总资源分配。配额的执行是通过准入检查完成的。如果累计的资源分配超过了配额限制，就不能创建配额消费者（例如，Pod）。换句话说，当Pod创建时，整体资源使用是根据Pod的规格（即，cpu/mem请求）进行聚合的。Kubernetes配额设计存在的限制是：配额资源使用是基于资源配置（例如，Pod规格中指定的Pod cpu/mem请求）进行聚合的。虽然这种机制可以保证实际的资源消耗永远不会超过ResourceQuota限制，但可能会导致资源利用率低，因为一些Pod可能已经申请了资源，但未能被调度。例如，实际资源消耗可能远小于限制。</p><p>由于上述限制，批处理工作负载（ML/DL）在Kubernetes集群中的运行效率可能不如在其他容器编排平台（如Yarn）中高。为了克服上述限制，可以将Yarn容量调度器中使用的“ElasticQuota”概念引入Kubernetes。基本上，“ElasticQuota”有“最大”和“最小”的概念。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/tree/master/kep/9-capacity-scheduling>Capacity Scheduling</a>。</p><h2 id=coscheduling>Coscheduling</h2><p>目前，通过Kubernetes的默认调度器，我们无法确保一组Pods可以全部被调度。在某些情况下，由于整个应用程序不能仅依赖部分Pods运行，这将浪费资源，如Spark作业，TensorFlow作业等。这个提议旨在通过引入PodGroup CRD来解决这个问题，来完成将一组Pods连接在一起的重要工作。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/coscheduling/README.md>Coscheduling</a>。</p><h2 id=node-resources>Node Resources</h2><p>基于插件参数资源参数，资源被赋予权重。CPU的基本单位是毫核，而内存的基本单位是字节。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/noderesources/README.md>Node Resources</a>。</p><h2 id=node-resource-topology>Node Resource Topology</h2><p>在引入拓扑管理器后，集群中启动pod的问题在工作节点拥有不同NUMA拓扑和该拓扑中的资源量不同时就变得实际起来。Pod可能会被调度到资源总量足够的节点上，但资源分布可能无法满足相应的拓扑策略。在这种情况下，Pod将无法启动。对于调度器来说，更好的行为是选择合适的节点，kubelet准入处理器可能会通过。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/noderesourcetopology/README.md>Node Resource Topology</a>。</p><h2 id=preemption-toleration>Preemption Toleration</h2><p>Kubernetes调度器提供了Pod优先级和抢占特性。用户（通常是集群管理员）可以定义几个PriorityClass以在集群中分类优先级。如果集群的弹性较差（例如On-Premise集群），那么设计优先级类和抢占规则对于计算资源的利用率非常重要。</p><p>PriorityClass可以有PreemptionPolicy配置，用于自定义该优先级类的抢占者行为。允许的值有PreemptLowerPriority（默认）和Never。如果设置为Never，优先级类将变成非抢占优先级类，它不能抢占任何Pod，但可能被更高优先级的Pod抢占。PreemptionPolicy API非常简单易懂。然而，这个策略只关注抢占者侧的行为。这个插件通过在PriorityClass中添加抢占者（也称为受害者）侧策略，提供了更灵活的抢占行为配置。特别是，集群管理员可以定义抢占容忍策略，该策略定义了优先级类将免除抢占的标准。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/preemptiontoleration/README.md>Preemption Toleration</a>。</p><h2 id=trimaran>Trimaran</h2><p>Kubernetes 提供了一种声明性资源模型，核心组件（调度器和kubelet）会遵守这种模型以保持一致性并满足QoS保证。然而，使用这种模型可能会导致集群的低利用率，原因如下：用户很难为应用程序估计准确的资源使用情况。此外，用户可能不理解资源模型，也不会设置它。Kubernetes提供的默认的树形调度插件（Score）不考虑实时节点利用率值。这个提案利用实时资源使用情况来通过提议的插件调度pod。最终的目标是在不破坏Kubernetes资源模型契约的情况下，提高集群利用率并降低集群管理的成本。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/trimaran/README.md>Trimaran</a>。</p><ul><li>TargetLoadPacking：实现了一种打包策略，直到配置的CPU利用率，然后在热节点之间切换到扩展策略，支持CPU资源。</li><li>LoadVariationRiskBalancing：在节点之间平衡风险，风险被定义为平均利用率和利用率变化的组合测量，支持CPU和内存资源。</li><li>LowRiskOverCommitment：评估过度承诺的性能风险，并通过考虑（1）Pod的资源限制值（限制意识）和（2）节点上的实际负载（利用率）（负载意识），选择风险最低的节点。因此，它为Pod提供了一个低风险环境，缓解了过度承诺的问题，同时允许Pod使用他们的限制。</li></ul><h2 id=network-aware-scheduling>Network-Aware Scheduling</h2><p>许多应用程序对延迟敏感，要求应用程序中的微服务之间的延迟更低。对于端到端延迟成为主要目标的应用程序，旨在降低成本或提高资源效率的调度策略是不够的。
+像物联网（IoT）、多层次web服务和视频流服务这样的应用程序将最大限度地从网络感知的调度策略中受益，这些策略除了考虑调度器使用的默认资源（如CPU和内存）外，还考虑延迟和带宽。</p><p>用户在使用多层次应用程序时经常遇到延迟问题。这些应用程序通常包括数十个到数百个具有复杂相互依赖关系的微服务。服务器的距离通常是主要的罪魁祸首。根据关于服务功能链（SFC）的先前工作，最好的策略是减少同一应用程序中链式微服务之间的延迟。此外，对于那些微服务之间有大量数据传输的应用程序，带宽起着至关重要的作用。例如，数据库应用程序中的多个副本可能需要频繁的复制以确保数据一致性。Spark作业可能在map和reduce节点之间有频繁的数据传输。节点中的网络容量不足可能会导致延迟增加或数据包丢失，这将降低应用程序的服务质量(QoS)。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/networkaware/README.md>Network-Aware Scheduling</a>。</p><h2 id=cross-node-preemption>Cross Node Preemption</h2><p>PostFilter扩展点自1.19版本起在Kubernetes调度器中引入，上游的默认实现是在同一节点上抢占Pods，为无法调度的Pod腾出空间。与"同节点抢占"策略相反，我们可以提出一个"跨节点抢占"策略，通过跨多个节点抢占Pods，这在由于"跨节点"约束（如PodTopologySpread和PodAntiAffinity）导致Pod无法调度时非常有用。这也在抢占的原始设计文档中提到过。</p><p>此插件是作为一个示例构建的，演示了如何使用PostFilter扩展点，同时也启发用户构建他们自己的创新策略，如抢占一组Pods。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/crossnodepreemption/README.md>Cross Node Preemption</a>。</p><h2 id=pod-state>Pod State</h2><p>这是一个评分插件，它以以下方式考虑终止和提名的Pods：拥有更多终止Pods的节点将获得更高的分数，因为这些终止的Pods最终将从节点中物理删除拥有更多被提名的Pods（携带.status.nominatedNodeName）的节点将获得较低的分数，因为这些被提名的节点预计在未来的调度周期中将容纳一些抢占者Pod。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/podstate/README.md>Pod State</a>。</p><h2 id=quality-of-service>Quality of Service</h2><p>按照.spec.priority对Pods进行排序。默认情况下，插件按以下顺序对Pods进行排队：</p><ul><li>Guaranteed (requests == limits)</li><li>Burstable (requests &lt; limits)</li><li>BestEffort (requests and limits not set)</li></ul><p>可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/blob/master/pkg/qos/README.md>Quality of Service</a>。</p><h2 id=disk-io-aware-scheduling>disk-io-aware-scheduling</h2><p>磁盘IO资源是云原生环境中保证工作负载性能的重要资源。当前的Kubernetes调度器不支持磁盘IO资源感知调度。可能会发生在一个节点上调度的pods争夺磁盘IO资源，导致性能下降（嘈杂的邻居问题）。越来越多的需求希望在Kubernetes中添加磁盘IO资源感知调度，以避免或减轻嘈杂的邻居问题。为了支持磁盘IO资源感知调度，我们添加了一个调度插件，该插件跟踪每个pod的磁盘IO资源需求，并在做出调度决策时对每个节点上可用的磁盘IO资源进行核算。可参见 <a href=https://github.com/kubernetes-sigs/scheduler-plugins/tree/master/kep/624-disk-io-aware-scheduling>disk-io-aware-scheduling</a>。</p><hr><ul class=pager><li class=previous><a href=/post/2024-04-08-scheduler-framework-03/ data-toggle=tooltip data-placement=top title="深入理解 Kubernetes Scheduler Framework 调度框架（Part 3）">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2024</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
