@@ -1,0 +1,1162 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="监测 Linux 内存缺页中断事件"><meta property="og:title" content="监测 Linux 内存缺页中断事件"><meta property="twitter:title" content="监测 Linux 内存缺页中断事件"><meta name=description content="监测 Linux 内存缺页中断事件"><meta property="og:description" content="监测 Linux 内存缺页中断事件"><meta property="twitter:description" content="监测 Linux 内存缺页中断事件"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>监测 Linux 内存缺页中断事件 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2024-05-02-linux-page-fault/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/ebpf title=eBPF>eBPF</a></div><h1>监测 Linux 内存缺页中断事件</h1><h2 class=subheading>监测 Linux 内存缺页中断事件</h2><span class=meta>Posted by
+陈谭军
+on
+Thursday, May 2, 2024
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2024-05-02-linux-page-fault/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 10685 字</span>，阅读约 <span class=more-meta>22 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=内存缺页中断概念>内存缺页中断概念</h1><p>内存缺页中断（page fault）是一种由于程序试图访问的内存页不在物理内存中而产生的一种中断。这通常发生在以下几种情况：</p><ul><li>内存页在物理内存中不存在。当程序试图访问的内存页被交换（swapped）到硬盘上时，就会发生这种情况。在这种情况下，操作系统会将这个内存页从硬盘上交换回物理内存，然后让程序继续执行。</li><li>内存页存在，但是不在程序的地址空间中。当程序试图访问一个并未分配给它的内存地址时，就会发生这种情况。在这种情况下，操作系统通常会终止这个程序，因为这通常是程序的一个bug。</li><li>内存页存在，但是权限不匹配。当程序试图以一种并未被允许的方式（例如，写入一个只读的内存页）访问内存页时，就会发生这种情况。在这种情况下，操作系统通常会更改内存页的权限，或者终止这个程序。</li></ul><p>总的来说，内存缺页中断是操作系统虚拟内存管理的一部分。通过内存缺页中断，操作系统可以在有限的物理内存中运行需要更多内存的程序，以及保护程序之间不会相互干扰。</p><h1 id=内存缺页中断原因>内存缺页中断原因</h1><p>在Linux系统中，产生内存缺页中断的原因主要有以下几种：</p><ul><li>请求的页面不在内存中：Linux使用了虚拟内存机制，一部分内存数据会被交换到硬盘上，当程序试图访问的页面不在内存中，而在硬盘上时，就会触发缺页中断，此时，操作系统会从硬盘加载页面到内存中。</li><li>访问权限不符：当程序试图写入一个只读的内存页，或者试图访问一个没有访问权限的内存页时，也会触发缺页中断。这种情况下，Linux会根据具体情况，要么更改页面的访问权限，要么结束程序的运行。</li><li>地址未映射：当程序访问一个未被映射的内存地址时，也会触发缺页中断。这种情况通常是由于程序的bug，例如，使用了未初始化的指针。此时，Linux通常会结束程序的运行。</li><li>内存耗尽：当系统内存不足，无法分配新的内存页面时，也会触发缺页中断。在这种情况下，Linux会尝试释放一些不常用的内存页面，或者使用交换空间（swap space）来获取更多的内存。如果这些方法都无法解决问题，Linux可能会触发OOM（Out of Memory）机制，强制结束一些进程来释放内存。</li></ul><p>以上这些情况都可能引发内存缺页中断，系统会根据具体情况进行处理。</p><h1 id=内存缺页中断排查工具>内存缺页中断排查工具</h1><p>在Linux系统中，可以使用以下工具来帮助排查是否存在内存缺页中断：</p><ul><li>vmstat：vmstat是一个系统报告虚拟内存统计信息的工具。其中si和so列表示每秒从磁盘调入和换出内存的数量，这可以用来观察是否存在频繁的缺页中断。</li><li>sar：sar是一个系统性能工具，可以报告各种系统资源的使用情况。sar -B命令可以查看每秒发生的主存和交换空间的页面交换情况。</li><li>top/htop：这两个命令行工具可以实时查看系统和进程的资源使用情况，包括内存使用量、CPU使用率等，也可以查看进程的缺页中断情况。</li><li>perf：perf工具可以用来监控和分析系统和应用程序的性能，包括CPU使用情况、内存使用情况、缺页中断等。</li><li>dstat：dstat是一个用来查看所有系统资源的实时统计信息的工具，它可以查看磁盘I/O、网络、CPU、内存等资源的使用情况。</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~# vmstat <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>procs -----------memory---------- ---swap-- -----io---- -system-- ------cpu-----
+</span></span><span style=display:flex><span> r  b   swpd   free   buff  cache   si   so    bi    bo   in   cs us sy id wa st
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>3307124</span> <span style=color:#bd93f9>691580</span> <span style=color:#bd93f9>3891544</span>    <span style=color:#bd93f9>0</span>    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>1</span>     <span style=color:#bd93f9>8</span>    <span style=color:#bd93f9>1</span>    <span style=color:#bd93f9>1</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>3307148</span> <span style=color:#bd93f9>691580</span> <span style=color:#bd93f9>3891544</span>    <span style=color:#bd93f9>0</span>    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>553</span>  <span style=color:#bd93f9>205</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>3307148</span> <span style=color:#bd93f9>691580</span> <span style=color:#bd93f9>3891544</span>    <span style=color:#bd93f9>0</span>    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>567</span>  <span style=color:#bd93f9>269</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>3307084</span> <span style=color:#bd93f9>691580</span> <span style=color:#bd93f9>3891544</span>    <span style=color:#bd93f9>0</span>    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>562</span>  <span style=color:#bd93f9>235</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>  <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span> 
+</span></span><span style=display:flex><span><span style=color:#6272a4># Procs</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># r: 正在运行和等待运行的进程数量。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># b: 处在不可中断睡眠状态的进程数量。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># Memory</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># swpd: 使用的虚拟内存数量（以KB为单位）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># free: 空闲的物理内存数量（以KB为单位）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># buff: 用作缓冲的内存数量（以KB为单位）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># cache: 用作缓存的内存数量（以KB为单位）。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># Swap</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># si: 从磁盘换入内存的数量（以KB/s为单位）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># so: 从内存换出到磁盘的数量（以KB/s为单位）。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># IO</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># bi: 从块设备（如硬盘）读取的数据量（以块/秒为单位）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># bo: 写入块设备的数据量（以块/秒为单位）。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># System</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># in: 每秒的中断次数，包括时间中断。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># cs: 每秒的上下文切换次数。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># CPU</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># us: 用户进程的CPU时间百分比，不包括优先级调整的那部分。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># sy: 内核进程的CPU时间百分比。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># id: 空闲时间百分比。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># wa: 等待IO的CPU时间百分比。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># st: 被虚拟机偷走的CPU时间百分比（如果存在）。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-frllxehj:~# sar -B <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>Linux 5.10.0-051000-generic <span style=color:#ff79c6>(</span>instance-frllxehj<span style=color:#ff79c6>)</span>         02/28/2024      _x86_64_        <span style=color:#ff79c6>(</span><span style=color:#bd93f9>2</span> CPU<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>11:38:46 AM  pgpgin/s pgpgout/s   fault/s  majflt/s  pgfree/s pgscank/s pgscand/s pgsteal/s    %vmeff
+</span></span><span style=display:flex><span>11:38:47 AM      0.00     48.00    294.00      0.00    217.00      0.00      0.00      0.00      0.00
+</span></span><span style=display:flex><span>11:38:48 AM      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+</span></span><span style=display:flex><span>11:38:49 AM      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># pgpgin/s: 每秒从磁盘读取到内存的页面数。这通常发生在进程尝试访问它们的私有内存区域中的页面，但是发现页面并不在内存中，因此需要从磁盘中读取。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># pgpgout/s: 每秒从内存写回到磁盘的页面数。这通常发生在系统需要释放内存空间时，会选择一些内存中的页面写回到磁盘。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># fault/s: 每秒发生的总页故障数。页故障发生在进程访问到一个并不在内存中的页面时。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># majflt/s: 每秒发生的主要页故障数。主要页故障发生在处理页面故障需要从磁盘中读取数据时。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># pgfree/s: 操作系统每秒释放的页面数。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># pgscank/s: 每秒由kswapd守护进程扫描的页面数。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># pgscand/s: 每秒由直接页面扫描回收器扫描的页面数。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># pgsteal/s: 每秒被成功回收的页面数。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># %vmeff: 显示了页面回收的效率百分比，计算公式为100*pgsteal/(pgscand+pgscank)。</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-frllxehj:~# top
+</span></span><span style=display:flex><span>WARNING: perf not found <span style=color:#ff79c6>for</span> kernel 5.10.0-051000
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>top - 11:39:06 up <span style=color:#bd93f9>23</span> days, <span style=color:#bd93f9>25</span> min,  <span style=color:#bd93f9>2</span> users,  load average: 0.00, 0.00, 0.00
+</span></span><span style=display:flex><span>Tasks: <span style=color:#bd93f9>423</span> total,   <span style=color:#bd93f9>1</span> running, <span style=color:#bd93f9>422</span> sleeping,   <span style=color:#bd93f9>0</span> stopped,   <span style=color:#bd93f9>0</span> zombie
+</span></span><span style=display:flex><span>%Cpu<span style=color:#ff79c6>(</span>s<span style=color:#ff79c6>)</span>:  0.2 us,  0.2 sy,  0.0 ni, 99.7 id,  0.0 wa,  0.0 hi,  0.0 si,  0.0 st
+</span></span><span style=display:flex><span>MiB Mem :  6.9/7953.2   <span style=color:#ff79c6>[||||||</span>|                                                                                             <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>MiB Swap:  0.0/0.0      <span style=color:#ff79c6>[</span>                                                                                                    <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>    PID USER      PR  NI    VIRT    RES    SHR S  %CPU  %MEM     TIME+ COMMAND                                                                                                        
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>817172</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> I   0.3   0.0   0:07.84 kworker/0:0-mm_percpu_wq                                                                                       
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>839275</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>13916</span>   <span style=color:#bd93f9>8912</span>   <span style=color:#bd93f9>7456</span> S   0.3   0.1   0:00.04 sshd                                                                                                           
+</span></span><span style=display:flex><span> <span style=color:#bd93f9>840314</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>15216</span>   <span style=color:#bd93f9>4084</span>   <span style=color:#bd93f9>3284</span> R   0.3   0.1   0:00.01 top                                                                                                            
+</span></span><span style=display:flex><span>      <span style=color:#bd93f9>1</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>  <span style=color:#bd93f9>103600</span>  <span style=color:#bd93f9>12780</span>   <span style=color:#bd93f9>8544</span> S   0.0   0.2   0:15.80 systemd                                                                                                        
+</span></span><span style=display:flex><span>      <span style=color:#bd93f9>2</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> S   0.0   0.0   0:00.17 kthreadd                                                                                                       
+</span></span><span style=display:flex><span>      <span style=color:#bd93f9>3</span> root       <span style=color:#bd93f9>0</span> -20       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> I   0.0   0.0   0:00.00 rcu_gp                                                                                                         
+</span></span><span style=display:flex><span>      <span style=color:#bd93f9>4</span> root       <span style=color:#bd93f9>0</span> -20       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> I   0.0   0.0   0:00.00 rcu_par_gp                                                                                                     
+</span></span><span style=display:flex><span>      <span style=color:#bd93f9>6</span> root       <span style=color:#bd93f9>0</span> -20       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> I   0.0   0.0   0:00.00 kworker/0:0H-kblockd                                                                                           
+</span></span><span style=display:flex><span>      <span style=color:#bd93f9>9</span> root       <span style=color:#bd93f9>0</span> -20       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> I   0.0   0.0   0:00.00 mm_percpu_wq                                                                                                   
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>10</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> S   0.0   0.0   0:01.01 ksoftirqd/0                                                                                                    
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>11</span> root      <span style=color:#bd93f9>20</span>   <span style=color:#bd93f9>0</span>       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> I   0.0   0.0   0:21.87 rcu_sched                                                                                                      
+</span></span><span style=display:flex><span>     <span style=color:#bd93f9>12</span> root      rt   <span style=color:#bd93f9>0</span>       <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> S   0.0   0.0   0:01.07 migration/0            
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># PID：进程标识符（Process ID），是一个唯一标识进程的数字。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># USER：运行该进程的用户的用户名。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># PR：进程的优先级。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># NI：进程的&#34;nice&#34;值。这是一个用户可以控制的值，用来调整进程的优先级。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># VIRT：进程使用的虚拟内存总量，单位是kb。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># RES：进程使用的、未被交换出去的物理内存大小，单位是kb。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># SHR：进程使用的共享内存大小，单位是kb。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># S：进程的状态。常见的状态有：S（休眠），R（运行），Z（僵尸进程），T（跟踪/停止进程），D（不可中断的睡眠状态）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># %CPU：进程使用的CPU时间百分比。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># %MEM：进程使用的物理内存百分比。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># TIME+：进程使用的CPU时间总计，单位是秒。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># COMMAND：启动进程的命令行命令。</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>root@instance-frllxehj:~# dstat
+</span></span><span style=display:flex><span>You did not <span style=color:#ff79c6>select</span> any stats, using -cdngy by default.
+</span></span><span style=display:flex><span>--total-cpu-usage-- -dsk/total- -net/total- ---paging-- ---system--
+</span></span><span style=display:flex><span>usr sys idl wai stl| <span style=color:#8be9fd;font-style:italic>read</span>  writ| recv  send|  in   out | int   csw 
+</span></span><span style=display:flex><span>  <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>   <span style=color:#bd93f9>0</span>   0|1240B   15k|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> |   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | <span style=color:#bd93f9>564</span>   <span style=color:#bd93f9>240</span> 
+</span></span><span style=display:flex><span>  <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>   <span style=color:#bd93f9>0</span>   0|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | 288B  852B|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | <span style=color:#bd93f9>560</span>   <span style=color:#bd93f9>246</span> 
+</span></span><span style=display:flex><span>  <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>   <span style=color:#bd93f9>0</span>   0|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | 330B  504B|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | <span style=color:#bd93f9>559</span>   <span style=color:#bd93f9>201</span> 
+</span></span><span style=display:flex><span>  <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>   <span style=color:#bd93f9>0</span>   0|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | 552B  880B|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | <span style=color:#bd93f9>561</span>   <span style=color:#bd93f9>228</span> 
+</span></span><span style=display:flex><span>  <span style=color:#bd93f9>0</span>   <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>100</span>   <span style=color:#bd93f9>0</span>   0|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | 222B  388B|   <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span> | <span style=color:#bd93f9>556</span>   <span style=color:#bd93f9>219</span>
+</span></span><span style=display:flex><span>  
+</span></span><span style=display:flex><span><span style=color:#6272a4># –total-cpu-usage–：显示CPU的使用情况，包含用户空间使用量（usr），系统空间使用量（sys），空闲时间（idl），等待I/O的时间（wait），硬件中断（hiq）和软件中断（siq）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># -dsk/total-：显示磁盘的使用情况，包含读取（read）和写入（writ）的数据量。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># -net/total-：显示网络的使用情况，包含接收（recv）和发送（send）的数据量。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># —paging–：显示页面交换情况，包含从磁盘读入（in）和写入到磁盘的页面（out）。</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># —system–：显示系统级别的统计，包含中断（int）和上下文切换（csw）的次数。</span>
+</span></span></code></pre></div><h1 id=内存缺页中断流程>内存缺页中断流程</h1><p>本次流程分析以内核 5.10 版本为准，可参见<a href=https://elixir.bootlin.com/linux/v5.10/source/arch/arm/mm/fault.c#L240>fault.c#L240</a> 。缺页异常处理首先是用do_page_fault()函数读取缺页的虚地址，如果没有找到则访问了非法虚地址，将会发出SIGSEGV信号终止当前进程。否则进行缺页类型检查，地址越界或者段错误同样终止此次进程。
+do_page_fault 源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>// 具体见 https://elixir.bootlin.com/linux/v5.10/source/arch/arm/mm/fault.c#L240
+</span></span><span style=display:flex><span>static int __kprobes
+</span></span><span style=display:flex><span>do_page_fault<span style=color:#ff79c6>(</span>unsigned long addr, unsigned int fsr, struct pt_regs *regs<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    // 入参：regs: 指向保存在堆栈中的寄存器；
+</span></span><span style=display:flex><span>    // code: 异常的错误码
+</span></span><span style=display:flex><span>	struct task_struct *tsk;
+</span></span><span style=display:flex><span>	struct mm_struct *mm;
+</span></span><span style=display:flex><span>	int sig, code;
+</span></span><span style=display:flex><span>	vm_fault_t fault;
+</span></span><span style=display:flex><span>	unsigned int <span style=color:#8be9fd;font-style:italic>flags</span> <span style=color:#ff79c6>=</span> FAULT_FLAG_DEFAULT;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>kprobe_page_fault<span style=color:#ff79c6>(</span>regs, fsr<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>tsk</span> <span style=color:#ff79c6>=</span> current;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>mm</span>  <span style=color:#ff79c6>=</span> tsk-&gt;mm;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* Enable interrupts <span style=color:#ff79c6>if</span> they were enabled in the parent context. */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>interrupts_enabled<span style=color:#ff79c6>(</span>regs<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		local_irq_enable<span style=color:#ff79c6>()</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * If we<span style=color:#f1fa8c>&#39;re in an interrupt or have no user
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * context, we must not take the fault..
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    // 判断当前状态是否处于中断上下文或者禁止抢占，如果是跳转到no_context；
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    // 如果当前进程没有mm，说明是一个内核线程，跳转到no_context；
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (faulthandler_disabled() || !mm)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		goto no_context;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (user_mode(regs))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		flags |= FAULT_FLAG_USER;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if ((fsr &amp; FSR_WRITE) &amp;&amp; !(fsr &amp; FSR_CM))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		flags |= FAULT_FLAG_WRITE;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS, 1, regs, addr);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * As per x86, we may deadlock here.  However, since the kernel only
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * validly references user space from well defined areas of the code,
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * we can bug out early if this is from code which shouldn&#39;</span>t.
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!mmap_read_trylock<span style=color:#ff79c6>(</span>mm<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        // 获取锁失败，如果在内核态且在exception table查询不到该地址，则跳转到no_context 
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!user_mode<span style=color:#ff79c6>(</span>regs<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> !search_exception_tables<span style=color:#ff79c6>(</span>regs-&gt;ARM_pc<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>			goto no_context;
+</span></span><span style=display:flex><span>retry:
+</span></span><span style=display:flex><span>        // 用户态则睡眠等待锁持有者释放锁
+</span></span><span style=display:flex><span>		mmap_read_lock<span style=color:#ff79c6>(</span>mm<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * The above down_read_trylock<span style=color:#ff79c6>()</span> might have succeeded in
+</span></span><span style=display:flex><span>		 * which <span style=color:#ff79c6>case</span>, we<span style=color:#f1fa8c>&#39;ll have missed the might_sleep() from
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * down_read()
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		might_sleep();
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>#ifdef CONFIG_DEBUG_VM
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		if (!user_mode(regs) &amp;&amp;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		    !search_exception_tables(regs-&gt;ARM_pc))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			goto no_context;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>#endif
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	fault = __do_page_fault(mm, addr, fsr, flags, tsk, regs);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/* If we need to retry but a fatal signal is pending, handle the
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * signal first. We do not need to release the mmap_lock because
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * it would already be released in __lock_page_or_retry in
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * mm/filemap.c. */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (fault_signal_pending(fault, regs)) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		if (!user_mode(regs))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			goto no_context;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		return 0;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (!(fault &amp; VM_FAULT_ERROR) &amp;&amp; flags &amp; FAULT_FLAG_ALLOW_RETRY) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		if (fault &amp; VM_FAULT_RETRY) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			flags |= FAULT_FLAG_TRIED;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			goto retry;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	mmap_read_unlock(mm);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * Handle the &#34;normal&#34; case first - VM_FAULT_MAJOR
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    // 如果没有返回(VM_FAULT_ERROR | VM_FAULT_BADMAP | VM_FAULT_BADACCESS)，则缺页中断处理完成
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (likely(!(fault &amp; (VM_FAULT_ERROR | VM_FAULT_BADMAP | VM_FAULT_BADACCESS))))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		return 0;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * If we are in kernel mode at this point, we
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * have no context to handle this fault with.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (!user_mode(regs))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		goto no_context;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (fault &amp; VM_FAULT_OOM) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        // 如果错误类型为OOM，则当前系统无足够内存，触发OOM机制
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * We ran out of memory, call the OOM killer, and return to
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * userspace (which will retry the fault, or kill us if we
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * got oom-killed)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		pagefault_out_of_memory();
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		return 0;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (fault &amp; VM_FAULT_SIGBUS) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * We had some memory, but were unable to
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * successfully fix up this page fault.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		sig = SIGBUS;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		code = BUS_ADRERR;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	} else {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * Something tried to access memory that
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * isn&#39;</span>t in our memory map..
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>sig</span> <span style=color:#ff79c6>=</span> SIGSEGV;
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>code</span> <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>fault</span> <span style=color:#ff79c6>==</span> VM_FAULT_BADACCESS ?
+</span></span><span style=display:flex><span>			SEGV_ACCERR : SEGV_MAPERR;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    // 给用户进程发送信号，错误内核无法妥善处理
+</span></span><span style=display:flex><span>	__do_user_fault<span style=color:#ff79c6>(</span>addr, fsr, sig, code, regs<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>no_context:
+</span></span><span style=display:flex><span>    // 错误发生在内核态；发送oops错误
+</span></span><span style=display:flex><span>	__do_kernel_fault<span style=color:#ff79c6>(</span>mm, addr, fsr, regs<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>#else					/* CONFIG_MMU */</span>
+</span></span><span style=display:flex><span>static int
+</span></span><span style=display:flex><span>do_page_fault<span style=color:#ff79c6>(</span>unsigned long addr, unsigned int fsr, struct pt_regs *regs<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#6272a4>#endif					/* CONFIG_MMU */</span>
+</span></span></code></pre></div><p>__do_page_fault 处理页面异常具体函数，处理页错误，源码如下所示：</p><ul><li>通过find_vma查找虚拟地址addr后的最近vma，如果没找到，则方位地址错误，因为它不在所分配的任何一个vma线性区；</li><li>如果找到vma，但addr并未落入这个区间，则可能是栈中vma；</li><li>经检查一切正常后，调用handle_mm_fault分配物理页框</li><li>异常情况：VM_FAULT_BADACCESS，严重错误，内核会直接kill该进程；</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>static vm_fault_t __kprobes
+</span></span><span style=display:flex><span>__do_page_fault<span style=color:#ff79c6>(</span>struct mm_struct *mm, unsigned long addr, unsigned int fsr,
+</span></span><span style=display:flex><span>		unsigned int flags, struct task_struct *tsk,
+</span></span><span style=display:flex><span>		struct pt_regs *regs<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	struct vm_area_struct *vma;
+</span></span><span style=display:flex><span>	vm_fault_t fault;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 搜索出现异常的地址前向最近的的vma
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>vma</span> <span style=color:#ff79c6>=</span> find_vma<span style=color:#ff79c6>(</span>mm, addr<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>fault</span> <span style=color:#ff79c6>=</span> VM_FAULT_BADMAP;
+</span></span><span style=display:flex><span>    // 如果vma为NULL，说明addr之后没有vma，所以这个addr是个错误地址
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>!vma<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		goto out;
+</span></span><span style=display:flex><span>    // 如果addr之后有vma，但不包含addr，不能断定addr是错误地址，还需检查
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>vma-&gt;vm_start &gt; addr<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		goto check_stack;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * Ok, we have a good vm_area <span style=color:#ff79c6>for</span> this
+</span></span><span style=display:flex><span>	 * memory access, so we can handle it.
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>good_area:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>access_error<span style=color:#ff79c6>(</span>fsr, vma<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>fault</span> <span style=color:#ff79c6>=</span> VM_FAULT_BADACCESS;
+</span></span><span style=display:flex><span>		goto out;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    // 分配新页
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> handle_mm_fault<span style=color:#ff79c6>(</span>vma, addr &amp; PAGE_MASK, flags, regs<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>check_stack:
+</span></span><span style=display:flex><span>   	 // addr后面的vma的vm_flags含有VM_GROWSDOWN标志，说明这个vma属于栈的vma
+</span></span><span style=display:flex><span>	 // 即addr在栈中，有可能是栈空间不够时再进栈导致的访问错误
+</span></span><span style=display:flex><span>	 // 同时检查栈是否还能扩展，如果不能扩展则确认确实是栈溢出导致，即addr确实是栈中地址，不是非法地址
+</span></span><span style=display:flex><span>	 // 应进入缺页中断请求
+</span></span><span style=display:flex><span>	/* Don&#39;t allow expansion below FIRST_USER_ADDRESS */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vma-&gt;vm_flags &amp; VM_GROWSDOWN <span style=color:#ff79c6>&amp;&amp;</span>
+</span></span><span style=display:flex><span>	    addr &gt;<span style=color:#ff79c6>=</span> FIRST_USER_ADDRESS <span style=color:#ff79c6>&amp;&amp;</span> !expand_stack<span style=color:#ff79c6>(</span>vma, addr<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		goto good_area;
+</span></span><span style=display:flex><span>out:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> fault;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>如果虚存区访问权限与引起缺页异常访问类型匹配，引入handle_mm_fault()函数实现页面分配与交换，触发缺页异常的地址address分配各级的页目录，那么每个address就会拥有配对的pte， __handle_mm_fault核心处理函数。</p><ul><li>如果被访问的页不在内存，那么内核就会分配一个新的页面并适当初始化即请求调页。</li><li>如果被访问的页在内存中但是被标记为可读，也就是已经被存放在一个页面中，那么内核就会分配一个新的页面，并将旧页面数据复制到新的页面即写时复制。</li></ul><p>handle_mm_fault 源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * By the <span style=color:#8be9fd;font-style:italic>time</span> we get here, we already hold the mm semaphore
+</span></span><span style=display:flex><span> *
+</span></span><span style=display:flex><span> * The mmap_lock may have been released depending on flags and our
+</span></span><span style=display:flex><span> * <span style=color:#ff79c6>return</span> value.  See filemap_fault<span style=color:#ff79c6>()</span> and __lock_page_or_retry<span style=color:#ff79c6>()</span>.
+</span></span><span style=display:flex><span> */
+</span></span><span style=display:flex><span>// 为引发缺页的进程分配一个物理页框
+</span></span><span style=display:flex><span>vm_fault_t handle_mm_fault<span style=color:#ff79c6>(</span>struct vm_area_struct *vma, unsigned long address,
+</span></span><span style=display:flex><span>			   unsigned int flags, struct pt_regs *regs<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	vm_fault_t ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	__set_current_state<span style=color:#ff79c6>(</span>TASK_RUNNING<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	count_vm_event<span style=color:#ff79c6>(</span>PGFAULT<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	count_memcg_event_mm<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, PGFAULT<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* <span style=color:#ff79c6>do</span> counter updates before entering really critical section. */
+</span></span><span style=display:flex><span>	check_sync_rss_stat<span style=color:#ff79c6>(</span>current<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // /* 
+</span></span><span style=display:flex><span>	//  * 1. vma向下增长，且addr<span style=color:#ff79c6>==</span>vma-&gt;vm_start，则要向下扩展一页保护页
+</span></span><span style=display:flex><span>	//  * 2. vma向上增长，且addr<span style=color:#ff79c6>==</span>vma-&gt;end，则要向上扩展一页保护页
+</span></span><span style=display:flex><span>	//  */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!arch_vma_access_permitted<span style=color:#ff79c6>(</span>vma, flags &amp; FAULT_FLAG_WRITE,
+</span></span><span style=display:flex><span>					    flags &amp; FAULT_FLAG_INSTRUCTION,
+</span></span><span style=display:flex><span>					    flags &amp; FAULT_FLAG_REMOTE<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_SIGSEGV;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * Enable the memcg OOM handling <span style=color:#ff79c6>for</span> faults triggered in user
+</span></span><span style=display:flex><span>	 * space.  Kernel faults are handled more gracefully.
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>flags &amp; FAULT_FLAG_USER<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		mem_cgroup_enter_user_fault<span style=color:#ff79c6>()</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 如果开启了巨页，则使用hugetlb_fault分配内存
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>is_vm_hugetlb_page<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>)))</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> hugetlb_fault<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vma, address, flags<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>else</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> __handle_mm_fault<span style=color:#ff79c6>(</span>vma, address, flags<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>flags &amp; FAULT_FLAG_USER<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		mem_cgroup_exit_user_fault<span style=color:#ff79c6>()</span>;
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * The task may have entered a memcg OOM situation but
+</span></span><span style=display:flex><span>		 * <span style=color:#ff79c6>if</span> the allocation error was handled gracefully <span style=color:#ff79c6>(</span>no
+</span></span><span style=display:flex><span>		 * VM_FAULT_OOM<span style=color:#ff79c6>)</span>, there is no need to <span style=color:#8be9fd;font-style:italic>kill</span> anything.
+</span></span><span style=display:flex><span>		 * Just clean up the OOM state peacefully.
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>task_in_memcg_oom<span style=color:#ff79c6>(</span>current<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> !<span style=color:#ff79c6>(</span>ret &amp; VM_FAULT_OOM<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>			mem_cgroup_oom_synchronize<span style=color:#ff79c6>(</span><span style=color:#8be9fd;font-style:italic>false</span><span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	mm_account_fault<span style=color:#ff79c6>(</span>regs, address, flags, ret<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>在__handle_mm_fault中依次查找或创建页表，直到pte项，最后调用handle_pte_fault来处理，__handle_mm_fault 源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * By the <span style=color:#8be9fd;font-style:italic>time</span> we get here, we already hold the mm semaphore
+</span></span><span style=display:flex><span> *
+</span></span><span style=display:flex><span> * The mmap_lock may have been released depending on flags and our
+</span></span><span style=display:flex><span> * <span style=color:#ff79c6>return</span> value.  See filemap_fault<span style=color:#ff79c6>()</span> and __lock_page_or_retry<span style=color:#ff79c6>()</span>.
+</span></span><span style=display:flex><span> */
+</span></span><span style=display:flex><span>static vm_fault_t __handle_mm_fault<span style=color:#ff79c6>(</span>struct vm_area_struct *vma,
+</span></span><span style=display:flex><span>		unsigned long address, unsigned int flags<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	struct vm_fault <span style=color:#8be9fd;font-style:italic>vmf</span> <span style=color:#ff79c6>=</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		.vma <span style=color:#ff79c6>=</span> vma,
+</span></span><span style=display:flex><span>		.address <span style=color:#ff79c6>=</span> address &amp; PAGE_MASK,
+</span></span><span style=display:flex><span>		.flags <span style=color:#ff79c6>=</span> flags,
+</span></span><span style=display:flex><span>		.pgoff <span style=color:#ff79c6>=</span> linear_page_index<span style=color:#ff79c6>(</span>vma, address<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>		.gfp_mask <span style=color:#ff79c6>=</span> __get_fault_gfp_mask<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>;
+</span></span><span style=display:flex><span>	unsigned int <span style=color:#8be9fd;font-style:italic>dirty</span> <span style=color:#ff79c6>=</span> flags &amp; FAULT_FLAG_WRITE;
+</span></span><span style=display:flex><span>	struct mm_struct *mm <span style=color:#ff79c6>=</span> vma-&gt;vm_mm;
+</span></span><span style=display:flex><span>	pgd_t *pgd;
+</span></span><span style=display:flex><span>	p4d_t *p4d;
+</span></span><span style=display:flex><span>	vm_fault_t ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 获取addr对应在当前进程页表的PGD页面目录项
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>pgd</span> <span style=color:#ff79c6>=</span> pgd_offset<span style=color:#ff79c6>(</span>mm, address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>p4d</span> <span style=color:#ff79c6>=</span> p4d_alloc<span style=color:#ff79c6>(</span>mm, pgd, address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!p4d<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	vmf.pud <span style=color:#ff79c6>=</span> pud_alloc<span style=color:#ff79c6>(</span>mm, p4d, address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!vmf.pud<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span>retry_pud:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pud_none<span style=color:#ff79c6>(</span>*vmf.pud<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> __transparent_hugepage_enabled<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> create_huge_pud<span style=color:#ff79c6>(</span>&amp;vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>ret &amp; VM_FAULT_FALLBACK<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		pud_t <span style=color:#8be9fd;font-style:italic>orig_pud</span> <span style=color:#ff79c6>=</span> *vmf.pud;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		barrier<span style=color:#ff79c6>()</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pud_trans_huge<span style=color:#ff79c6>(</span>orig_pud<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>||</span> pud_devmap<span style=color:#ff79c6>(</span>orig_pud<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			/* NUMA <span style=color:#ff79c6>case</span> <span style=color:#ff79c6>for</span> anonymous PUDs would go here */
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>dirty <span style=color:#ff79c6>&amp;&amp;</span> !pud_write<span style=color:#ff79c6>(</span>orig_pud<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> wp_huge_pud<span style=color:#ff79c6>(</span>&amp;vmf, orig_pud<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>ret &amp; VM_FAULT_FALLBACK<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				huge_pud_set_accessed<span style=color:#ff79c6>(</span>&amp;vmf, orig_pud<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 获取对应的PUD表项，如果PUD表项为空，则返回VM_FAULT_OOM错误
+</span></span><span style=display:flex><span>	vmf.pmd <span style=color:#ff79c6>=</span> pmd_alloc<span style=color:#ff79c6>(</span>mm, vmf.pud, address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!vmf.pmd<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* Huge pud page fault raced with pmd_alloc? */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pud_trans_unstable<span style=color:#ff79c6>(</span>vmf.pud<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		goto retry_pud;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pmd_none<span style=color:#ff79c6>(</span>*vmf.pmd<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> __transparent_hugepage_enabled<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> create_huge_pmd<span style=color:#ff79c6>(</span>&amp;vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>ret &amp; VM_FAULT_FALLBACK<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		pmd_t <span style=color:#8be9fd;font-style:italic>orig_pmd</span> <span style=color:#ff79c6>=</span> *vmf.pmd;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		barrier<span style=color:#ff79c6>()</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>is_swap_pmd<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>)))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			VM_BUG_ON<span style=color:#ff79c6>(</span>thp_migration_supported<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>&amp;&amp;</span>
+</span></span><span style=display:flex><span>					  !is_pmd_migration_entry<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>))</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>is_pmd_migration_entry<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>				pmd_migration_entry_wait<span style=color:#ff79c6>(</span>mm, vmf.pmd<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pmd_trans_huge<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>||</span> pmd_devmap<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pmd_protnone<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> vma_is_accessible<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> do_huge_pmd_numa_page<span style=color:#ff79c6>(</span>&amp;vmf, orig_pmd<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>dirty <span style=color:#ff79c6>&amp;&amp;</span> !pmd_write<span style=color:#ff79c6>(</span>orig_pmd<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> wp_huge_pmd<span style=color:#ff79c6>(</span>&amp;vmf, orig_pmd<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>ret &amp; VM_FAULT_FALLBACK<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				huge_pmd_set_accessed<span style=color:#ff79c6>(</span>&amp;vmf, orig_pmd<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> handle_pte_fault<span style=color:#ff79c6>(</span>&amp;vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>handle_pte_fault 源码如下所示：</p><ul><li>根据页表项pte所描述的物理页框是否在物理内存中，分为两大类，由pte_present(*pte)区分。</li><li>调页请求(物理页不存在)：分配一个页框，根据pte页表项是否为空分为两种情况：<ul><li>pte为空：pte中尚未写入物理地址，文件映射缺页中断、匿名映射缺页中断。</li><li>pte不为空，但(PTE_VALID | PTE_PROT_NONE)未置位：相关物理地址已经被交换到外存。</li></ul></li><li>写时复制(物理页存在)：被访问的页存在，但该页是只读，内核需要对该页进行写操作；则此时内核将这个已存在的只读页中数据复制到一个新页框中。</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * These routines also need to handle stuff like marking pages dirty
+</span></span><span style=display:flex><span> * and/or accessed <span style=color:#ff79c6>for</span> architectures that don<span style=color:#f1fa8c>&#39;t do it in hardware (most
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * RISC architectures).  The early dirtying is also good on the i386.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> *
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * There is also a hook called &#34;update_mmu_cache()&#34; that architectures
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * with external mmu caches can use to update those (ie the Sparc or
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * PowerPC hashed page tables that act as extended TLBs).
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> *
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * We enter with non-exclusive mmap_lock (to exclude vma changes, but allow
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * concurrent faults).
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> *
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * The mmap_lock may have been released depending on flags and our return value.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * See filemap_fault() and __lock_page_or_retry().
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>static vm_fault_t handle_pte_fault(struct vm_fault *vmf)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>{
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	pte_t entry;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (unlikely(pmd_none(*vmf-&gt;pmd))) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * Leave __pte_alloc() until later: because vm_ops-&gt;fault may
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * want to allocate huge page, and if we expose page table
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * for an instant, it will be difficult to retract from
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * concurrent faults and from rmap lookups.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		vmf-&gt;pte = NULL;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	} else {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/* See comment in pte_alloc_one_map() */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		if (pmd_devmap_trans_unstable(vmf-&gt;pmd))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			return 0;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * A regular pmd is established and it can&#39;</span>t morph into a huge
+</span></span><span style=display:flex><span>		 * pmd from under us anymore at this point because we hold the
+</span></span><span style=display:flex><span>		 * mmap_lock <span style=color:#8be9fd;font-style:italic>read</span> mode and khugepaged takes it in write mode.
+</span></span><span style=display:flex><span>		 * So now it&#39;s safe to run pte_offset_map<span style=color:#ff79c6>()</span>.
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		vmf-&gt;pte <span style=color:#ff79c6>=</span> pte_offset_map<span style=color:#ff79c6>(</span>vmf-&gt;pmd, vmf-&gt;address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		vmf-&gt;orig_pte <span style=color:#ff79c6>=</span> *vmf-&gt;pte;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * some architectures can have larger ptes than wordsize,
+</span></span><span style=display:flex><span>		 * e.g.ppc44x-defconfig has <span style=color:#8be9fd;font-style:italic>CONFIG_PTE_64BIT</span><span style=color:#ff79c6>=</span>y and
+</span></span><span style=display:flex><span>		 * <span style=color:#8be9fd;font-style:italic>CONFIG_32BIT</span><span style=color:#ff79c6>=</span>y, so READ_ONCE cannot guarantee atomic
+</span></span><span style=display:flex><span>		 * accesses.  The code below just needs a consistent view
+</span></span><span style=display:flex><span>		 * <span style=color:#ff79c6>for</span> the ifs and we later double check anyway with the
+</span></span><span style=display:flex><span>		 * ptl lock held. So here a barrier will <span style=color:#ff79c6>do</span>.
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>        // pte表项不同处理器可能会大于word size， 此时READ_ONCE和ACCESS_ONCE不保证访问原子性，因此需要内存屏障以保证正确读取了pte表项内容
+</span></span><span style=display:flex><span>        
+</span></span><span style=display:flex><span>		barrier<span style=color:#ff79c6>()</span>;
+</span></span><span style=display:flex><span>        // 说明尚未写入任何物理地址 
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pte_none<span style=color:#ff79c6>(</span>vmf-&gt;orig_pte<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			pte_unmap<span style=color:#ff79c6>(</span>vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			vmf-&gt;pte <span style=color:#ff79c6>=</span> NULL;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!vmf-&gt;pte<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vma_is_anonymous<span style=color:#ff79c6>(</span>vmf-&gt;vma<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>            // 匿名映射缺页中断，最终会调用alloc_pages从伙伴系统分配页面
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> do_anonymous_page<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>else</span>
+</span></span><span style=display:flex><span>            // 如果该vma定义了操作函数集合，说明是文件映射页面缺页中断，将调用do_fault分配物理页
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> do_fault<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    // PTE_PRESENT没有置位，说明pte实际指向的物理地址不存在，可能是调页请求有两种情况：
+</span></span><span style=display:flex><span>	// 1. *pte为空；
+</span></span><span style=display:flex><span>	// 2. *pte不为空，但是<span style=color:#ff79c6>(</span>PTE_VALID | PTE_PROT_NONE<span style=color:#ff79c6>)</span>标志位未置位
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!pte_present<span style=color:#ff79c6>(</span>vmf-&gt;orig_pte<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> do_swap_page<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 到这应该是写时复制触发的缺页中断；即被访问的页面不可写，有两种情况：
+</span></span><span style=display:flex><span>    // 1. 之前给vma映射的是零页<span style=color:#ff79c6>(</span>zero-pfn<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    // 2. 访问fork得到的进程空间<span style=color:#ff79c6>(</span>子进程、父进程共享父进程的内存，均为只读页<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pte_protnone<span style=color:#ff79c6>(</span>vmf-&gt;orig_pte<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> vma_is_accessible<span style=color:#ff79c6>(</span>vmf-&gt;vma<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> do_numa_page<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	vmf-&gt;ptl <span style=color:#ff79c6>=</span> pte_lockptr<span style=color:#ff79c6>(</span>vmf-&gt;vma-&gt;vm_mm, vmf-&gt;pmd<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	spin_lock<span style=color:#ff79c6>(</span>vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> vmf-&gt;orig_pte;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>!pte_same<span style=color:#ff79c6>(</span>*vmf-&gt;pte, entry<span style=color:#ff79c6>)))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		update_mmu_tlb<span style=color:#ff79c6>(</span>vmf-&gt;vma, vmf-&gt;address, vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		goto unlock;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    // 写操作时发生的缺页异常
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        // 第二种情况：pte页表项标识不可写，引发COW
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!pte_write<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>            // 进行写时复制操作
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> do_wp_page<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>        // vma映射的是zero-pfn，设置pte_dirty位，标识页内容已被修改
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> pte_mkdirty<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    // 设置访问位，通常是_PAGE_ACCESSD
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> pte_mkyoung<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>ptep_set_access_flags<span style=color:#ff79c6>(</span>vmf-&gt;vma, vmf-&gt;address, vmf-&gt;pte, entry,
+</span></span><span style=display:flex><span>				vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        // pte内容发生变化，需要把新的内容写入pte页表项中，并刷新TLB和cache 
+</span></span><span style=display:flex><span>		update_mmu_cache<span style=color:#ff79c6>(</span>vmf-&gt;vma, vmf-&gt;address, vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		/* Skip spurious TLB flush <span style=color:#ff79c6>for</span> retried page fault */
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vmf-&gt;flags &amp; FAULT_FLAG_TRIED<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>			goto unlock;
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * This is needed only <span style=color:#ff79c6>for</span> protection faults but the arch code
+</span></span><span style=display:flex><span>		 * is not yet telling us <span style=color:#ff79c6>if</span> this is a protection fault or not.
+</span></span><span style=display:flex><span>		 * This still avoids useless tlb flushes <span style=color:#ff79c6>for</span> .text page faults
+</span></span><span style=display:flex><span>		 * with threads.
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>			flush_tlb_fix_spurious_fault<span style=color:#ff79c6>(</span>vmf-&gt;vma, vmf-&gt;address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>unlock:
+</span></span><span style=display:flex><span>	pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>文件映射缺页中断处理函数，do_fault 源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * We enter with non-exclusive mmap_lock <span style=color:#ff79c6>(</span>to exclude vma changes,
+</span></span><span style=display:flex><span> * but allow concurrent faults<span style=color:#ff79c6>)</span>.
+</span></span><span style=display:flex><span> * The mmap_lock may have been released depending on flags and our
+</span></span><span style=display:flex><span> * <span style=color:#ff79c6>return</span> value.  See filemap_fault<span style=color:#ff79c6>()</span> and __lock_page_or_retry<span style=color:#ff79c6>()</span>.
+</span></span><span style=display:flex><span> * If mmap_lock is released, vma may become invalid <span style=color:#ff79c6>(</span><span style=color:#ff79c6>for</span> example
+</span></span><span style=display:flex><span> * by other thread calling munmap<span style=color:#ff79c6>())</span>.
+</span></span><span style=display:flex><span> */
+</span></span><span style=display:flex><span>static vm_fault_t do_fault<span style=color:#ff79c6>(</span>struct vm_fault *vmf<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	struct vm_area_struct *vma <span style=color:#ff79c6>=</span> vmf-&gt;vma;
+</span></span><span style=display:flex><span>	struct mm_struct *vm_mm <span style=color:#ff79c6>=</span> vma-&gt;vm_mm;
+</span></span><span style=display:flex><span>	vm_fault_t ret;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * The VMA was not fully populated on mmap<span style=color:#ff79c6>()</span> or missing VM_DONTEXPAND
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!vma-&gt;vm_ops-&gt;fault<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * If we find a migration pmd entry or a none pmd entry, which
+</span></span><span style=display:flex><span>		 * should never happen, <span style=color:#ff79c6>return</span> SIGBUS
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>!pmd_present<span style=color:#ff79c6>(</span>*vmf-&gt;pmd<span style=color:#ff79c6>)))</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_SIGBUS;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			vmf-&gt;pte <span style=color:#ff79c6>=</span> pte_offset_map_lock<span style=color:#ff79c6>(</span>vmf-&gt;vma-&gt;vm_mm,
+</span></span><span style=display:flex><span>						       vmf-&gt;pmd,
+</span></span><span style=display:flex><span>						       vmf-&gt;address,
+</span></span><span style=display:flex><span>						       &amp;vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			/*
+</span></span><span style=display:flex><span>			 * Make sure this is not a temporary clearing of pte
+</span></span><span style=display:flex><span>			 * by holding ptl and checking again. A R/M/W update
+</span></span><span style=display:flex><span>			 * of pte involves: take ptl, clearing the pte so that
+</span></span><span style=display:flex><span>			 * we don&#39;t have concurrent modification by hardware
+</span></span><span style=display:flex><span>			 * followed by an update.
+</span></span><span style=display:flex><span>			 */
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>pte_none<span style=color:#ff79c6>(</span>*vmf-&gt;pte<span style=color:#ff79c6>)))</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_SIGBUS;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>else</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_NOPAGE;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>        // 如果为读中断
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> do_read_fault<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>vma-&gt;vm_flags &amp; VM_SHARED<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>        // 没有定义VM_SHARED, 是一个私有映射且发生了写时复制
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> do_cow_fault<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>else</span>
+</span></span><span style=display:flex><span>        // 共享映射中发生了缺页异常
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> do_shared_fault<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* preallocated pagetable is unused: free it */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vmf-&gt;prealloc_pte<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		pte_free<span style=color:#ff79c6>(</span>vm_mm, vmf-&gt;prealloc_pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		vmf-&gt;prealloc_pte <span style=color:#ff79c6>=</span> NULL;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>匿名页缺页中断，一般为malloc触发，do_anonymous_page 源码如下所示：</p><ul><li>调用anon_vma_prepare()获取一个anon_vma结构，这个结构可能属于此vma，也可能属于此vma能够合并的前后一个vma。</li><li>通过伙伴系统分配一个页(在32位上，会优先从高端内存分配)</li><li>根据vma默认页表项参数vm_page_prot创建一个页表项，这个页表项用于加入到address对应的页表中</li><li>调用page_add_new_anon_rmap()给此page添加一个反向映射</li><li>将页表项和页表还有此页进行关联，由于页表已经在调用前分配好页了，只需要将页表项与新匿名页进行关联，然后将设置好的页表项写入address在此页表中的偏移地址即可。</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * We enter with non-exclusive mmap_lock <span style=color:#ff79c6>(</span>to exclude vma changes,
+</span></span><span style=display:flex><span> * but allow concurrent faults<span style=color:#ff79c6>)</span>, and pte mapped but not yet locked.
+</span></span><span style=display:flex><span> * We <span style=color:#ff79c6>return</span> with mmap_lock still held, but pte unmapped and unlocked.
+</span></span><span style=display:flex><span> */
+</span></span><span style=display:flex><span>static vm_fault_t do_anonymous_page<span style=color:#ff79c6>(</span>struct vm_fault *vmf<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	struct vm_area_struct *vma <span style=color:#ff79c6>=</span> vmf-&gt;vma;
+</span></span><span style=display:flex><span>	struct page *page;
+</span></span><span style=display:flex><span>	vm_fault_t <span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> 0;
+</span></span><span style=display:flex><span>	pte_t entry;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* File mapping without -&gt;vm_ops ? */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vma-&gt;vm_flags &amp; VM_SHARED<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_SIGBUS;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * Use pte_alloc<span style=color:#ff79c6>()</span> instead of pte_alloc_map<span style=color:#ff79c6>()</span>.  We can&#39;t run
+</span></span><span style=display:flex><span>	 * pte_offset_map<span style=color:#ff79c6>()</span> on pmds where a huge pmd might be created
+</span></span><span style=display:flex><span>	 * from a different thread.
+</span></span><span style=display:flex><span>	 *
+</span></span><span style=display:flex><span>	 * pte_alloc_map<span style=color:#ff79c6>()</span> is safe to use under mmap_write_lock<span style=color:#ff79c6>(</span>mm<span style=color:#ff79c6>)</span> or when
+</span></span><span style=display:flex><span>	 * parallel threads are excluded by other means.
+</span></span><span style=display:flex><span>	 *
+</span></span><span style=display:flex><span>	 * Here we only have mmap_read_lock<span style=color:#ff79c6>(</span>mm<span style=color:#ff79c6>)</span>.
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pte_alloc<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;pmd<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* See the comment in pte_alloc_one_map<span style=color:#ff79c6>()</span> */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>pmd_trans_unstable<span style=color:#ff79c6>(</span>vmf-&gt;pmd<span style=color:#ff79c6>)))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> 0;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* Use the zero-page <span style=color:#ff79c6>for</span> reads */
+</span></span><span style=display:flex><span>    // /* 
+</span></span><span style=display:flex><span>	// * 如果不是写操作且允许使用Zero page, 则把zero_pfn的页表条目赋给entry
+</span></span><span style=display:flex><span>   	// * 因为这里已经是缺页异常的请求调页的处理，又是读操作，所以肯定是本进程第一次访问这个页
+</span></span><span style=display:flex><span>	// * 所以这个页里面是什么内容无所谓，分配个默认全零页就好，进一步推迟物理页的分配，这就会让entry带着zero_pfn跳到标号setpte
+</span></span><span style=display:flex><span>	// */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!<span style=color:#ff79c6>(</span>vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span>
+</span></span><span style=display:flex><span>			!mm_forbids_zeropage<span style=color:#ff79c6>(</span>vma-&gt;vm_mm<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> pte_mkspecial<span style=color:#ff79c6>(</span>pfn_pte<span style=color:#ff79c6>(</span>my_zero_pfn<span style=color:#ff79c6>(</span>vmf-&gt;address<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>						vma-&gt;vm_page_prot<span style=color:#ff79c6>))</span>;
+</span></span><span style=display:flex><span>		vmf-&gt;pte <span style=color:#ff79c6>=</span> pte_offset_map_lock<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;pmd,
+</span></span><span style=display:flex><span>				vmf-&gt;address, &amp;vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!pte_none<span style=color:#ff79c6>(</span>*vmf-&gt;pte<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			update_mmu_tlb<span style=color:#ff79c6>(</span>vma, vmf-&gt;address, vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			goto unlock;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> check_stable_address_space<span style=color:#ff79c6>(</span>vma-&gt;vm_mm<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>ret<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>			goto unlock;
+</span></span><span style=display:flex><span>		/* Deliver the page fault to userland, check inside PT lock */
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>userfaultfd_missing<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>return</span> handle_userfault<span style=color:#ff79c6>(</span>vmf, VM_UFFD_MISSING<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		goto setpte;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>    // 处理带FAULT_FLAG_WRITE写标志的缺页中断
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>	/* Allocate our own private page. */
+</span></span><span style=display:flex><span>    // /* 为vma准备反向映射条件 
+</span></span><span style=display:flex><span>    // * find_mergeable_anon_vma 检查此vma能与前后的vma进行合并吗，如果可以，则使用能够合并的那个vma的anon_vma，如果不能够合并，则申请一个空闲的anon_vma
+</span></span><span style=display:flex><span>    // * 新建一个 anon_vma_chain
+</span></span><span style=display:flex><span>    // * 将avc-&gt;anon_vma指向获得的vma，avc-&gt;vma指向vma，并把avc加入到vma的anon_vma_chain中
+</span></span><span style=display:flex><span>    // */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>anon_vma_prepare<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>)))</span>
+</span></span><span style=display:flex><span>		goto oom;
+</span></span><span style=display:flex><span>    // 调用伙伴系统分配一个可写的匿名页面
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>page</span> <span style=color:#ff79c6>=</span> alloc_zeroed_user_highpage_movable<span style=color:#ff79c6>(</span>vma, vmf-&gt;address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!page<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		goto oom;
+</span></span><span style=display:flex><span>    
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>mem_cgroup_charge<span style=color:#ff79c6>(</span>page, vma-&gt;vm_mm, GFP_KERNEL<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		goto oom_free_page;
+</span></span><span style=display:flex><span>    // 更新memcg中的计数，如果超过了memcg中的限制值，则会把这个页释放掉，并返回VM_FAULT_OOM 
+</span></span><span style=display:flex><span>	cgroup_throttle_swaprate<span style=color:#ff79c6>(</span>page, GFP_KERNEL<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * The memory barrier inside __SetPageUptodate makes sure that
+</span></span><span style=display:flex><span>	 * preceding stores to the page contents become visible before
+</span></span><span style=display:flex><span>	 * the set_pte_at<span style=color:#ff79c6>()</span> write.
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>    // 调用内存屏障，设置page-&gt;flag中更新标志位PG_uptodate
+</span></span><span style=display:flex><span>	__SetPageUptodate<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 根据vma页参数及pages地址创建pte页表项
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> mk_pte<span style=color:#ff79c6>(</span>page, vma-&gt;vm_page_prot<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> pte_sw_mkyoung<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>    // 如果vma区是可写的，则给页表项添加可写标志
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vma-&gt;vm_flags &amp; VM_WRITE<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> pte_mkwrite<span style=color:#ff79c6>(</span>pte_mkdirty<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>))</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	vmf-&gt;pte <span style=color:#ff79c6>=</span> pte_offset_map_lock<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;pmd, vmf-&gt;address,
+</span></span><span style=display:flex><span>			&amp;vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!pte_none<span style=color:#ff79c6>(</span>*vmf-&gt;pte<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		update_mmu_cache<span style=color:#ff79c6>(</span>vma, vmf-&gt;address, vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		goto release;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> check_stable_address_space<span style=color:#ff79c6>(</span>vma-&gt;vm_mm<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>ret<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		goto release;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* Deliver the page fault to userland, check inside PT lock */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>userfaultfd_missing<span style=color:#ff79c6>(</span>vma<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>        // 获取addr对应的pte页表项；由于要修改，所以要上锁，只读是不需要上锁的
+</span></span><span style=display:flex><span>		put_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> handle_userfault<span style=color:#ff79c6>(</span>vmf, VM_UFFD_MISSING<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    // 增加mm_struct中匿名页<span style=color:#ff79c6>(</span>MM_ANONPAGES<span style=color:#ff79c6>)</span>的统计计数
+</span></span><span style=display:flex><span>	inc_mm_counter_fast<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, MM_ANONPAGES<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>    // /* 对这个新页进行反向映射 
+</span></span><span style=display:flex><span>    // * 主要工作是:
+</span></span><span style=display:flex><span>    // * <span style=color:#8be9fd;font-style:italic>设置此页的_mapcount</span> <span style=color:#ff79c6>=</span> 0，说明此页正在使用，但是是非共享的<span style=color:#ff79c6>(</span>&gt;0是共享<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    // * 统计:
+</span></span><span style=display:flex><span>    // * 设置page-&gt;mapping最低位为1
+</span></span><span style=display:flex><span>    // * page-&gt;mapping指向此vma-&gt;anon_vma
+</span></span><span style=display:flex><span>    // * page-&gt;index存放此page在vma中的第几页
+</span></span><span style=display:flex><span>    // */
+</span></span><span style=display:flex><span>	page_add_new_anon_rmap<span style=color:#ff79c6>(</span>page, vma, vmf-&gt;address, <span style=color:#8be9fd;font-style:italic>false</span><span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>    /* 把匿名页面添加到LRU链表中，在kswap内核模块会使用LRU链表 */
+</span></span><span style=display:flex><span>	lru_cache_add_inactive_or_unevictable<span style=color:#ff79c6>(</span>page, vma<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>setpte:
+</span></span><span style=display:flex><span>    /* 将上面配置好的页表项写入页表 */
+</span></span><span style=display:flex><span>	set_pte_at<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;address, vmf-&gt;pte, entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* No need to invalidate - it was non-present before */
+</span></span><span style=display:flex><span>    /* 让mmu更新页表项，应该会清除tlb */
+</span></span><span style=display:flex><span>	update_mmu_cache<span style=color:#ff79c6>(</span>vma, vmf-&gt;address, vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>unlock:
+</span></span><span style=display:flex><span>	pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>release:
+</span></span><span style=display:flex><span>    // 取消此page在memcg中的计数
+</span></span><span style=display:flex><span>    // 将申请的页释放到每CPU页高速缓存中
+</span></span><span style=display:flex><span>	put_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	goto unlock;
+</span></span><span style=display:flex><span>oom_free_page:
+</span></span><span style=display:flex><span>	put_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>oom:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>do_swap_page 源码如下所示：</p><ul><li>先由pte得到swap entry,再得到page，再有pte以及pte entry添加到硬件pte页表。swap cache: 系统中有多少匿名页曾经被swap-out、现在又被swap-in并且swap-in之后页面中的内容一直没发生变化。</li><li>为了防止页面在swap in/out时，进程有同步问题；即在swap out操作时，进程访问了换出页面。</li><li>如果页面数据没有完全写入磁盘，page frame是在swap cache。</li><li>等数据完全写入磁盘后，且没有进程对page frame进行访问，则swap cache会释放page frame，将其交给buddy system。</li><li>swap cache 只存在很短暂时间，page out完成后就删除。</li><li>曾经被swap out现在又被swap in的匿名页会在swap cache，知道页面中内容发生变化，或者原来用过的交换区空间被回收为止。</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * We enter with non-exclusive mmap_lock <span style=color:#ff79c6>(</span>to exclude vma changes,
+</span></span><span style=display:flex><span> * but allow concurrent faults<span style=color:#ff79c6>)</span>, and pte mapped but not yet locked.
+</span></span><span style=display:flex><span> * We <span style=color:#ff79c6>return</span> with pte unmapped and unlocked.
+</span></span><span style=display:flex><span> *
+</span></span><span style=display:flex><span> * We <span style=color:#ff79c6>return</span> with the mmap_lock locked or unlocked in the same cases
+</span></span><span style=display:flex><span> * as does filemap_fault<span style=color:#ff79c6>()</span>.
+</span></span><span style=display:flex><span> */
+</span></span><span style=display:flex><span>vm_fault_t do_swap_page<span style=color:#ff79c6>(</span>struct vm_fault *vmf<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	struct vm_area_struct *vma <span style=color:#ff79c6>=</span> vmf-&gt;vma;
+</span></span><span style=display:flex><span>	struct page *page <span style=color:#ff79c6>=</span> NULL, *swapcache;
+</span></span><span style=display:flex><span>	swp_entry_t entry;
+</span></span><span style=display:flex><span>	pte_t pte;
+</span></span><span style=display:flex><span>	int locked;
+</span></span><span style=display:flex><span>	int <span style=color:#8be9fd;font-style:italic>exclusive</span> <span style=color:#ff79c6>=</span> 0;
+</span></span><span style=display:flex><span>	vm_fault_t <span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> 0;
+</span></span><span style=display:flex><span>	void *shadow <span style=color:#ff79c6>=</span> NULL;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!pte_unmap_same<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;pmd, vmf-&gt;pte, vmf-&gt;orig_pte<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		goto out;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    /* 根据pte来获取swap的entry, swap entry和pte有一个对应关系 */
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>entry</span> <span style=color:#ff79c6>=</span> pte_to_swp_entry<span style=color:#ff79c6>(</span>vmf-&gt;orig_pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>non_swap_entry<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>is_migration_entry<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			migration_entry_wait<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;pmd,
+</span></span><span style=display:flex><span>					     vmf-&gt;address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>is_device_private_entry<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			vmf-&gt;page <span style=color:#ff79c6>=</span> device_private_entry_to_page<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> vmf-&gt;page-&gt;pgmap-&gt;ops-&gt;migrate_to_ram<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>is_hwpoison_entry<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_HWPOISON;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			print_bad_pte<span style=color:#ff79c6>(</span>vma, vmf-&gt;address, vmf-&gt;orig_pte, NULL<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_SIGBUS;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		goto out;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	delayacct_set_flag<span style=color:#ff79c6>(</span>DELAYACCT_PF_SWAPIN<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>    /* 在swapcache里面寻找entry对应的page */
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>page</span> <span style=color:#ff79c6>=</span> lookup_swap_cache<span style=color:#ff79c6>(</span>entry, vma, vmf-&gt;address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>swapcache</span> <span style=color:#ff79c6>=</span> page;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!page<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        /* 如果swapcache里面找不到就在swap area里面找 */
+</span></span><span style=display:flex><span>		struct swap_info_struct *si <span style=color:#ff79c6>=</span> swp_swap_info<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>data_race<span style=color:#ff79c6>(</span>si-&gt;flags &amp; SWP_SYNCHRONOUS_IO<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span>
+</span></span><span style=display:flex><span>		    __swap_count<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>==</span> 1<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			/* skip swapcache */
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>page</span> <span style=color:#ff79c6>=</span> alloc_page_vma<span style=color:#ff79c6>(</span>GFP_HIGHUSER_MOVABLE, vma,
+</span></span><span style=display:flex><span>							vmf-&gt;address<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				int err;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>				__SetPageLocked<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				__SetPageSwapBacked<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				set_page_private<span style=color:#ff79c6>(</span>page, entry.val<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>				/* Tell memcg to use swap ownership records */
+</span></span><span style=display:flex><span>				SetPageSwapCache<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>err</span> <span style=color:#ff79c6>=</span> mem_cgroup_charge<span style=color:#ff79c6>(</span>page, vma-&gt;vm_mm,
+</span></span><span style=display:flex><span>							GFP_KERNEL<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				ClearPageSwapCache<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>err<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>					<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span>					goto out_page;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>shadow</span> <span style=color:#ff79c6>=</span> get_shadow_from_swap_cache<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>shadow<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>					workingset_refault<span style=color:#ff79c6>(</span>page, shadow<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>				lru_cache_add<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>				swap_readpage<span style=color:#ff79c6>(</span>page, <span style=color:#8be9fd;font-style:italic>true</span><span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>page</span> <span style=color:#ff79c6>=</span> swapin_readahead<span style=color:#ff79c6>(</span>entry, GFP_HIGHUSER_MOVABLE,
+</span></span><span style=display:flex><span>						vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>swapcache</span> <span style=color:#ff79c6>=</span> page;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!page<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			/*
+</span></span><span style=display:flex><span>			 * Back out <span style=color:#ff79c6>if</span> somebody <span style=color:#ff79c6>else</span> faulted in this pte
+</span></span><span style=display:flex><span>			 * <span style=color:#ff79c6>while</span> we released the pte lock.
+</span></span><span style=display:flex><span>			 */
+</span></span><span style=display:flex><span>			vmf-&gt;pte <span style=color:#ff79c6>=</span> pte_offset_map_lock<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;pmd,
+</span></span><span style=display:flex><span>					vmf-&gt;address, &amp;vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>likely<span style=color:#ff79c6>(</span>pte_same<span style=color:#ff79c6>(</span>*vmf-&gt;pte, vmf-&gt;orig_pte<span style=color:#ff79c6>)))</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_OOM;
+</span></span><span style=display:flex><span>			delayacct_clear_flag<span style=color:#ff79c6>(</span>DELAYACCT_PF_SWAPIN<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			goto unlock;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		/* Had to <span style=color:#8be9fd;font-style:italic>read</span> the page from swap area: Major fault */
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_MAJOR;
+</span></span><span style=display:flex><span>		count_vm_event<span style=color:#ff79c6>(</span>PGMAJFAULT<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		count_memcg_event_mm<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, PGMAJFAULT<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>PageHWPoison<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * hwpoisoned dirty swapcache pages are kept <span style=color:#ff79c6>for</span> killing
+</span></span><span style=display:flex><span>		 * owner processes <span style=color:#ff79c6>(</span>which may be unknown at hwpoison <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ret</span> <span style=color:#ff79c6>=</span> VM_FAULT_HWPOISON;
+</span></span><span style=display:flex><span>		delayacct_clear_flag<span style=color:#ff79c6>(</span>DELAYACCT_PF_SWAPIN<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		goto out_release;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>locked</span> <span style=color:#ff79c6>=</span> lock_page_or_retry<span style=color:#ff79c6>(</span>page, vma-&gt;vm_mm, vmf-&gt;flags<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	delayacct_clear_flag<span style=color:#ff79c6>(</span>DELAYACCT_PF_SWAPIN<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!locked<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		ret |<span style=color:#ff79c6>=</span> VM_FAULT_RETRY;
+</span></span><span style=display:flex><span>		goto out_release;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * Make sure try_to_free_swap or reuse_swap_page or swapoff did not
+</span></span><span style=display:flex><span>	 * release the swapcache from under us.  The page pin, and pte_same
+</span></span><span style=display:flex><span>	 * <span style=color:#8be9fd;font-style:italic>test</span> below, are not enough to exclude that.  Even <span style=color:#ff79c6>if</span> it is still
+</span></span><span style=display:flex><span>	 * swapcache, we need to check that the page<span style=color:#f1fa8c>&#39;s swap has not changed.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (unlikely((!PageSwapCache(page) ||
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			page_private(page) != entry.val)) &amp;&amp; swapcache)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		goto out_page;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	page = ksm_might_need_to_copy(page, vma, vmf-&gt;address);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (unlikely(!page)) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		ret = VM_FAULT_OOM;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		page = swapcache;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		goto out_page;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	cgroup_throttle_swaprate(page, GFP_KERNEL);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * Back out if somebody else already faulted in this pte.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	vmf-&gt;pte = pte_offset_map_lock(vma-&gt;vm_mm, vmf-&gt;pmd, vmf-&gt;address,
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			&amp;vmf-&gt;ptl);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (unlikely(!pte_same(*vmf-&gt;pte, vmf-&gt;orig_pte)))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		goto out_nomap;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (unlikely(!PageUptodate(page))) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		ret = VM_FAULT_SIGBUS;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		goto out_nomap;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * The page isn&#39;</span>t present yet, go ahead with the fault.
+</span></span><span style=display:flex><span>	 *
+</span></span><span style=display:flex><span>	 * Be careful about the sequence of operations here.
+</span></span><span style=display:flex><span>	 * To get its accounting right, reuse_swap_page<span style=color:#ff79c6>()</span> must be called
+</span></span><span style=display:flex><span>	 * <span style=color:#ff79c6>while</span> the page is counted on swap but not yet in mapcount i.e.
+</span></span><span style=display:flex><span>	 * before page_add_anon_rmap<span style=color:#ff79c6>()</span> and swap_free<span style=color:#ff79c6>()</span>; try_to_free_swap<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>	 * must be called after the swap_free<span style=color:#ff79c6>()</span>, or it will never succeed.
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>    /* anonpage数加1，匿名页从swap空间交换出来，所以加1 */
+</span></span><span style=display:flex><span>	inc_mm_counter_fast<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, MM_ANONPAGES<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>    /* swap page个数减1 */
+</span></span><span style=display:flex><span>	dec_mm_counter_fast<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, MM_SWAPENTS<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>    /* 由page和VMA属性创建一个新的pte */
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>pte</span> <span style=color:#ff79c6>=</span> mk_pte<span style=color:#ff79c6>(</span>page, vma-&gt;vm_page_prot<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>((</span>vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>&amp;&amp;</span> reuse_swap_page<span style=color:#ff79c6>(</span>page, NULL<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>pte</span> <span style=color:#ff79c6>=</span> maybe_mkwrite<span style=color:#ff79c6>(</span>pte_mkdirty<span style=color:#ff79c6>(</span>pte<span style=color:#ff79c6>)</span>, vma<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		vmf-&gt;flags &amp;<span style=color:#ff79c6>=</span> ~FAULT_FLAG_WRITE;
+</span></span><span style=display:flex><span>		ret |<span style=color:#ff79c6>=</span> VM_FAULT_WRITE;
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>exclusive</span> <span style=color:#ff79c6>=</span> RMAP_EXCLUSIVE;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	flush_icache_page<span style=color:#ff79c6>(</span>vma, page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pte_swp_soft_dirty<span style=color:#ff79c6>(</span>vmf-&gt;orig_pte<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>pte</span> <span style=color:#ff79c6>=</span> pte_mksoft_dirty<span style=color:#ff79c6>(</span>pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>pte_swp_uffd_wp<span style=color:#ff79c6>(</span>vmf-&gt;orig_pte<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>pte</span> <span style=color:#ff79c6>=</span> pte_mkuffd_wp<span style=color:#ff79c6>(</span>pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>pte</span> <span style=color:#ff79c6>=</span> pte_wrprotect<span style=color:#ff79c6>(</span>pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    /* 将新生成的PTE entry添加到硬件页表 */
+</span></span><span style=display:flex><span>	set_pte_at<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vmf-&gt;address, vmf-&gt;pte, pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	arch_do_swap_page<span style=color:#ff79c6>(</span>vma-&gt;vm_mm, vma, vmf-&gt;address, pte, vmf-&gt;orig_pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	vmf-&gt;orig_pte <span style=color:#ff79c6>=</span> pte;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* ksm created a completely new copy */
+</span></span><span style=display:flex><span>    /* 根据page是否为swapcache，如果是，则只为page创建rmap，如果不是则创建rmap还要将page添加到LRU链表 */
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>(</span>page !<span style=color:#ff79c6>=</span> swapcache <span style=color:#ff79c6>&amp;&amp;</span> swapcache<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		page_add_new_anon_rmap<span style=color:#ff79c6>(</span>page, vma, vmf-&gt;address, <span style=color:#8be9fd;font-style:italic>false</span><span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		lru_cache_add_inactive_or_unevictable<span style=color:#ff79c6>(</span>page, vma<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		do_page_add_anon_rmap<span style=color:#ff79c6>(</span>page, vma, vmf-&gt;address, exclusive<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	swap_free<span style=color:#ff79c6>(</span>entry<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>mem_cgroup_swap_full<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>||</span>
+</span></span><span style=display:flex><span>	    <span style=color:#ff79c6>(</span>vma-&gt;vm_flags &amp; VM_LOCKED<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>||</span> PageMlocked<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		try_to_free_swap<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	unlock_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>page !<span style=color:#ff79c6>=</span> swapcache <span style=color:#ff79c6>&amp;&amp;</span> swapcache<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * Hold the lock to avoid the swap entry to be reused
+</span></span><span style=display:flex><span>		 * <span style=color:#ff79c6>until</span> we take the PT lock <span style=color:#ff79c6>for</span> the pte_same<span style=color:#ff79c6>()</span> check
+</span></span><span style=display:flex><span>		 * <span style=color:#ff79c6>(</span>to avoid <span style=color:#8be9fd;font-style:italic>false</span> positives from pte_same<span style=color:#ff79c6>)</span>. For
+</span></span><span style=display:flex><span>		 * further safety release the lock after the swap_free
+</span></span><span style=display:flex><span>		 * so that the swap count won&#39;t change under a
+</span></span><span style=display:flex><span>		 * parallel locked swapcache.
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		unlock_page<span style=color:#ff79c6>(</span>swapcache<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		put_page<span style=color:#ff79c6>(</span>swapcache<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>vmf-&gt;flags &amp; FAULT_FLAG_WRITE<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		ret |<span style=color:#ff79c6>=</span> do_wp_page<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>ret &amp; VM_FAULT_ERROR<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>			ret &amp;<span style=color:#ff79c6>=</span> VM_FAULT_ERROR;
+</span></span><span style=display:flex><span>		goto out;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	/* No need to invalidate - it was non-present before */
+</span></span><span style=display:flex><span>	update_mmu_cache<span style=color:#ff79c6>(</span>vma, vmf-&gt;address, vmf-&gt;pte<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>unlock:
+</span></span><span style=display:flex><span>	pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>out:
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span>out_nomap:
+</span></span><span style=display:flex><span>	pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>out_page:
+</span></span><span style=display:flex><span>	unlock_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>out_release:
+</span></span><span style=display:flex><span>	put_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>page !<span style=color:#ff79c6>=</span> swapcache <span style=color:#ff79c6>&amp;&amp;</span> swapcache<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		unlock_page<span style=color:#ff79c6>(</span>swapcache<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		put_page<span style=color:#ff79c6>(</span>swapcache<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> ret;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>写时复制，一般出现在fork后子进程修改内存数据，do_wp_page 源码如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>/*
+</span></span><span style=display:flex><span> * This routine handles present pages, when users try to write
+</span></span><span style=display:flex><span> * to a shared page. It is <span style=color:#ff79c6>done</span> by copying the page to a new address
+</span></span><span style=display:flex><span> * and decrementing the shared-page counter <span style=color:#ff79c6>for</span> the old page.
+</span></span><span style=display:flex><span> *
+</span></span><span style=display:flex><span> * Note that this routine assumes that the protection checks have been
+</span></span><span style=display:flex><span> * <span style=color:#ff79c6>done</span> by the <span style=color:#8be9fd;font-style:italic>caller</span> <span style=color:#ff79c6>(</span>the low-level page fault routine in most cases<span style=color:#ff79c6>)</span>.
+</span></span><span style=display:flex><span> * Thus we can safely just mark it writable once we<span style=color:#f1fa8c>&#39;ve done any necessary
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * COW.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> *
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * We also mark the page dirty at this point even though the page will
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * change only once the write actually happens. This avoids a few races,
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * and potentially makes it more efficient.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> *
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * We enter with non-exclusive mmap_lock (to exclude vma changes,
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * but allow concurrent faults), with pte both mapped and locked.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> * We return with mmap_lock still held, but pte unmapped and unlocked.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c> */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>static vm_fault_t do_wp_page(struct vm_fault *vmf)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	__releases(vmf-&gt;ptl)
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>{
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	struct vm_area_struct *vma = vmf-&gt;vma;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (userfaultfd_pte_wp(vma, *vmf-&gt;pte)) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		pte_unmap_unlock(vmf-&gt;pte, vmf-&gt;ptl);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		return handle_userfault(vmf, VM_UFFD_WP);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	vmf-&gt;page = vm_normal_page(vma, vmf-&gt;address, vmf-&gt;orig_pte);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (!vmf-&gt;page) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * VM_MIXEDMAP !pfn_valid() case, or VM_SOFTDIRTY clear on a
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * VM_PFNMAP VMA.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 *
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * We should not cow pages in a shared writeable mapping.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * Just mark the pages writable and/or call ops-&gt;pfn_mkwrite.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		if ((vma-&gt;vm_flags &amp; (VM_WRITE|VM_SHARED)) ==
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>				     (VM_WRITE|VM_SHARED))
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>			return wp_pfn_shared(vmf);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		pte_unmap_unlock(vmf-&gt;pte, vmf-&gt;ptl);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		return wp_page_copy(vmf);
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	}
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	/*
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * Take out anonymous pages first, anonymous shared vmas are
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 * not dirty accountable.
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	 */
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>	if (PageAnon(vmf-&gt;page)) {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		struct page *page = vmf-&gt;page;
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		/* PageKsm() doesn&#39;</span>t necessarily raise the page refcount */
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>PageKsm<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>||</span> page_count<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> !<span style=color:#ff79c6>=</span> 1<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>			goto copy;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>!trylock_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>			goto copy;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>PageKsm<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>||</span> page_mapcount<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> !<span style=color:#ff79c6>=</span> <span style=color:#bd93f9>1</span> <span style=color:#ff79c6>||</span> page_count<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span> !<span style=color:#ff79c6>=</span> 1<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			unlock_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>			goto copy;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		/*
+</span></span><span style=display:flex><span>		 * Ok, we<span style=color:#f1fa8c>&#39;ve got the only map reference, and the only
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * page count reference, and the page is locked,
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>		 * it&#39;</span>s dark out, and we&#39;re wearing sunglasses. Hit it.
+</span></span><span style=display:flex><span>		 */
+</span></span><span style=display:flex><span>		unlock_page<span style=color:#ff79c6>(</span>page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		wp_page_reuse<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> VM_FAULT_WRITE;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>if</span> <span style=color:#ff79c6>(</span>unlikely<span style=color:#ff79c6>((</span>vma-&gt;vm_flags &amp; <span style=color:#ff79c6>(</span>VM_WRITE|VM_SHARED<span style=color:#ff79c6>))</span> <span style=color:#ff79c6>==</span>
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>(</span>VM_WRITE|VM_SHARED<span style=color:#ff79c6>)))</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> wp_page_shared<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>copy:
+</span></span><span style=display:flex><span>	/*
+</span></span><span style=display:flex><span>	 * Ok, we need to copy. Oh, well..
+</span></span><span style=display:flex><span>	 */
+</span></span><span style=display:flex><span>	get_page<span style=color:#ff79c6>(</span>vmf-&gt;page<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	pte_unmap_unlock<span style=color:#ff79c6>(</span>vmf-&gt;pte, vmf-&gt;ptl<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> wp_page_copy<span style=color:#ff79c6>(</span>vmf<span style=color:#ff79c6>)</span>;
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>整体流程如下所示：</p><p><img src=/images/2024-05-02-linux-page-fault/1.svg alt></p><p>主要通过do_page_fault()函数读取缺页虚地址，调用handle_mm_fault()函数具体处理进程访问用户虚拟地址生成的页错误异常，当进程通过系统调用进入内核模式，系统调用传入用户空间的缓冲区，进程在内核模式下访问用户空间的缓冲区。如果页错误异常处理程序确认虚拟地址属于分配给进程的虚拟内存区域，并且虚拟内存区域授予触发页错误异常的访问权限，就会运行到函数handle_mm_fault，最终具体实现由handle_pte_fault函数完成。</p><h1 id=ebpf-排查缺页中断>eBPF 排查缺页中断</h1><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~# bpftrace -e <span style=color:#f1fa8c>&#39;kprobe:handle_mm_fault { printf(&#34;pid: %d, comm: %s called handle_mm_fault\n&#34;, pid, comm); }&#39;</span>
+</span></span><span style=display:flex><span>Attaching <span style=color:#bd93f9>1</span> probe...
+</span></span><span style=display:flex><span>pid: 855417, comm: bcm-si called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855416, comm: bpftrace called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span><span style=display:flex><span>pid: 855417, comm: gpu.sh called handle_mm_fault
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~# bpftrace -e <span style=color:#f1fa8c>&#39;kretprobe:handle_mm_fault { printf(&#34;Return value: %d\n&#34;, retval); }&#39;</span>
+</span></span><span style=display:flex><span>Attaching <span style=color:#bd93f9>1</span> probe...
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>1032</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>1032</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>512</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>512</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>512</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span><span style=display:flex><span>Return value: <span style=color:#bd93f9>256</span>
+</span></span></code></pre></div><h1 id=参考>参考</h1><ol><li><a href=https://github.com/0voice/kernel_memory_management/tree/main>https://github.com/0voice/kernel_memory_management/tree/main</a></li><li><a href=https://blog.csdn.net/weixin_48405654/article/details/134006072>https://blog.csdn.net/weixin_48405654/article/details/134006072</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2024-05-01-linux-oom/ data-toggle=tooltip data-placement=top title="监测 Linux 内核内存 OOM 事件">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2024</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
