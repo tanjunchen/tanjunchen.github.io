@@ -1,0 +1,619 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="Kubernetes CoreDNS 核心原理和源码解析"><meta property="og:title" content="Kubernetes CoreDNS 核心原理和源码解析"><meta property="twitter:title" content="Kubernetes CoreDNS 核心原理和源码解析"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>Kubernetes CoreDNS 核心原理和源码解析 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2024-01-09-kubernetes-coredns/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=Kubernetes>Kubernetes</a>
+<a class=tag href=/tags/dns title=DNS>DNS</a>
+<a class=tag href=/tags/coredns title=CoreDNS>CoreDNS</a></div><h1>Kubernetes CoreDNS 核心原理和源码解析</h1><h2 class=subheading></h2><span class=meta>Posted by
+陈谭军
+on
+Sunday, January 7, 2024
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2024-01-09-kubernetes-coredns/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 8091 字</span>，阅读约 <span class=more-meta>17 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=k8s-中的-dns-解析原理>K8S 中的 DNS 解析原理</h1><p><img src=/images/2024-01-09-kubernetes-coredns/1.png alt></p><p>示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  tanjunchen_blog <span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> kubectl  <span style=color:#8be9fd;font-style:italic>exec</span> -it nginx-0 bash                                                                                                           ✱
+</span></span><span style=display:flex><span>kubectl <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#ff79c6>[</span>POD<span style=color:#ff79c6>]</span> <span style=color:#ff79c6>[</span>COMMAND<span style=color:#ff79c6>]</span> is DEPRECATED and will be removed in a future version. Use kubectl <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#ff79c6>[</span>POD<span style=color:#ff79c6>]</span> -- <span style=color:#ff79c6>[</span>COMMAND<span style=color:#ff79c6>]</span> instead.
+</span></span><span style=display:flex><span>root@nginx-0:/# cat /etc/resolv.conf
+</span></span><span style=display:flex><span>search default.svc.cluster.local svc.cluster.local cluster.local
+</span></span><span style=display:flex><span>nameserver 10.22.0.10
+</span></span><span style=display:flex><span>options ndots:5
+</span></span><span style=display:flex><span>root@nginx-0:/# <span style=color:#8be9fd;font-style:italic>exit</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>exit</span>
+</span></span><span style=display:flex><span>➜  tanjunchen_blog <span style=color:#ff79c6>(</span>main<span style=color:#ff79c6>)</span> kubectl  -n kube-system get svc kube-dns                                                                                                 ✱
+</span></span><span style=display:flex><span>NAME       TYPE        CLUSTER-IP   EXTERNAL-IP   PORT<span style=color:#ff79c6>(</span>S<span style=color:#ff79c6>)</span>                  AGE
+</span></span><span style=display:flex><span>kube-dns   ClusterIP   10.22.0.10   &lt;none&gt;        53/UDP,53/TCP,9153/TCP   113d
+</span></span></code></pre></div><h1 id=k8s-dns-spec>K8S DNS SPEC</h1><p>CoreDNS 类似于 containerd 和 CRI，calico/cilium 和 CNI 之间的关系，CoreDNS 是对 <a href=https://github.com/kubernetes/dns/blob/master/docs/specification.md>K8S DNS SPEC</a> 的一个实现，从 kubernetes v1.11 起，CoreDNS 已经取代 kube-dns 成为默认的 DNS 方案.</p><h1 id=k8s-sepc-简要版本>K8S SEPC 简要版本</h1><p>这里列举 k8s 集群中常见的 DNS 查询，如下所示：</p><ul><li>Schema Version Record</li><li>Service ClusterIP IPV4 Record</li><li>Service ClusterIP IPV6 Record</li><li>根据 ClusterIP 反查 Service Name</li><li>Headless Service Record</li></ul><h2 id=schema-version-record>Schema Version Record</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>* Question Example:
+</span></span><span style=display:flex><span>  * dns-version.cluster.local. IN TXT
+</span></span><span style=display:flex><span>* Answer Example:
+</span></span><span style=display:flex><span>  * dns-version.cluster.local. <span style=color:#bd93f9>28800</span> IN TXT <span style=color:#f1fa8c>&#34;1.1.0&#34;</span>
+</span></span></code></pre></div><h2 id=service-clusterip-ipv4-record>Service ClusterIP IPV4 Record</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>* Question Example:
+</span></span><span style=display:flex><span>  * kubernetes.default.svc.cluster.local. IN A
+</span></span><span style=display:flex><span>* Answer Example:
+</span></span><span style=display:flex><span>  * kubernetes.default.svc.cluster.local. <span style=color:#bd93f9>4</span> IN A 10.3.0.1
+</span></span></code></pre></div><h2 id=service-clusterip-ipv6-record>Service ClusterIP IPV6 Record</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>* Question Example:
+</span></span><span style=display:flex><span>  * kubernetes.default.svc.cluster.local. IN AAAA
+</span></span><span style=display:flex><span>* Answer Example:
+</span></span><span style=display:flex><span>  * kubernetes.default.svc.cluster.local. <span style=color:#bd93f9>4</span> IN AAAA 2001:db8::1
+</span></span></code></pre></div><h2 id=根据-clusterip-反查-service-name>根据 ClusterIP 反查 Service Name</h2><p>假设 kubernetes 服务的 ClusterIP 是 10.3.0.1，注意这里查询请求 ip 地址为逆序.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>* Question Example:
+</span></span><span style=display:flex><span>  * 1.0.3.10.in-addr.arpa. IN PTR
+</span></span><span style=display:flex><span>* Answer Example:
+</span></span><span style=display:flex><span>  * 1.0.3.10.in-addr.arpa. <span style=color:#bd93f9>14</span> IN PTR kubernetes.default.svc.cluster.local.
+</span></span></code></pre></div><h2 id=headless-service-record>Headless Service Record</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>* Question Example:
+</span></span><span style=display:flex><span>  * headless.default.svc.cluster.local. IN A
+</span></span><span style=display:flex><span>* Answer Example:
+</span></span><span style=display:flex><span>  * headless.default.svc.cluster.local. <span style=color:#bd93f9>4</span> IN A 10.3.0.1
+</span></span><span style=display:flex><span>  * headless.default.svc.cluster.local. <span style=color:#bd93f9>4</span> IN A 10.3.0.2
+</span></span><span style=display:flex><span>  * headless.default.svc.cluster.local. <span style=color:#bd93f9>4</span> IN A 10.3.0.3
+</span></span></code></pre></div><h1 id=coredns-配置文件解析>CoreDNS 配置文件解析</h1><p>格式如下：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>[</span>SCHEME://<span style=color:#ff79c6>]</span>ZONE <span style=color:#ff79c6>[[</span>SCHEME://<span style=color:#ff79c6>]</span>ZONE<span style=color:#ff79c6>]</span>...<span style=color:#ff79c6>[</span>:PORT<span style=color:#ff79c6>]{[</span>PLUGIN<span style=color:#ff79c6>]</span>...<span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><ul><li>SCHEME是可选的，默认值为dns://，也可以指定为tls://，grpc://或者https://</li><li>ZONE是可选的，指定了此dnsserver可以服务的域名前缀，如果不指定，则默认为root，表示可以接收所有的dns请求</li><li>PORT是选项的，指定了监听端口号，默认为53，如果这里指定了端口号，则不能通过参数-dns.port覆盖</li><li>一块上面格式的配置表示一个dnsserver，称为serverblock，可以配置多个serverblock表示多个dnsserver</li></ul><p>下面通过一个例子说明，如下配置文件指定了4个serverblock，即4个dnsserver，第一个监听端口5300，后面三个监听同一个端口53，每个dnsserver指定了特定的插件.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>coredns.io:5300 <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    file /etc/coredns/zones/coredns.io.db
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>example.io:53 <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    log    
+</span></span><span style=display:flex><span>    errors
+</span></span><span style=display:flex><span>    file /etc/coredns/zones/example.io.db
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>example.net:53 <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    file /etc/coredns/zones/example.net.db
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>.:53 <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    kubernetes
+</span></span><span style=display:flex><span>    errors
+</span></span><span style=display:flex><span>    log
+</span></span><span style=display:flex><span>    health
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><h1 id=快速开始>快速开始</h1><p>源码编译</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>$ git clone https://github.com/coredns/coredns
+</span></span><span style=display:flex><span>$ <span style=color:#8be9fd;font-style:italic>cd</span> coredns
+</span></span><span style=display:flex><span>$ git checkout -b  v1.9.4 v1.9.4
+</span></span><span style=display:flex><span>$ make
+</span></span></code></pre></div><p>coredns 默认会监听在 53 端口，没有配置 Corefile 的话，默认会加载 whoami 和 log 两个 plugin. 请求 <code>dig www.example.com</code> 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>(</span>base<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>[</span>root@instance-crwsvl7m-2 ~<span style=color:#ff79c6>]</span><span style=color:#6272a4>#  dig www.example.com</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>; &lt;&lt;&gt;&gt; DiG 9.11.4-P2-RedHat-9.11.4-26.P2.el7 &lt;&lt;&gt;&gt; www.example.com
+</span></span><span style=display:flex><span>;; global options: +cmd
+</span></span><span style=display:flex><span>;; Got answer:
+</span></span><span style=display:flex><span>;; -&gt;&gt;HEADER<span style=color:#f1fa8c>&lt;&lt;- opco</span>de: QUERY，status: NOERROR，id: <span style=color:#bd93f9>40514</span>
+</span></span><span style=display:flex><span>;; flags: qr rd ra ad; QUERY: 1，ANSWER: 1，AUTHORITY: 0，ADDITIONAL: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>;; OPT PSEUDOSECTION:
+</span></span><span style=display:flex><span>; EDNS: version: 0，flags:; udp: <span style=color:#bd93f9>1280</span>
+</span></span><span style=display:flex><span>;; QUESTION SECTION:
+</span></span><span style=display:flex><span>;www.example.com.               IN      A
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>;; ANSWER SECTION:
+</span></span><span style=display:flex><span>www.example.com.        <span style=color:#bd93f9>384</span>     IN      A       93.184.215.14
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>;; Query time: <span style=color:#bd93f9>0</span> msec
+</span></span><span style=display:flex><span>;; SERVER: 106.12.199.25#53<span style=color:#ff79c6>(</span>106.12.199.25<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>;; WHEN: Fri Sep <span style=color:#bd93f9>20</span> 19:46:44 CST <span style=color:#bd93f9>2024</span>
+</span></span><span style=display:flex><span>;; MSG SIZE  rcvd: <span style=color:#bd93f9>60</span>
+</span></span></code></pre></div><p>请求我们本地起的 coredns 进程 dig <a href=https://www.example.com>www.example.com</a>，返回 client ip，即 whoami 插件的作用：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>(</span>base<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>[</span>root@instance-crwsvl7m-2 ~<span style=color:#ff79c6>]</span><span style=color:#6272a4>#  dig @127.0.0.1 -p53  www.example.com</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>; &lt;&lt;&gt;&gt; DiG 9.11.4-P2-RedHat-9.11.4-26.P2.el7 &lt;&lt;&gt;&gt; @127.0.0.1 -p53 www.example.com
+</span></span><span style=display:flex><span>; <span style=color:#ff79c6>(</span><span style=color:#bd93f9>1</span> server found<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>;; global options: +cmd
+</span></span><span style=display:flex><span>;; Got answer:
+</span></span><span style=display:flex><span>;; -&gt;&gt;HEADER<span style=color:#f1fa8c>&lt;&lt;- opco</span>de: QUERY，status: NOERROR，id: <span style=color:#bd93f9>26257</span>
+</span></span><span style=display:flex><span>;; flags: qr aa rd; QUERY: 1，ANSWER: 0，AUTHORITY: 0，ADDITIONAL: <span style=color:#bd93f9>3</span>
+</span></span><span style=display:flex><span>;; WARNING: recursion requested but not available
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>;; OPT PSEUDOSECTION:
+</span></span><span style=display:flex><span>; EDNS: version: 0，flags:; udp: <span style=color:#bd93f9>4096</span>
+</span></span><span style=display:flex><span>;; QUESTION SECTION:
+</span></span><span style=display:flex><span>;www.example.com.               IN      A
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>;; ADDITIONAL SECTION:
+</span></span><span style=display:flex><span>www.example.com.        <span style=color:#bd93f9>0</span>       IN      A       127.0.0.1
+</span></span><span style=display:flex><span>_udp.www.example.com.   <span style=color:#bd93f9>0</span>       IN      SRV     <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>0</span> <span style=color:#bd93f9>50368</span> .
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>;; Query time: <span style=color:#bd93f9>0</span> msec
+</span></span><span style=display:flex><span>;; SERVER: 127.0.0.1#53<span style=color:#ff79c6>(</span>127.0.0.1<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>;; WHEN: Fri Sep <span style=color:#bd93f9>20</span> 19:43:56 CST <span style=color:#bd93f9>2024</span>
+</span></span><span style=display:flex><span>;; MSG SIZE  rcvd: <span style=color:#bd93f9>114</span>
+</span></span></code></pre></div><p>coredns 日志也可以看到对应请求</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>(</span>base<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>[</span>root@instance-crwsvl7m-2 coredns<span style=color:#ff79c6>]</span><span style=color:#6272a4># ./coredns </span>
+</span></span><span style=display:flex><span>.:53
+</span></span><span style=display:flex><span>CoreDNS-1.9.4
+</span></span><span style=display:flex><span>linux/amd64，go1.20.12，1f0a41a
+</span></span><span style=display:flex><span><span style=color:#ff79c6>[</span>INFO<span style=color:#ff79c6>]</span> 127.0.0.1:50368 - <span style=color:#bd93f9>26257</span> <span style=color:#f1fa8c>&#34;A IN www.example.com. udp 44 false 4096&#34;</span> NOERROR qr,aa,rd <span style=color:#bd93f9>103</span> 0.000157803s
+</span></span></code></pre></div><h1 id=coredns-源码解析>CoreDNS 源码解析</h1><p>基于 tag v1.9.4，分析核心流程相关代码，如下所示：</p><h2 id=插件定义>插件定义</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>type</span> <span style=color:#ff79c6>(</span>
+</span></span><span style=display:flex><span>	// Plugin is a middle layer which represents the traditional
+</span></span><span style=display:flex><span>	// idea of plugin: it chains one Handler to the next by being
+</span></span><span style=display:flex><span>	// passed the next Handler in the chain.
+</span></span><span style=display:flex><span>	Plugin func<span style=color:#ff79c6>(</span>Handler<span style=color:#ff79c6>)</span> Handler
+</span></span><span style=display:flex><span>	
+</span></span><span style=display:flex><span>	Handler interface <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		ServeDNS<span style=color:#ff79c6>(</span>context.Context，dns.ResponseWriter，*dns.Msg<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>int，error<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		Name<span style=color:#ff79c6>()</span> string
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span><span style=color:#ff79c6>)</span>
+</span></span></code></pre></div><p>核心接口 ServeDNS，参数说明：</p><ul><li>context.Context，上下文信息</li><li>dns.ResponseWriter，代表客户端连接，可以回写查询结果</li><li>*dns.Msg，dns请求消息体</li></ul><h2 id=插件注册>插件注册</h2><p>以 kubernetes 为例，在 init() 内注册 setup 方法，然后使用 AddPlugin() 方法，将插件加入插件链.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>const <span style=color:#8be9fd;font-style:italic>pluginName</span> <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#34;kubernetes&#34;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>var <span style=color:#8be9fd;font-style:italic>log</span> <span style=color:#ff79c6>=</span> clog.NewWithPlugin<span style=color:#ff79c6>(</span>pluginName<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>func init<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>{</span> plugin.Register<span style=color:#ff79c6>(</span>pluginName，setup<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>func setup<span style=color:#ff79c6>(</span>c *caddy.Controller<span style=color:#ff79c6>)</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span>	dnsserver.GetConfig<span style=color:#ff79c6>(</span>c<span style=color:#ff79c6>)</span>.AddPlugin<span style=color:#ff79c6>(</span>func<span style=color:#ff79c6>(</span>next plugin.Handler<span style=color:#ff79c6>)</span> plugin.Handler <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		k.Next <span style=color:#ff79c6>=</span> next
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> k
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>})</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><h2 id=coredns-主要流程>CoreDNS 主要流程</h2><p>main 函数：</p><ul><li>解析 Corefile 配置文件</li><li>启动 server</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func Run<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	// Get Corefile input
+</span></span><span style=display:flex><span>	corefile，err :<span style=color:#ff79c6>=</span> caddy.LoadCaddyfile<span style=color:#ff79c6>(</span>serverType<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		mustLogFatal<span style=color:#ff79c6>(</span>err<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	fmt.Printf<span style=color:#ff79c6>(</span><span style=color:#f1fa8c>&#34;DEBUG: Corefile is:\n%s&#34;</span>，string<span style=color:#ff79c6>(</span>corefile.Body<span style=color:#ff79c6>()))</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	// Start your engines
+</span></span><span style=display:flex><span>	instance，err :<span style=color:#ff79c6>=</span> caddy.Start<span style=color:#ff79c6>(</span>corefile<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		mustLogFatal<span style=color:#ff79c6>(</span>err<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>Start 函数最终会调用 NewServer，新建 coredns server. coredns 在创建 Server 时，会遍历已注册的 plugin 来构建 pluginChain 调用链.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>// NewServer returns a new CoreDNS server and compiles all plugins in to it. By default CH class
+</span></span><span style=display:flex><span>// queries are blocked unless queries from enableChaos are loaded.
+</span></span><span style=display:flex><span>func NewServer<span style=color:#ff79c6>(</span>addr string，group <span style=color:#ff79c6>[]</span>*Config<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>*Server，error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	s :<span style=color:#ff79c6>=</span> &amp;Server<span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		Addr:         addr,
+</span></span><span style=display:flex><span>		zones:        make<span style=color:#ff79c6>(</span>map<span style=color:#ff79c6>[</span>string<span style=color:#ff79c6>]</span>*Config<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>		graceTimeout: <span style=color:#bd93f9>5</span> * time.Second,
+</span></span><span style=display:flex><span>		tsigSecret:   make<span style=color:#ff79c6>(</span>map<span style=color:#ff79c6>[</span>string<span style=color:#ff79c6>]</span>string<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _，site :<span style=color:#ff79c6>=</span> range group <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span>		// compile custom plugin <span style=color:#ff79c6>for</span> everything
+</span></span><span style=display:flex><span>		var stack plugin.Handler
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> i :<span style=color:#ff79c6>=</span> len<span style=color:#ff79c6>(</span>site.Plugin<span style=color:#ff79c6>)</span> - 1; i &gt;<span style=color:#ff79c6>=</span> 0; i-- <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>stack</span> <span style=color:#ff79c6>=</span> site.Plugin<span style=color:#ff79c6>[</span>i<span style=color:#ff79c6>](</span>stack<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			// register the *handler* also
+</span></span><span style=display:flex><span>			site.registerHandler<span style=color:#ff79c6>(</span>stack<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		site.pluginChain <span style=color:#ff79c6>=</span> stack
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>...
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> s，nil
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>启动 udp/tcp 的监听，读取 dns 请求报文，处理 dns 请求。</p><ul><li>Serve 处理 TCP 请求</li><li>ServePacket 处理 UDP 请求<ul><li>ServePacket 会启动启动 dns server，并启动 udp server ;</li><li>ActivateAndServe 会根据配置来启动 tcp 和 udp 服务 ;</li><li>serveUDP 读取 dns 请求报文，然后开一个协程去调用 serveUDPPacket ;</li><li>serveUDPPacket 内部会实例化 writer 写对象，然后调用 serveDNS 处理请求.</li></ul></li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>// Serve starts the server with an existing listener. It blocks <span style=color:#ff79c6>until</span> the server stops.
+</span></span><span style=display:flex><span>// This implements caddy.TCPServer interface.
+</span></span><span style=display:flex><span>func <span style=color:#ff79c6>(</span>s *Server<span style=color:#ff79c6>)</span> Serve<span style=color:#ff79c6>(</span>l net.Listener<span style=color:#ff79c6>)</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	s.m.Lock<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>	s.server<span style=color:#ff79c6>[</span>tcp<span style=color:#ff79c6>]</span> <span style=color:#ff79c6>=</span> &amp;dns.Server<span style=color:#ff79c6>{</span>Listener: l，Net: <span style=color:#f1fa8c>&#34;tcp&#34;</span>，Handler: dns.HandlerFunc<span style=color:#ff79c6>(</span>func<span style=color:#ff79c6>(</span>w dns.ResponseWriter，r *dns.Msg<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		ctx :<span style=color:#ff79c6>=</span> context.WithValue<span style=color:#ff79c6>(</span>context.Background<span style=color:#ff79c6>()</span>，Key<span style=color:#ff79c6>{}</span>，s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ctx</span> <span style=color:#ff79c6>=</span> context.WithValue<span style=color:#ff79c6>(</span>ctx，LoopKey<span style=color:#ff79c6>{}</span>，0<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		s.ServeDNS<span style=color:#ff79c6>(</span>ctx，w，r<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>})</span>，TsigSecret: s.tsigSecret<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	s.m.Unlock<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> s.server<span style=color:#ff79c6>[</span>tcp<span style=color:#ff79c6>]</span>.ActivateAndServe<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>// ServePacket starts the server with an existing packetconn. It blocks <span style=color:#ff79c6>until</span> the server stops.
+</span></span><span style=display:flex><span>// This implements caddy.UDPServer interface.
+</span></span><span style=display:flex><span>func <span style=color:#ff79c6>(</span>s *Server<span style=color:#ff79c6>)</span> ServePacket<span style=color:#ff79c6>(</span>p net.PacketConn<span style=color:#ff79c6>)</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	s.m.Lock<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>	s.server<span style=color:#ff79c6>[</span>udp<span style=color:#ff79c6>]</span> <span style=color:#ff79c6>=</span> &amp;dns.Server<span style=color:#ff79c6>{</span>PacketConn: p，Net: <span style=color:#f1fa8c>&#34;udp&#34;</span>，Handler: dns.HandlerFunc<span style=color:#ff79c6>(</span>func<span style=color:#ff79c6>(</span>w dns.ResponseWriter，r *dns.Msg<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		ctx :<span style=color:#ff79c6>=</span> context.WithValue<span style=color:#ff79c6>(</span>context.Background<span style=color:#ff79c6>()</span>，Key<span style=color:#ff79c6>{}</span>，s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#8be9fd;font-style:italic>ctx</span> <span style=color:#ff79c6>=</span> context.WithValue<span style=color:#ff79c6>(</span>ctx，LoopKey<span style=color:#ff79c6>{}</span>，0<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		s.ServeDNS<span style=color:#ff79c6>(</span>ctx，w，r<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>})</span>，TsigSecret: s.tsigSecret<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	s.m.Unlock<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> s.server<span style=color:#ff79c6>[</span>udp<span style=color:#ff79c6>]</span>.ActivateAndServe<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>...
+</span></span><span style=display:flex><span>func <span style=color:#ff79c6>(</span>srv *Server<span style=color:#ff79c6>)</span> ActivateAndServe<span style=color:#ff79c6>()</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>if</span> srv.PacketConn !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        ...
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>return</span> srv.serveUDP<span style=color:#ff79c6>(</span>srv.PacketConn<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>if</span> srv.Listener !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        ...
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>return</span> srv.serveTCP<span style=color:#ff79c6>(</span>srv.Listener<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>return</span> &amp;Error<span style=color:#ff79c6>{</span>err: <span style=color:#f1fa8c>&#34;bad listeners&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>...
+</span></span><span style=display:flex><span>func <span style=color:#ff79c6>(</span>srv *Server<span style=color:#ff79c6>)</span> serveUDP<span style=color:#ff79c6>(</span>l net.PacketConn<span style=color:#ff79c6>)</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	...
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> srv.isStarted<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        ...
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> isUDP <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			m，sUDP，err <span style=color:#ff79c6>=</span> reader.ReadUDP<span style=color:#ff79c6>(</span>lUDP，rtimeout<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			m，sPC，err <span style=color:#ff79c6>=</span> readerPC.ReadPacketConn<span style=color:#ff79c6>(</span>l，rtimeout<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>        ...
+</span></span><span style=display:flex><span>		go srv.serveUDPPacket<span style=color:#ff79c6>(</span>&amp;wg，m，l，sUDP，sPC<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> nil
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>...
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>srv *Server<span style=color:#ff79c6>)</span> serveUDPPacket<span style=color:#ff79c6>(</span>wg *sync.WaitGroup，m <span style=color:#ff79c6>[]</span>byte，u net.PacketConn，udpSession *SessionUDP，pcSession net.Addr<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	w :<span style=color:#ff79c6>=</span> &amp;response<span style=color:#ff79c6>{</span>tsigProvider: srv.tsigProvider<span style=color:#ff79c6>()</span>，udp: u，udpSession: udpSession，pcSession: pcSession<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> srv.DecorateWriter !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		w.writer <span style=color:#ff79c6>=</span> srv.DecorateWriter<span style=color:#ff79c6>(</span>w<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span> <span style=color:#ff79c6>else</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		w.writer <span style=color:#ff79c6>=</span> w
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	srv.serveDNS<span style=color:#ff79c6>(</span>m，w<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	wg.Done<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>根据请求的 zone，遍历执行 pluginChain 插件链的所有 Plugin 插件，依次执行 plugin.ServeDNS 方法.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>s *Server<span style=color:#ff79c6>)</span> ServeDNS<span style=color:#ff79c6>(</span>ctx context.Context，w dns.ResponseWriter，r *dns.Msg<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	// Wrap the response writer in a ScrubWriter so we automatically make the reply fit in the client&#39;s buffer.
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>w</span> <span style=color:#ff79c6>=</span> request.NewScrubWriter<span style=color:#ff79c6>(</span>r，w<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	q :<span style=color:#ff79c6>=</span> strings.ToLower<span style=color:#ff79c6>(</span>r.Question<span style=color:#ff79c6>[</span>0<span style=color:#ff79c6>]</span>.Name<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	var <span style=color:#ff79c6>(</span>
+</span></span><span style=display:flex><span>		off       int
+</span></span><span style=display:flex><span>		end       bool
+</span></span><span style=display:flex><span>		dshandler *Config
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> h，ok :<span style=color:#ff79c6>=</span> s.zones<span style=color:#ff79c6>[</span>q<span style=color:#ff79c6>[</span>off:<span style=color:#ff79c6>]]</span>; ok <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> h.pluginChain <span style=color:#ff79c6>==</span> nil <span style=color:#ff79c6>{</span> // zone defined，but has not got any plugins
+</span></span><span style=display:flex><span>				errorAndMetricsFunc<span style=color:#ff79c6>(</span>s.Addr，w，r，dns.RcodeRefused<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> r.Question<span style=color:#ff79c6>[</span>0<span style=color:#ff79c6>]</span>.Qtype !<span style=color:#ff79c6>=</span> dns.TypeDS <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				rcode，_ :<span style=color:#ff79c6>=</span> h.pluginChain.ServeDNS<span style=color:#ff79c6>(</span>ctx，w，r<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>if</span> !plugin.ClientWrite<span style=color:#ff79c6>(</span>rcode<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>					errorFunc<span style=color:#ff79c6>(</span>s.Addr，w，r，rcode<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			// The <span style=color:#8be9fd;font-style:italic>type</span> is DS，keep the handler，but keep on searching as maybe we are serving
+</span></span><span style=display:flex><span>			// the parent as well and the DS should be routed to it - this will probably *misroute* DS
+</span></span><span style=display:flex><span>			// queries to a possibly grand parent，but there is no way <span style=color:#ff79c6>for</span> us to know at this point
+</span></span><span style=display:flex><span>			// <span style=color:#ff79c6>if</span> there is an actual delegation from grandparent -&gt; parent -&gt; zone.
+</span></span><span style=display:flex><span>			// In all fairness: direct DS queries should not be needed.
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>dshandler</span> <span style=color:#ff79c6>=</span> h
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		off，end <span style=color:#ff79c6>=</span> dns.NextLabel<span style=color:#ff79c6>(</span>q，off<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> end <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>break</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	// Wildcard match，if we have found nothing try the root zone as a last resort.
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> h，ok :<span style=color:#ff79c6>=</span> s.zones<span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;.&#34;</span><span style=color:#ff79c6>]</span>; ok <span style=color:#ff79c6>&amp;&amp;</span> h.pluginChain !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		rcode，_ :<span style=color:#ff79c6>=</span> h.pluginChain.ServeDNS<span style=color:#ff79c6>(</span>ctx，w，r<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> !plugin.ClientWrite<span style=color:#ff79c6>(</span>rcode<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			errorFunc<span style=color:#ff79c6>(</span>s.Addr，w，r，rcode<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	// Still here? Error out with REFUSED.
+</span></span><span style=display:flex><span>	errorAndMetricsFunc<span style=color:#ff79c6>(</span>s.Addr，w，r，dns.RcodeRefused<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>这里 <code>.</code> 代表的是 root zone，即其他 zone 都没匹配到，并配置了 root zone，则匹配到 root zone，进行处理，示例 Corefile 如下：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>example.org:1053 <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    file /var/lib/coredns/example.org.signed
+</span></span><span style=display:flex><span>    transfer <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        to * 2001:500:8f::53
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    errors
+</span></span><span style=display:flex><span>    log
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>. <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    any
+</span></span><span style=display:flex><span>    forward . 8.8.8.8:53
+</span></span><span style=display:flex><span>    errors
+</span></span><span style=display:flex><span>    log
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>CoreDNS 的架构和核心流程总结如下：</p><p><img src=/images/2024-01-09-kubernetes-coredns/2.png alt></p><h2 id=kubernetes-plugin-主要逻辑>kubernetes plugin 主要逻辑</h2><p>插件配置：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-yaml data-lang=yaml><span style=display:flex><span><span style=color:#ff79c6>apiVersion</span>: v1
+</span></span><span style=display:flex><span><span style=color:#ff79c6>data</span>:
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>Corefile</span>: |-<span style=color:#f1fa8c>
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    .:53 {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        errors
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        health {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            lameduck 10s
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        }
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        ready
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        log
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        kubernetes cluster.local in-addr.arpa ip6.arpa {
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            pods insecure
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            fallthrough in-addr.arpa ip6.arpa
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>            ttl 30
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        }
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        prometheus :9153
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        forward . /etc/resolv.conf
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        cache 30
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        loop
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        reload
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>        loadbalance
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>    }</span>    
+</span></span><span style=display:flex><span><span style=color:#ff79c6>kind</span>: ConfigMap
+</span></span></code></pre></div><p>插件加载主要功能如下所示：</p><ul><li>解析 k8s 配置</li><li>实例化 kubeclient 并实例化 dns controller 控制器</li><li>把插件注册到 plugin 链</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func setup<span style=color:#ff79c6>(</span>c *caddy.Controller<span style=color:#ff79c6>)</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	// Do not call klog.InitFlags<span style=color:#ff79c6>(</span>nil<span style=color:#ff79c6>)</span> here.  It will cause reload to panic.
+</span></span><span style=display:flex><span>	klog.SetLogger<span style=color:#ff79c6>(</span>logr.New<span style=color:#ff79c6>(</span>&amp;loggerAdapter<span style=color:#ff79c6>{</span>log<span style=color:#ff79c6>}))</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	k，err :<span style=color:#ff79c6>=</span> kubernetesParse<span style=color:#ff79c6>(</span>c<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> plugin.Error<span style=color:#ff79c6>(</span>pluginName，err<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	onStart，onShut，err :<span style=color:#ff79c6>=</span> k.InitKubeCache<span style=color:#ff79c6>(</span>context.Background<span style=color:#ff79c6>())</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> plugin.Error<span style=color:#ff79c6>(</span>pluginName，err<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> onStart !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		c.OnStartup<span style=color:#ff79c6>(</span>onStart<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> onShut !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		c.OnShutdown<span style=color:#ff79c6>(</span>onShut<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	dnsserver.GetConfig<span style=color:#ff79c6>(</span>c<span style=color:#ff79c6>)</span>.AddPlugin<span style=color:#ff79c6>(</span>func<span style=color:#ff79c6>(</span>next plugin.Handler<span style=color:#ff79c6>)</span> plugin.Handler <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		k.Next <span style=color:#ff79c6>=</span> next
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> k
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>})</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	// get locally bound addresses
+</span></span><span style=display:flex><span>	c.OnStartup<span style=color:#ff79c6>(</span>func<span style=color:#ff79c6>()</span> error <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		k.localIPs <span style=color:#ff79c6>=</span> boundIPs<span style=color:#ff79c6>(</span>c<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nil
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>})</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> nil
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>k *Kubernetes<span style=color:#ff79c6>)</span> InitKubeCache<span style=color:#ff79c6>(</span>ctx context.Context<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>onStart func<span style=color:#ff79c6>()</span> error，onShut func<span style=color:#ff79c6>()</span> error，err error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	config，err :<span style=color:#ff79c6>=</span> k.getClientConfig<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nil，nil，err
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	kubeClient，err :<span style=color:#ff79c6>=</span> kubernetes.NewForConfig<span style=color:#ff79c6>(</span>config<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	k.APIConn <span style=color:#ff79c6>=</span> newdnsController<span style=color:#ff79c6>(</span>ctx，kubeClient，k.opts<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>dnsController 控制器逻辑，实例化 dnsControl 对象，同时实例化各个资源的 informer 对象，在实例化 informer 时传入自定义的 eventHandler 回调方法 和 indexer 索引方法.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func newdnsController<span style=color:#ff79c6>(</span>ctx context.Context，kubeClient kubernetes.Interface，opts dnsControlOpts<span style=color:#ff79c6>)</span> *dnsControl <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	dns :<span style=color:#ff79c6>=</span> dnsControl<span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		client:            kubeClient,
+</span></span><span style=display:flex><span>		selector:          opts.selector,
+</span></span><span style=display:flex><span>		namespaceSelector: opts.namespaceSelector,
+</span></span><span style=display:flex><span>		stopCh:            make<span style=color:#ff79c6>(</span>chan struct<span style=color:#ff79c6>{})</span>,
+</span></span><span style=display:flex><span>		zones:             opts.zones,
+</span></span><span style=display:flex><span>		endpointNameMode:  opts.endpointNameMode,
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	dns.svcLister，dns.svcController <span style=color:#ff79c6>=</span> object.NewIndexerInformer<span style=color:#ff79c6>(</span>
+</span></span><span style=display:flex><span>		&amp;cache.ListWatch<span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			ListFunc:  serviceListFunc<span style=color:#ff79c6>(</span>ctx，dns.client，api.NamespaceAll，dns.selector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>			WatchFunc: serviceWatchFunc<span style=color:#ff79c6>(</span>ctx，dns.client，api.NamespaceAll，dns.selector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>		&amp;api.Service<span style=color:#ff79c6>{}</span>,
+</span></span><span style=display:flex><span>		cache.ResourceEventHandlerFuncs<span style=color:#ff79c6>{</span>AddFunc: dns.Add，UpdateFunc: dns.Update，DeleteFunc: dns.Delete<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>		cache.Indexers<span style=color:#ff79c6>{</span>svcNameNamespaceIndex: svcNameNamespaceIndexFunc，svcIPIndex: svcIPIndexFunc，svcExtIPIndex: svcExtIPIndexFunc<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>		object.DefaultProcessor<span style=color:#ff79c6>(</span>object.ToService，nil<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> opts.initPodCache <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		dns.podLister，dns.podController <span style=color:#ff79c6>=</span> object.NewIndexerInformer<span style=color:#ff79c6>(</span>
+</span></span><span style=display:flex><span>			&amp;cache.ListWatch<span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				ListFunc:  podListFunc<span style=color:#ff79c6>(</span>ctx，dns.client，api.NamespaceAll，dns.selector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>				WatchFunc: podWatchFunc<span style=color:#ff79c6>(</span>ctx，dns.client，api.NamespaceAll，dns.selector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>			&amp;api.Pod<span style=color:#ff79c6>{}</span>,
+</span></span><span style=display:flex><span>			cache.ResourceEventHandlerFuncs<span style=color:#ff79c6>{</span>AddFunc: dns.Add，UpdateFunc: dns.Update，DeleteFunc: dns.Delete<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>			cache.Indexers<span style=color:#ff79c6>{</span>podIPIndex: podIPIndexFunc<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>			object.DefaultProcessor<span style=color:#ff79c6>(</span>object.ToPod，nil<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> opts.initEndpointsCache <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		dns.epLock.Lock<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>		dns.epLister，dns.epController <span style=color:#ff79c6>=</span> object.NewIndexerInformer<span style=color:#ff79c6>(</span>
+</span></span><span style=display:flex><span>			&amp;cache.ListWatch<span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				ListFunc:  endpointSliceListFunc<span style=color:#ff79c6>(</span>ctx，dns.client，api.NamespaceAll，dns.selector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>				WatchFunc: endpointSliceWatchFunc<span style=color:#ff79c6>(</span>ctx，dns.client，api.NamespaceAll，dns.selector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>			&amp;discovery.EndpointSlice<span style=color:#ff79c6>{}</span>,
+</span></span><span style=display:flex><span>			cache.ResourceEventHandlerFuncs<span style=color:#ff79c6>{</span>AddFunc: dns.Add，UpdateFunc: dns.Update，DeleteFunc: dns.Delete<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>			cache.Indexers<span style=color:#ff79c6>{</span>epNameNamespaceIndex: epNameNamespaceIndexFunc，epIPIndex: epIPIndexFunc<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>			object.DefaultProcessor<span style=color:#ff79c6>(</span>object.EndpointSliceToEndpoints，dns.EndpointSliceLatencyRecorder<span style=color:#ff79c6>())</span>,
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		dns.epLock.Unlock<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	dns.nsLister，dns.nsController <span style=color:#ff79c6>=</span> object.NewIndexerInformer<span style=color:#ff79c6>(</span>
+</span></span><span style=display:flex><span>		&amp;cache.ListWatch<span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			ListFunc:  namespaceListFunc<span style=color:#ff79c6>(</span>ctx，dns.client，dns.namespaceSelector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>			WatchFunc: namespaceWatchFunc<span style=color:#ff79c6>(</span>ctx，dns.client，dns.namespaceSelector<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>		&amp;api.Namespace<span style=color:#ff79c6>{}</span>,
+</span></span><span style=display:flex><span>		cache.ResourceEventHandlerFuncs<span style=color:#ff79c6>{}</span>,
+</span></span><span style=display:flex><span>		cache.Indexers<span style=color:#ff79c6>{}</span>,
+</span></span><span style=display:flex><span>		object.DefaultProcessor<span style=color:#ff79c6>(</span>object.ToNamespace，nil<span style=color:#ff79c6>)</span>,
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> &amp;dns
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><ul><li>为什么需要监听 service 资源 ?<ul><li>用户在 pod 内直接使用 service_name 获取到 cluster ip</li></ul></li><li>为什么需要监听 pod 资源 ?<ul><li>用户可以直接通过 podname 进行解析</li></ul></li><li>为什么需要监听 endpoints 资源 ?<ul><li>如果 service 有配置 clusterNone，也就是 headless 类型，则需要使用到 endpoints 的地址</li><li>headless 服务的场景<ul><li>应用自己进行负载均衡</li><li>应用需要连接到所有 pod</li></ul></li></ul></li><li>为什么需要监听 namespace 资源 ?<ul><li>需要判断请求域名的 namespace 段是否可用</li></ul></li></ul><p>kubernetes 插件如何处理 dns 请求? kubernetes 插件也实现了 ServeDNS 方法，该逻辑通过请求的 Qtype 查询类型，调用不同方法来解析域名.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>// ServeDNS implements the plugin.Handler interface.
+</span></span><span style=display:flex><span>func <span style=color:#ff79c6>(</span>k Kubernetes<span style=color:#ff79c6>)</span> ServeDNS<span style=color:#ff79c6>(</span>ctx context.Context，w dns.ResponseWriter，r *dns.Msg<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>int，error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	state :<span style=color:#ff79c6>=</span> request.Request<span style=color:#ff79c6>{</span>W: w，Req: r<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	switch state.QType<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeA:
+</span></span><span style=display:flex><span>		records，truncated，err <span style=color:#ff79c6>=</span> plugin.A<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，nil，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeAAAA:
+</span></span><span style=display:flex><span>		records，truncated，err <span style=color:#ff79c6>=</span> plugin.AAAA<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，nil，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeTXT:
+</span></span><span style=display:flex><span>		records，truncated，err <span style=color:#ff79c6>=</span> plugin.TXT<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，nil，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeCNAME:
+</span></span><span style=display:flex><span>		records，err <span style=color:#ff79c6>=</span> plugin.CNAME<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypePTR:
+</span></span><span style=display:flex><span>		records，err <span style=color:#ff79c6>=</span> plugin.PTR<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeMX:
+</span></span><span style=display:flex><span>		records，extra，err <span style=color:#ff79c6>=</span> plugin.MX<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeSRV:
+</span></span><span style=display:flex><span>		records，extra，err <span style=color:#ff79c6>=</span> plugin.SRV<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeSOA:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>qname</span> <span style=color:#ff79c6>==</span> zone <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			records，err <span style=color:#ff79c6>=</span> plugin.SOA<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeAXFR，dns.TypeIXFR:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> dns.RcodeRefused，nil
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>case</span> dns.TypeNS:
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> state.Name<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>==</span> zone <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			records，extra，err <span style=color:#ff79c6>=</span> plugin.NS<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，state，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>break</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		fallthrough
+</span></span><span style=display:flex><span>	default:
+</span></span><span style=display:flex><span>		// Do a fake A lookup，so we can distinguish between NODATA and NXDOMAIN
+</span></span><span style=display:flex><span>		fake :<span style=color:#ff79c6>=</span> state.NewWithQuestion<span style=color:#ff79c6>(</span>state.QName<span style=color:#ff79c6>()</span>，dns.TypeA<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		fake.Zone <span style=color:#ff79c6>=</span> state.Zone
+</span></span><span style=display:flex><span>		_，_，err <span style=color:#ff79c6>=</span> plugin.A<span style=color:#ff79c6>(</span>ctx，&amp;k，zone，fake，nil，plugin.Options<span style=color:#ff79c6>{})</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	m :<span style=color:#ff79c6>=</span> new<span style=color:#ff79c6>(</span>dns.Msg<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	m.SetReply<span style=color:#ff79c6>(</span>r<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	m.Truncated <span style=color:#ff79c6>=</span> truncated
+</span></span><span style=display:flex><span>	m.Authoritative <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>	m.Answer <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>m.Answer，records...<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	m.Extra <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>m.Extra，extra...<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	w.WriteMsg<span style=color:#ff79c6>(</span>m<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> dns.RcodeSuccess，nil
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>plugin.A，plugin.Txt，plugin.CNAME 等都会调用到 Services() 方法，以 CNAME 为例.</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func CNAME<span style=color:#ff79c6>(</span>ctx context.Context，b ServiceBackend，zone string，state request.Request，opt Options<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>records <span style=color:#ff79c6>[]</span>dns.RR，err error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	services，err :<span style=color:#ff79c6>=</span> b.Services<span style=color:#ff79c6>(</span>ctx，state，true，opt<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> err !<span style=color:#ff79c6>=</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nil，err
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> len<span style=color:#ff79c6>(</span>services<span style=color:#ff79c6>)</span> &gt; <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		serv :<span style=color:#ff79c6>=</span> services<span style=color:#ff79c6>[</span>0<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> ip :<span style=color:#ff79c6>=</span> net.ParseIP<span style=color:#ff79c6>(</span>serv.Host<span style=color:#ff79c6>)</span>; <span style=color:#8be9fd;font-style:italic>ip</span> <span style=color:#ff79c6>==</span> nil <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>records</span> <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>records，serv.NewCNAME<span style=color:#ff79c6>(</span>state.QName<span style=color:#ff79c6>()</span>，serv.Host<span style=color:#ff79c6>))</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> records，nil
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>Services() 最终调用 Records() 方法，会从域名的特征判断请求域名是 pod 还是 svc. Pod 走 findPods 查询方法，其他情况都走 findServices 方法。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>k *Kubernetes<span style=color:#ff79c6>)</span> Services<span style=color:#ff79c6>(</span>ctx context.Context，state request.Request，exact bool，opt plugin.Options<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>svcs <span style=color:#ff79c6>[]</span>msg.Service，err error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	s，e :<span style=color:#ff79c6>=</span> k.Records<span style=color:#ff79c6>(</span>ctx，state，false<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	internal :<span style=color:#ff79c6>=</span> <span style=color:#ff79c6>[]</span>msg.Service<span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _，svc :<span style=color:#ff79c6>=</span> range s <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> t，_ :<span style=color:#ff79c6>=</span> svc.HostType<span style=color:#ff79c6>()</span>; t !<span style=color:#ff79c6>=</span> dns.TypeCNAME <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>internal</span> <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>internal，svc<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> internal，e
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>k *Kubernetes<span style=color:#ff79c6>)</span> Records<span style=color:#ff79c6>(</span>ctx context.Context，state request.Request，exact bool<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>([]</span>msg.Service，error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	r，e :<span style=color:#ff79c6>=</span> parseRequest<span style=color:#ff79c6>(</span>state.Name<span style=color:#ff79c6>()</span>，state.Zone<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> r.podOrSvc <span style=color:#ff79c6>==</span> Pod <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		pods，err :<span style=color:#ff79c6>=</span> k.findPods<span style=color:#ff79c6>(</span>r，state.Zone<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> pods，err
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	services，err :<span style=color:#ff79c6>=</span> k.findServices<span style=color:#ff79c6>(</span>r，state.Zone<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> services，err
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>findServices：</p><ul><li>如果 service 是 headless 类型，则返回 service endoptins 地址</li><li>如果 service 类型是 ClusterIP，则返回 clusterIP 这个 vip</li><li>如果 service 有绑定 ExternalName，则需要返回 CNAME 记录</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>k *Kubernetes<span style=color:#ff79c6>)</span> findServices<span style=color:#ff79c6>(</span>r recordRequest，zone string<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>services <span style=color:#ff79c6>[]</span>msg.Service，err error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>if</span> !k.namespaceExposed<span style=color:#ff79c6>(</span>r.namespace<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>return</span> nil，errNoItems
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	idx :<span style=color:#ff79c6>=</span> object.ServiceKey<span style=color:#ff79c6>(</span>r.service，r.namespace<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>serviceList</span> <span style=color:#ff79c6>=</span> k.APIConn.SvcIndex<span style=color:#ff79c6>(</span>idx<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#8be9fd;font-style:italic>endpointsListFunc</span> <span style=color:#ff79c6>=</span> func<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>[]</span>*object.Endpoints <span style=color:#ff79c6>{</span> <span style=color:#ff79c6>return</span> k.APIConn.EpIndex<span style=color:#ff79c6>(</span>idx<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>	zonePath :<span style=color:#ff79c6>=</span> msg.Path<span style=color:#ff79c6>(</span>zone，coredns<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _，svc :<span style=color:#ff79c6>=</span> range serviceList <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        ...
+</span></span><span style=display:flex><span>		// External service
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> svc.Type <span style=color:#ff79c6>==</span> api.ServiceTypeExternalName <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			s :<span style=color:#ff79c6>=</span> msg.Service<span style=color:#ff79c6>{</span>Key: strings.Join<span style=color:#ff79c6>([]</span>string<span style=color:#ff79c6>{</span>zonePath，Svc，svc.Namespace，svc.Name<span style=color:#ff79c6>}</span>，<span style=color:#f1fa8c>&#34;/&#34;</span><span style=color:#ff79c6>)</span>，Host: svc.ExternalName，TTL: k.ttl<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>if</span> t，_ :<span style=color:#ff79c6>=</span> s.HostType<span style=color:#ff79c6>()</span>; <span style=color:#8be9fd;font-style:italic>t</span> <span style=color:#ff79c6>==</span> dns.TypeCNAME <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				s.Key <span style=color:#ff79c6>=</span> strings.Join<span style=color:#ff79c6>([]</span>string<span style=color:#ff79c6>{</span>zonePath，Svc，svc.Namespace，svc.Name<span style=color:#ff79c6>}</span>，<span style=color:#f1fa8c>&#34;/&#34;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>services</span> <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>services，s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>err</span> <span style=color:#ff79c6>=</span> nil
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		// Endpoint query or headless service
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> svc.Headless<span style=color:#ff79c6>()</span> <span style=color:#ff79c6>||</span> r.endpoint !<span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>&#34;&#34;</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            ...
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>for</span> _，ep :<span style=color:#ff79c6>=</span> range endpointsList <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                ...
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>for</span> _，eps :<span style=color:#ff79c6>=</span> range ep.Subsets <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>for</span> _，addr :<span style=color:#ff79c6>=</span> range eps.Addresses <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                        ...
+</span></span><span style=display:flex><span>						<span style=color:#ff79c6>for</span> _，p :<span style=color:#ff79c6>=</span> range eps.Ports <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>                            ...
+</span></span><span style=display:flex><span>							<span style=color:#8be9fd;font-style:italic>services</span> <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>services，s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>						<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>					<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>				<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>continue</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>		// ClusterIP service
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>for</span> _，p :<span style=color:#ff79c6>=</span> range svc.Ports <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            ...
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>for</span> _，ip :<span style=color:#ff79c6>=</span> range svc.ClusterIPs <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>				s :<span style=color:#ff79c6>=</span> msg.Service<span style=color:#ff79c6>{</span>Host: ip，Port: int<span style=color:#ff79c6>(</span>p.Port<span style=color:#ff79c6>)</span>，TTL: k.ttl<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>				s.Key <span style=color:#ff79c6>=</span> strings.Join<span style=color:#ff79c6>([]</span>string<span style=color:#ff79c6>{</span>zonePath，Svc，svc.Namespace，svc.Name<span style=color:#ff79c6>}</span>，<span style=color:#f1fa8c>&#34;/&#34;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>				<span style=color:#8be9fd;font-style:italic>services</span> <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>services，s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>			<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> services，err
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>findPods()：</p><ul><li>处理 podname 的域名解析的方法，其内部调用 dnsController 里的 podLister.ByIndex 来获取 pod</li><li>podLister 内部维护了 indexer 索引和 store 存储，查询条件是格式化过的 podname</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>func <span style=color:#ff79c6>(</span>k *Kubernetes<span style=color:#ff79c6>)</span> findPods<span style=color:#ff79c6>(</span>r recordRequest，zone string<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>(</span>pods <span style=color:#ff79c6>[]</span>msg.Service，err error<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    ...
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>for</span> _，p :<span style=color:#ff79c6>=</span> range k.APIConn.PodIndex<span style=color:#ff79c6>(</span>ip<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>		// check <span style=color:#ff79c6>for</span> matching ip and namespace
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>if</span> <span style=color:#8be9fd;font-style:italic>ip</span> <span style=color:#ff79c6>==</span> p.PodIP <span style=color:#ff79c6>&amp;&amp;</span> match<span style=color:#ff79c6>(</span>namespace，p.Namespace<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>			s :<span style=color:#ff79c6>=</span> msg.Service<span style=color:#ff79c6>{</span>Key: strings.Join<span style=color:#ff79c6>([]</span>string<span style=color:#ff79c6>{</span>zonePath，Pod，namespace，podname<span style=color:#ff79c6>}</span>，<span style=color:#f1fa8c>&#34;/&#34;</span><span style=color:#ff79c6>)</span>，Host: ip，TTL: k.ttl<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>pods</span> <span style=color:#ff79c6>=</span> append<span style=color:#ff79c6>(</span>pods，s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>			<span style=color:#8be9fd;font-style:italic>err</span> <span style=color:#ff79c6>=</span> nil
+</span></span><span style=display:flex><span>		<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>	<span style=color:#ff79c6>return</span> pods，err
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><h1 id=总结>总结</h1><p>coredns 众多功能都是使用 plugin 插件来实现的，包括 cache 和 log 等功能. kubernetes dns 解析也是通过 plugin 实现的. kubernetes plugin 的源码和原理，相比其他 k8s 组件来说好理解的多，简化流程如下：</p><ul><li>coredns 启动时初始化 kubernetes 插件，并装载注册插件</li><li>插件 kubernetes 中有个 dnscontroller 控制器，它会实例化 service/pods/endpoints/ns 等资源的 informer 并发起监听. 当这些资源发生变更时，会修改 informer 关联的 indexer 索引存储对象</li><li>当 coredns 有查询请求到来时，尝试从 indexer 获取对象，然后返回组装的 dns 数据<ul><li>域名为 pod 特征</li><li>从 podIndexer 中获取 podIP</li><li>当查询的 service 为 externalName 时，则返回 CNAME 记录</li><li>当查询的 service 为 ClusterNone or headless 时，则返回 service 对应的 endpoints 地址</li><li>当查询的 service 为 ClusterIP 时，则返回 service 的 clusterIP</li></ul></li></ul><p>kubernetes 插件核心处理流程如下所示：</p><p><img src=/images/2024-01-09-kubernetes-coredns/3.png alt></p><h1 id=参考资料>参考资料</h1><ul><li><a href=https://github.com/coredns/deployment/blob/master/kubernetes/CoreDNS-k8s_version.md>https://github.com/coredns/deployment/blob/master/kubernetes/CoreDNS-k8s_version.md</a></li><li><a href=https://coredns.io/plugins/kubernetes/>https://coredns.io/plugins/kubernetes/</a></li><li><a href=https://github.com/kubernetes/dns/blob/master/docs/specification.md>https://github.com/kubernetes/dns/blob/master/docs/specification.md</a></li><li><a href=https://github.com/coredns/coredns/issues/5495>https://github.com/coredns/coredns/issues/5495</a></li><li><a href=https://github.com/coredns/coredns/pull/5191>https://github.com/coredns/coredns/pull/5191</a></li></ul><hr><ul class=pager><li class=previous><a href=/post/2023-12-09-ebpf-share/ data-toggle=tooltip data-placement=top title="eBPF 探索 Linux 可观测性、网络、安全、性能">&larr;
+Previous Post</a></li><li class=next><a href=/post/2024-03-09-istio-sidecar-performance-test/ data-toggle=tooltip data-placement=top title="Sidecar 在 Istio 大规模场景下性能测试">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2024</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
