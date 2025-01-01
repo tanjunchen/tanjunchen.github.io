@@ -1,0 +1,425 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="Kubernetes 中数据包的生命周期 网络基础知识（Part1）"><meta property="og:title" content="Kubernetes 中数据包的生命周期 网络基础知识（Part1）"><meta property="twitter:title" content="Kubernetes 中数据包的生命周期 网络基础知识（Part1）"><meta name=description content="本文我们将讨论 Kubernetes 的 Linux 网络、Namespace 与容器网络 CNI 等基础知识。如 Linux 命名空间、容器网络基础知识、Pod 网络命令空间、什么是 CNI？等"><meta property="og:description" content="本文我们将讨论 Kubernetes 的 Linux 网络、Namespace 与容器网络 CNI 等基础知识。如 Linux 命名空间、容器网络基础知识、Pod 网络命令空间、什么是 CNI？等"><meta property="twitter:description" content="本文我们将讨论 Kubernetes 的 Linux 网络、Namespace 与容器网络 CNI 等基础知识。如 Linux 命名空间、容器网络基础知识、Pod 网络命令空间、什么是 CNI？等"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>Kubernetes 中数据包的生命周期 网络基础知识（Part1） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2021-10-22-kubernetes-pod-part01/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>Kubernetes 中数据包的生命周期 网络基础知识（Part1）</h1><h2 class=subheading>本文我们将讨论 Kubernetes 的 Linux 网络、Namespace 与容器网络 CNI 基础知识</h2><span class=meta>Posted by
+陈谭军
+on
+Friday, October 22, 2021
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2021-10-22-kubernetes-pod-part01/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 4171 字</span>，阅读约 <span class=more-meta>9 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>最近在深入学习 Kubernetes 基础知识，通过追踪 HTTP 请求到达 Kubernetes 集群上的服务过程来深入学习 Kubernetes 实现原理。
+希望下列文章能够对我们熟悉 Kubernetes 有一定的帮助。</p><ul><li><a href=https://tanjunchen.github.io/post/2021-10-22-kubernetes-pod-part01/>Linux 网络、Namespace 与容器网络 CNI 基础知识</a></li><li>Kubernetes CNI 大利器 - Calico</li><li><a href=https://tanjunchen.github.io/post/2021-10-15-kubernetes-pod-part03/>Kubernetes 流量核心组件 - kube-proxy</a></li><li>Kubernetes 使用 Ingress 处理七层流量</li></ul><h1 id=linux-命名空间linux-namespaces>Linux 命名空间（Linux Namespaces）</h1><p>Linux 命名空间是大多数现代容器实现背后的技术。它们允许独立进程之间隔离全局系统资源。例如，PID命名空间隔离了进程ID命名空间，在同一主机上运行的两个进程可以拥有相同的PID。
+在容器的世界中，这种隔离级别显然是非常有用的。没有命名空间，容器A中运行的进程可以卸载容器B中的重要文件系统，或者更改容器C的主机名，或者从容器D中移除网络接口。通过对这些资源进行命名空间化，容器A中的进程甚至无法意识到容器B、C和D中的进程存在。Linux 内核中常见的命令空间如下所示：</p><ul><li>Mount - 隔离文件系统挂载点</li><li>UTS - 隔离主机名和域名</li><li>IPC - 隔离进程间通信（IPC）资源</li><li>PID - 隔离PID命名空间</li><li>Network - 隔离网络接口</li><li>User - 隔离UID/GID命名空间</li><li>Cgroup - 隔离cgroup根目录</li></ul><p><img src=/images/2021-10-22-kubernetes-pod-part01/1.png alt></p><p>更多有关 Linux Namespace 详情可参考 <a href=https://en.wikipedia.org/wiki/Linux_namespaces#Namespace_kinds>https://en.wikipedia.org/wiki/Linux_namespaces#Namespace_kinds</a></p><h2 id=容器网络network-namespace>容器网络（Network Namespace）</h2><p>在深入理解CNI之前，我们先熟悉网络命名空间。让我们使用 ip 命令创建两个不同的网络命名空间，并将它们分别命名为客户端 client 和服务器 server。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns add client
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns add server
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns list
+</span></span><span style=display:flex><span>server
+</span></span><span style=display:flex><span>client
+</span></span></code></pre></div><p>上述内容创建完成后，我们其实可以在 /run/netns 目录下看见该文件，如下所示：</p><p><img src=/images/2021-10-22-kubernetes-pod-part01/2.png alt></p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:/run/netns# <span style=color:#8be9fd;font-style:italic>pwd</span>
+</span></span><span style=display:flex><span>/run/netns
+</span></span></code></pre></div><p>创建一个 veth 对来连接这些网络命名空间。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip link list | grep veth
+</span></span><span style=display:flex><span>3: veth-server@veth-client: &lt;BROADCAST,MULTICAST,M-DOWN&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noop state DOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>4: veth-client@veth-server: &lt;BROADCAST,MULTICAST,M-DOWN&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noop state DOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span></code></pre></div><p><img src=/images/2021-10-22-kubernetes-pod-part01/3.png alt></p><p>veth对（网络线）存在于主机网络命名空间中；我们将 veth 对的两端移动到我们之前创建的各自的命名空间中。注意：主机网络命名空间是看不到 veth 对的。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip link <span style=color:#8be9fd;font-style:italic>set</span> veth-client netns client
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip link <span style=color:#8be9fd;font-style:italic>set</span> veth-server netns server
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip link list | grep veth   
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# 
+</span></span></code></pre></div><p><img src=/images/2021-10-22-kubernetes-pod-part01/4.png alt></p><p>让我们验证veth的两端是否真的存在于这些命名空间中。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client ip link
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noop state DOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>4: veth-client@if3: &lt;BROADCAST,MULTICAST&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noop state DOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether ba:15:14:e4:04:79 brd ff:ff:ff:ff:ff:ff link-netns server
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server ip link
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noop state DOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>3: veth-server@if4: &lt;BROADCAST,MULTICAST&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noop state DOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether 46:7d:31:fe:e9:bd brd ff:ff:ff:ff:ff:ff link-netns client
+</span></span></code></pre></div><p>现在让我们给这些接口分配IP地址并启动它们。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client ip address add 10.0.0.11/24 dev veth-client
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client ip link <span style=color:#8be9fd;font-style:italic>set</span> veth-client up 
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server ip address add 10.0.0.12/24 dev veth-server
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server ip link <span style=color:#8be9fd;font-style:italic>set</span> veth-server up 
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client ip addr
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noop state DOWN group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>4: veth-client@if3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether ba:15:14:e4:04:79 brd ff:ff:ff:ff:ff:ff link-netns server
+</span></span><span style=display:flex><span>    inet 10.0.0.11/24 scope global veth-client
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>    inet6 fe80::b815:14ff:fee4:479/64 scope link 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server ip addr
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noop state DOWN group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>3: veth-server@if4: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ether 46:7d:31:fe:e9:bd brd ff:ff:ff:ff:ff:ff link-netns client
+</span></span><span style=display:flex><span>    inet 10.0.0.12/24 scope global veth-server
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>    inet6 fe80::447d:31ff:fefe:e9bd/64 scope link 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span></code></pre></div><p><img src=/images/2021-10-22-kubernetes-pod-part01/5.png alt></p><p>使用 ping 命令验证这两个网络命名空间已经被连接并且是可达的。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client ping 10.0.0.12
+</span></span><span style=display:flex><span>PING 10.0.0.12 <span style=color:#ff79c6>(</span>10.0.0.12<span style=color:#ff79c6>)</span> 56<span style=color:#ff79c6>(</span>84<span style=color:#ff79c6>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.0.0.12: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.037 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.0.0.12: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.020 ms
+</span></span><span style=display:flex><span>^C
+</span></span><span style=display:flex><span>--- 10.0.0.12 ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#bd93f9>2</span> packets transmitted, <span style=color:#bd93f9>2</span> received, 0% packet loss, <span style=color:#8be9fd;font-style:italic>time</span> 1010ms
+</span></span><span style=display:flex><span>rtt min/avg/max/mdev <span style=color:#ff79c6>=</span> 0.020/0.028/0.037/0.008 ms
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server ping 10.0.0.11
+</span></span><span style=display:flex><span>PING 10.0.0.11 <span style=color:#ff79c6>(</span>10.0.0.11<span style=color:#ff79c6>)</span> 56<span style=color:#ff79c6>(</span>84<span style=color:#ff79c6>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.0.0.11: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.018 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.0.0.11: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.017 ms
+</span></span><span style=display:flex><span>^C
+</span></span><span style=display:flex><span>--- 10.0.0.11 ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#bd93f9>2</span> packets transmitted, <span style=color:#bd93f9>2</span> received, 0% packet loss, <span style=color:#8be9fd;font-style:italic>time</span> 1019ms
+</span></span><span style=display:flex><span>rtt min/avg/max/mdev <span style=color:#ff79c6>=</span> 0.017/0.017/0.018/0.000 ms
+</span></span></code></pre></div><p>注意：执行以下操作删除上述创建的网络命名空间。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># 删除设置的IP地址</span>
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server ip address del 10.0.0.12/24 dev veth-server
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client ip address del 10.0.0.11/24 dev veth-client
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 将网络接口移出网络命名空间</span>
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> veth-server netns <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> veth-client netns <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 删除网络命名空间</span>
+</span></span><span style=display:flex><span>ip netns del server
+</span></span><span style=display:flex><span>ip netns del client
+</span></span></code></pre></div><p>如果想要创建更多的网络命名空间并将它们连接在一起，为每一对命名空间创建一个veth对不是一个可扩展的解决方案。
+我们可以创建一个Linux桥接，并将这些网络命名空间连接到网桥上以获取连接性。这正是Docker在同一主机上运行的容器之间设置网络的方式。
+让我们使用以下脚本创建命名空间并将其连接到网桥上测试 Docker 默认桥接模式。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>HOST_IP</span><span style=color:#ff79c6>=</span>192.168.0.7
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>BR</span><span style=color:#ff79c6>=</span>bridge1
+</span></span><span style=display:flex><span>ip link add client1-veth <span style=color:#8be9fd;font-style:italic>type</span> veth peer name client1-veth-br
+</span></span><span style=display:flex><span>ip link add server1-veth <span style=color:#8be9fd;font-style:italic>type</span> veth peer name server1-veth-br
+</span></span><span style=display:flex><span>ip link add <span style=color:#8be9fd;font-style:italic>$BR</span> <span style=color:#8be9fd;font-style:italic>type</span> bridge
+</span></span><span style=display:flex><span>ip netns add client1
+</span></span><span style=display:flex><span>ip netns add server1
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> client1-veth netns client1
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> server1-veth netns server1
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> client1-veth-br master <span style=color:#8be9fd;font-style:italic>$BR</span>
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> server1-veth-br master <span style=color:#8be9fd;font-style:italic>$BR</span>
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> <span style=color:#8be9fd;font-style:italic>$BR</span> up
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> client1-veth-br up
+</span></span><span style=display:flex><span>ip link <span style=color:#8be9fd;font-style:italic>set</span> server1-veth-br up
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ip link <span style=color:#8be9fd;font-style:italic>set</span> client1-veth up
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ip link <span style=color:#8be9fd;font-style:italic>set</span> server1-veth up
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ip addr add 172.30.0.11/24 dev client1-veth
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ip addr add 172.30.0.12/24 dev server1-veth
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>ip addr add 172.30.0.1/24 dev <span style=color:#8be9fd;font-style:italic>$BR</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ping 172.30.0.12 -c <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ping 172.30.0.1 -c <span style=color:#bd93f9>5</span>
+</span></span></code></pre></div><p><img src=/images/2021-10-22-kubernetes-pod-part01/6.png alt></p><p>使用 ping 命令，我们可以验证两个网络命名空间已连接并且可以互相访问。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ping 172.30.0.1 -c <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>PING 172.30.0.1 <span style=color:#ff79c6>(</span>172.30.0.1<span style=color:#ff79c6>)</span> 56<span style=color:#ff79c6>(</span>84<span style=color:#ff79c6>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 172.30.0.1: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.040 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 172.30.0.1: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.037 ms
+</span></span><span style=display:flex><span>^C
+</span></span><span style=display:flex><span>--- 172.30.0.1 ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#bd93f9>2</span> packets transmitted, <span style=color:#bd93f9>2</span> received, 0% packet loss, <span style=color:#8be9fd;font-style:italic>time</span> 1025ms
+</span></span><span style=display:flex><span>rtt min/avg/max/mdev <span style=color:#ff79c6>=</span> 0.037/0.038/0.040/0.001 ms
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ping 172.30.0.1 -c <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>PING 172.30.0.1 <span style=color:#ff79c6>(</span>172.30.0.1<span style=color:#ff79c6>)</span> 56<span style=color:#ff79c6>(</span>84<span style=color:#ff79c6>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 172.30.0.1: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.062 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 172.30.0.1: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.032 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 172.30.0.1: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>3</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.036 ms
+</span></span></code></pre></div><p>从命名空间 ping 主机IP，出现“网络不可达”，因为在新创建的命名空间中尚未配置路由。让我们添加默认路由：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ping <span style=color:#8be9fd;font-style:italic>$HOST_IP</span> -c <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>ping: connect: Network is unreachable
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ping <span style=color:#8be9fd;font-style:italic>$HOST_IP</span> -c <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>ping: connect: Network is unreachable
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ip route show
+</span></span><span style=display:flex><span>172.30.0.0/24 dev client1-veth proto kernel scope link src 172.30.0.11 
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ip route show
+</span></span><span style=display:flex><span>172.30.0.0/24 dev server1-veth proto kernel scope link src 172.30.0.12 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ip route add default via 172.30.0.1 
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ip route add default via 172.30.0.1
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ip route show
+</span></span><span style=display:flex><span>default via 172.30.0.1 dev server1-veth 
+</span></span><span style=display:flex><span>172.30.0.0/24 dev server1-veth proto kernel scope link src 172.30.0.12 
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ip route show
+</span></span><span style=display:flex><span>default via 172.30.0.1 dev client1-veth 
+</span></span><span style=display:flex><span>172.30.0.0/24 dev client1-veth proto kernel scope link src 172.30.0.11 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ping <span style=color:#8be9fd;font-style:italic>$HOST_IP</span> -c <span style=color:#bd93f9>5</span>
+</span></span><span style=display:flex><span>PING 192.168.0.7 <span style=color:#ff79c6>(</span>192.168.0.7<span style=color:#ff79c6>)</span> 56<span style=color:#ff79c6>(</span>84<span style=color:#ff79c6>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 192.168.0.7: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.040 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 192.168.0.7: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>64</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.043 ms
+</span></span></code></pre></div><p>现在，访问外部网络的“默认”路由是桥接模式，因此命名空间可以使用任何外部网络服务，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-frllxehj:~/tanjunchen# ping 8.8.8.8 -c <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>PING 8.8.8.8 <span style=color:#ff79c6>(</span>8.8.8.8<span style=color:#ff79c6>)</span> 56<span style=color:#ff79c6>(</span>84<span style=color:#ff79c6>)</span> bytes of data.
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 8.8.8.8: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>53</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>1.51 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 8.8.8.8: <span style=color:#8be9fd;font-style:italic>icmp_seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>53</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>1.44 ms
+</span></span></code></pre></div><p>备注：我们可以通过以下手段删除上述常见的网络设备。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>ip link del client1-veth-br
+</span></span><span style=display:flex><span>ip link del server1-veth-br
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> client1 ip link del client1-veth
+</span></span><span style=display:flex><span>ip netns <span style=color:#8be9fd;font-style:italic>exec</span> server1 ip link del server1-veth
+</span></span><span style=display:flex><span>ip netns del client1
+</span></span><span style=display:flex><span>ip netns del server1
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>BR</span><span style=color:#ff79c6>=</span>bridge1
+</span></span><span style=display:flex><span>ip link del <span style=color:#8be9fd;font-style:italic>$BR</span>
+</span></span></code></pre></div><h2 id=如何从外部服务器访问私有网络>如何从外部服务器访问私有网络？</h2><p>在网络命名空间（Namespace）上下文中运行 Web 服务器并不容易，因为所有的 Linux 命名空间需要协同工作才能模拟这种场景。为简化操作，我们可以利用 Docker 来模拟这一场景。</p><p>让我们启动一个 Nginx 容器，并检查相关信息：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~# docker run -d --name web --rm nginx
+</span></span><span style=display:flex><span>Unable to find image <span style=color:#f1fa8c>&#39;nginx:latest&#39;</span> locally
+</span></span><span style=display:flex><span>latest: Pulling from library/nginx
+</span></span><span style=display:flex><span>fd674058ff8f: Downloading <span style=color:#ff79c6>[===========================</span>&gt;                       <span style=color:#ff79c6>]</span>  15.29MB/28.23MB
+</span></span><span style=display:flex><span>fd674058ff8f: Downloading <span style=color:#ff79c6>[===========================</span>&gt;                       <span style=color:#ff79c6>]</span>  15.59MB/28.23MB
+</span></span><span style=display:flex><span>2b99b9c5d9e5: Download <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>fd674058ff8f: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>566e42bcee1c: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>2b99b9c5d9e5: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>bd98674871f5: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>1e109dd2a0d7: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>da8cc133ff82: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>c44f27309ea1: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>Digest: sha256:42e917aaa1b5bb40dd0f6f7f4f857490ac7747d7ef73b391c774a41a8b994f15
+</span></span><span style=display:flex><span>Status: Downloaded newer image <span style=color:#ff79c6>for</span> nginx:latest
+</span></span><span style=display:flex><span>e09ffc5b9c8fbeea229ea4676b766c201d246e114a14d4e2de08aae90a5a5dd8
+</span></span></code></pre></div><p>获取容器的 IP 地址与检查容器的网络命名空间路径：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~# <span style=color:#8be9fd;font-style:italic>WEB_IP</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>`</span>docker inspect -f <span style=color:#f1fa8c>&#34;{{ .NetworkSettings.IPAddress }}&#34;</span> web<span style=color:#f1fa8c>`</span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~# docker inspect web --format <span style=color:#f1fa8c>&#39;{{ .NetworkSettings.SandboxKey }}&#39;</span>
+</span></span><span style=display:flex><span>/var/run/docker/netns/0d2b6c023fe9
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~# ip netns list
+</span></span><span style=display:flex><span>server1 <span style=color:#ff79c6>(</span>id: 1<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>client1 <span style=color:#ff79c6>(</span>id: 0<span style=color:#ff79c6>)</span>
+</span></span></code></pre></div><p>Docker 不会在默认位置创建网络命名空间，因此 ip netns list 无法显示该命名空间，通过创建符号链接来解决此问题：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>controlplane $ <span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#ff79c6>=</span>web
+</span></span><span style=display:flex><span>controlplane $ <span style=color:#8be9fd;font-style:italic>container_netns</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>docker inspect <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#f1fa8c>}</span> --format <span style=color:#f1fa8c>&#39;{{ .NetworkSettings.SandboxKey }}&#39;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>controlplane $ mkdir -p /var/run/netns
+</span></span><span style=display:flex><span>controlplane $ rm -f /var/run/netns/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>controlplane $ ln -sv <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_netns</span><span style=color:#f1fa8c>}</span> /var/run/netns/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span><span style=color:#f1fa8c>&#39;/var/run/netns/web&#39;</span> -&gt; <span style=color:#f1fa8c>&#39;/var/run/docker/netns/c009f2a4be71&#39;</span>
+</span></span></code></pre></div><p>验证网络命名空间是否已列出：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:/var/run/netns# ll
+</span></span><span style=display:flex><span>total <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>drwxr-xr-x  <span style=color:#bd93f9>2</span> root root  <span style=color:#bd93f9>100</span> Jan  <span style=color:#bd93f9>1</span> 14:25 ./
+</span></span><span style=display:flex><span>drwxr-xr-x <span style=color:#bd93f9>28</span> root root <span style=color:#bd93f9>1020</span> Jan  <span style=color:#bd93f9>1</span> 14:02 ../
+</span></span><span style=display:flex><span>-r--r--r--  <span style=color:#bd93f9>1</span> root root    <span style=color:#bd93f9>0</span> Jan  <span style=color:#bd93f9>1</span> 14:02 client1
+</span></span><span style=display:flex><span>-r--r--r--  <span style=color:#bd93f9>1</span> root root    <span style=color:#bd93f9>0</span> Jan  <span style=color:#bd93f9>1</span> 14:02 server1
+</span></span><span style=display:flex><span>lrwxrwxrwx  <span style=color:#bd93f9>1</span> root root   <span style=color:#bd93f9>34</span> Jan  <span style=color:#bd93f9>1</span> 14:24 web -&gt; /var/run/docker/netns/0d2b6c023fe9
+</span></span><span style=display:flex><span>root@instance-70s5fat5:/var/run/netns# ip netns list
+</span></span><span style=display:flex><span>web <span style=color:#ff79c6>(</span>id: 2<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>server1 <span style=color:#ff79c6>(</span>id: 1<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>client1 <span style=color:#ff79c6>(</span>id: 0<span style=color:#ff79c6>)</span>
+</span></span></code></pre></div><p>在命名空间中查看 IP 地址：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:/var/run/netns# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> web ip addr
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noqueue state UNKNOWN group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>    inet 127.0.0.1/8 scope host lo
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>    inet6 ::1/128 scope host 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>9: eth0@if10: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP group default 
+</span></span><span style=display:flex><span>    link/ether 02:42:ac:11:00:02 brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>    inet 172.17.0.2/16 brd 172.17.255.255 scope global eth0
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>root@instance-70s5fat5:/var/run/netns# <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#8be9fd;font-style:italic>$WEB_IP</span>
+</span></span><span style=display:flex><span>172.17.0.2
+</span></span></code></pre></div><p>容器通过 Linux 命名空间实现了完全隔离，我们可以从主机访问运行在容器内的 Web 应用：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:/var/run/netns# curl <span style=color:#8be9fd;font-style:italic>$WEB_IP</span>
+</span></span><span style=display:flex><span>&lt;!DOCTYPE html&gt;
+</span></span><span style=display:flex><span>&lt;html&gt;
+</span></span><span style=display:flex><span>&lt;head&gt;
+</span></span><span style=display:flex><span>&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+</span></span><span style=display:flex><span>&lt;style&gt;
+</span></span><span style=display:flex><span>html <span style=color:#ff79c6>{</span> color-scheme: light dark; <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>body <span style=color:#ff79c6>{</span> width: 35em; margin: <span style=color:#bd93f9>0</span> auto;
+</span></span><span style=display:flex><span>font-family: Tahoma, Verdana, Arial, sans-serif; <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>&lt;/style&gt;
+</span></span><span style=display:flex><span>&lt;/head&gt;
+</span></span><span style=display:flex><span>&lt;body&gt;
+</span></span><span style=display:flex><span>&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+</span></span><span style=display:flex><span>&lt;p&gt;If you see this page, the nginx web server is successfully installed and
+</span></span><span style=display:flex><span>working. Further configuration is required.&lt;/p&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;p&gt;For online documentation and support please refer to
+</span></span><span style=display:flex><span>&lt;a <span style=color:#8be9fd;font-style:italic>href</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;http://nginx.org/&#34;</span>&gt;nginx.org&lt;/a&gt;.&lt;br/&gt;
+</span></span><span style=display:flex><span>Commercial support is available at
+</span></span><span style=display:flex><span>&lt;a <span style=color:#8be9fd;font-style:italic>href</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;http://nginx.com/&#34;</span>&gt;nginx.com&lt;/a&gt;.&lt;/p&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;p&gt;&lt;em&gt;Thank you <span style=color:#ff79c6>for</span> using nginx.&lt;/em&gt;&lt;/p&gt;
+</span></span><span style=display:flex><span>&lt;/body&gt;
+</span></span><span style=display:flex><span>&lt;/html&gt;
+</span></span></code></pre></div><p>CNI 插件执行了上述命令（不完全相同，但类似）来配置回环接口、eth0 并为容器分配 IP 地址。我们将在下一节讨论 CNI。</p><h1 id=什么是-cni>什么是 CNI？</h1><p>CNI 插件负责将网络接口插入到容器网络命名空间中（例如，veth对的一端），并在主机上进行必要的更改（例如，将veth的另一端连接到一个桥）。他将IP分配给网络接口，并通过调用IPAM插件设置与IP地址管理部分一致的路由。CNI仅关注容器的网络连接以及在删除容器时移除分配的资源。</p><p><img src=/images/2021-10-22-kubernetes-pod-part01/7.png alt></p><p>Runtime 运行时可以是任何东西 - 例如 Kubernetes、PodMan、Cloud Foundry等。</p><h2 id=cni-规范>CNI 规范</h2><p>CNI 规范可参考 <a href=https://github.com/containernetworking/cni/blob/master/SPEC.md>https://github.com/containernetworking/cni/blob/master/SPEC.md</a>，CNI 具体特征如下所示：</p><ul><li>该规范将容器定义为Linux网络命名空间，像Docker这样的容器运行时为每个容器创建一个新的网络命名空间</li><li>CNI的网络定义存储为JSON文件</li><li>网络定义通过STDIN流向插件，主机上没有网络配置的配置文件</li><li>其他参数通过环境变量传递给插件</li><li>CNI插件是作为一个可执行程序实现的</li><li>CNI插件负责容器连接，它需要做所有的工作使容器可以连接到网络</li><li>CNI插件负责IPAM，包括IP地址分配和配置所需的路由</li></ul><p>接下来手动模拟Pod的创建，不通过Kubernetes与CNI插件分配IP，而是使用CLI命令。演示完这个示例后，我们将深入理解 Kubernetes 中的 Pod CNI 容器网络。</p><ol><li>下载 CNI 插件</li></ol><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~/cni# wget https://github.com/containernetworking/cni/releases/download/v0.5.0/cni-amd64-v0.5.0.tgz
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# tar -xvf cni-amd64-v0.5.0.tgz
+</span></span><span style=display:flex><span>./
+</span></span><span style=display:flex><span>./macvlan
+</span></span><span style=display:flex><span>./dhcp
+</span></span><span style=display:flex><span>./loopback
+</span></span><span style=display:flex><span>./ptp
+</span></span><span style=display:flex><span>./ipvlan
+</span></span><span style=display:flex><span>./bridge
+</span></span><span style=display:flex><span>./tuning
+</span></span><span style=display:flex><span>./noop
+</span></span><span style=display:flex><span>./host-local
+</span></span><span style=display:flex><span>./cnitool
+</span></span><span style=display:flex><span>./flannel
+</span></span></code></pre></div><p>2.创建 CNI JSON 配置文件</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cat &gt; /tmp/00-demo.conf &lt;&lt;<span style=color:#f1fa8c>&#34;EOF&#34;</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;cniVersion&#34;</span>: <span style=color:#f1fa8c>&#34;0.3.0&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;demo_br&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;bridge&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;bridge&#34;</span>: <span style=color:#f1fa8c>&#34;cni_net0&#34;</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;isGateway&#34;</span>: true,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;ipMasq&#34;</span>: true,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;ipam&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;host-local&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;subnet&#34;</span>: <span style=color:#f1fa8c>&#34;10.0.10.0/24&#34;</span>,
+</span></span><span style=display:flex><span>        <span style=color:#f1fa8c>&#34;routes&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>{</span> <span style=color:#f1fa8c>&#34;dst&#34;</span>: <span style=color:#f1fa8c>&#34;0.0.0.0/0&#34;</span> <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>{</span> <span style=color:#f1fa8c>&#34;dst&#34;</span>: <span style=color:#f1fa8c>&#34;1.1.1.1/32&#34;</span>, <span style=color:#f1fa8c>&#34;gw&#34;</span>:<span style=color:#f1fa8c>&#34;10.0.10.1&#34;</span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>EOF
+</span></span></code></pre></div><p>3.创建一个网络模式为 none 的容器，这样该容器将不会有任何可用的 IP 地址。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~/cni# docker run --name pause_demo -d --rm --network none k8s.gcr.io/pause:3.9
+</span></span><span style=display:flex><span>Unable to find image <span style=color:#f1fa8c>&#39;k8s.gcr.io/pause:3.9&#39;</span> locally
+</span></span><span style=display:flex><span>3.9: Pulling from pause
+</span></span><span style=display:flex><span>61fec91190a0: Pull <span style=color:#8be9fd;font-style:italic>complete</span> 
+</span></span><span style=display:flex><span>Digest: sha256:7031c1b283388d2c2e09b57badb803c05ebed362dc88d84b480cc47f72a21097
+</span></span><span style=display:flex><span>Status: Downloaded newer image <span style=color:#ff79c6>for</span> k8s.gcr.io/pause:3.9
+</span></span><span style=display:flex><span>16395083935b4e5e77dd95342e0e31678e5a4e65a872ca93a791da49291c55b1
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                  COMMAND    CREATED          STATUS          PORTS     NAMES
+</span></span><span style=display:flex><span>16395083935b   k8s.gcr.io/pause:3.9   <span style=color:#f1fa8c>&#34;/pause&#34;</span>   <span style=color:#bd93f9>12</span> seconds ago   Up <span style=color:#bd93f9>11</span> seconds             pause_demo
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# <span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#ff79c6>=</span>pause_demo
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# <span style=color:#8be9fd;font-style:italic>container_netns</span><span style=color:#ff79c6>=</span><span style=color:#ff79c6>$(</span>docker inspect <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#f1fa8c>}</span> --format <span style=color:#f1fa8c>&#39;{{ .NetworkSettings.SandboxKey }}&#39;</span><span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#8be9fd;font-style:italic>$container_id</span>
+</span></span><span style=display:flex><span>pause_demo
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#8be9fd;font-style:italic>$container_netns</span>
+</span></span><span style=display:flex><span>/var/run/docker/netns/47bcefca9939
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# mkdir -p /var/run/netns
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# rm -f /var/run/netns/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# ln -sv <span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_netns</span><span style=color:#f1fa8c>}</span> /var/run/netns/<span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>container_id</span><span style=color:#f1fa8c>}</span>
+</span></span><span style=display:flex><span><span style=color:#f1fa8c>&#39;/var/run/netns/pause_demo&#39;</span> -&gt; <span style=color:#f1fa8c>&#39;/var/run/docker/netns/47bcefca9939&#39;</span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# ip netns list
+</span></span><span style=display:flex><span>pause_demo
+</span></span><span style=display:flex><span>web
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> <span style=color:#8be9fd;font-style:italic>$container_id</span> ifconfig
+</span></span><span style=display:flex><span>lo: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>73&lt;UP,LOOPBACK,RUNNING&gt;  mtu <span style=color:#bd93f9>65536</span>
+</span></span><span style=display:flex><span>        inet 127.0.0.1  netmask 255.0.0.0
+</span></span><span style=display:flex><span>        inet6 ::1  prefixlen <span style=color:#bd93f9>128</span>  scopeid 0x10&lt;host&gt;
+</span></span><span style=display:flex><span>        loop  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Local Loopback<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>0</span>  bytes <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>0</span>  bytes <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>4.使用 CNI 配置文件调用 CNI 插件</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~/cni# <span style=color:#8be9fd;font-style:italic>CNI_CONTAINERID</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>$container_id</span> <span style=color:#8be9fd;font-style:italic>CNI_IFNAME</span><span style=color:#ff79c6>=</span>eth10 <span style=color:#8be9fd;font-style:italic>CNI_COMMAND</span><span style=color:#ff79c6>=</span>ADD <span style=color:#8be9fd;font-style:italic>CNI_NETNS</span><span style=color:#ff79c6>=</span>/var/run/netns/<span style=color:#8be9fd;font-style:italic>$container_id</span> <span style=color:#8be9fd;font-style:italic>CNI_PATH</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>`</span><span style=color:#8be9fd;font-style:italic>pwd</span><span style=color:#f1fa8c>`</span> ./bridge &lt;/tmp/00-demo.conf 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;interfaces&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;cni_net0&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;mac&#34;</span>: <span style=color:#f1fa8c>&#34;0a:58:0a:00:0a:01&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;veth61683440&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;mac&#34;</span>: <span style=color:#f1fa8c>&#34;ca:7b:bc:fc:73:f4&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;eth10&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;mac&#34;</span>: <span style=color:#f1fa8c>&#34;0a:58:0a:00:0a:02&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;sandbox&#34;</span>: <span style=color:#f1fa8c>&#34;/var/run/netns/pause_demo&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>]</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;ips&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;version&#34;</span>: <span style=color:#f1fa8c>&#34;4&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;interface&#34;</span>: 2,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;address&#34;</span>: <span style=color:#f1fa8c>&#34;10.0.10.2/24&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;gateway&#34;</span>: <span style=color:#f1fa8c>&#34;10.0.10.1&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>]</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;routes&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;dst&#34;</span>: <span style=color:#f1fa8c>&#34;0.0.0.0/0&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;dst&#34;</span>: <span style=color:#f1fa8c>&#34;1.1.1.1/32&#34;</span>,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;gw&#34;</span>: <span style=color:#f1fa8c>&#34;10.0.10.1&#34;</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>]</span>,
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;dns&#34;</span>: <span style=color:#ff79c6>{}</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>更多详细信息可以阅读 CNI 规范，比如可以在同一个 JSON 文件中使用多个插件来链式执行操作，例如添加防火墙规则等。</p><p>5.CNI 会根据配置文件创建一个网桥并进行相应的配置</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~/cni# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> pause_demo ifconfig
+</span></span><span style=display:flex><span>eth10: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>        inet 10.0.10.2  netmask 255.255.255.0  broadcast 0.0.0.0
+</span></span><span style=display:flex><span>        inet6 fe80::4432:8ff:fef6:53a6  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x20&lt;link&gt;
+</span></span><span style=display:flex><span>        ether 0a:58:0a:00:0a:02  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>37</span>  bytes <span style=color:#bd93f9>2883</span> <span style=color:#ff79c6>(</span>2.8 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>20</span>  bytes <span style=color:#bd93f9>2281</span> <span style=color:#ff79c6>(</span>2.2 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>lo: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>73&lt;UP,LOOPBACK,RUNNING&gt;  mtu <span style=color:#bd93f9>65536</span>
+</span></span><span style=display:flex><span>        inet 127.0.0.1  netmask 255.0.0.0
+</span></span><span style=display:flex><span>        inet6 ::1  prefixlen <span style=color:#bd93f9>128</span>  scopeid 0x10&lt;host&gt;
+</span></span><span style=display:flex><span>        loop  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Local Loopback<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>0</span>  bytes <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>0</span>  bytes <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# ip netns <span style=color:#8be9fd;font-style:italic>exec</span> pause_demo ip route
+</span></span><span style=display:flex><span>default via 10.0.10.1 dev eth10 
+</span></span><span style=display:flex><span>1.1.1.1 via 10.0.10.1 dev eth10 
+</span></span><span style=display:flex><span>10.0.10.0/24 dev eth10 proto kernel scope link src 10.0.10.2 
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# ifconfig
+</span></span><span style=display:flex><span>cni_net0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>        inet 10.0.10.1  netmask 255.255.255.0  broadcast 0.0.0.0
+</span></span><span style=display:flex><span>        inet6 fe80::2452:25ff:fee1:f8d2  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x20&lt;link&gt;
+</span></span><span style=display:flex><span>        ether 0a:58:0a:00:0a:01  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>20</span>  bytes <span style=color:#bd93f9>2001</span> <span style=color:#ff79c6>(</span>2.0 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>26</span>  bytes <span style=color:#bd93f9>2041</span> <span style=color:#ff79c6>(</span>2.0 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>6.启动一个 Web 服务器并共享 pause 容器的命名空间</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~/cni# docker run --name web_demo -d --rm --network container:<span style=color:#8be9fd;font-style:italic>$container_id</span> nginx
+</span></span><span style=display:flex><span>f045b0da9253c8a84170ae36f7542287cad813de522363cc1c156bf526742cd7
+</span></span><span style=display:flex><span>root@instance-70s5fat5:~/cni# curl <span style=color:#f1fa8c>`</span>cat /var/lib/cni/networks/demo_br/last_reserved_ip<span style=color:#f1fa8c>`</span>
+</span></span><span style=display:flex><span>&lt;!DOCTYPE html&gt;
+</span></span><span style=display:flex><span>&lt;html&gt;
+</span></span><span style=display:flex><span>&lt;head&gt;
+</span></span><span style=display:flex><span>&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+</span></span><span style=display:flex><span>&lt;style&gt;
+</span></span><span style=display:flex><span>html <span style=color:#ff79c6>{</span> color-scheme: light dark; <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>body <span style=color:#ff79c6>{</span> width: 35em; margin: <span style=color:#bd93f9>0</span> auto;
+</span></span></code></pre></div><p>7.要使用 pause 容器的 IP 地址浏览 nginx</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-70s5fat5:~/cni# curl <span style=color:#f1fa8c>`</span>cat /var/lib/cni/networks/demo_br/last_reserved_ip<span style=color:#f1fa8c>`</span>
+</span></span><span style=display:flex><span>&lt;!DOCTYPE html&gt;
+</span></span><span style=display:flex><span>&lt;html&gt;
+</span></span><span style=display:flex><span>&lt;head&gt;
+</span></span><span style=display:flex><span>&lt;title&gt;Welcome to nginx!&lt;/title&gt;
+</span></span><span style=display:flex><span>&lt;style&gt;
+</span></span><span style=display:flex><span>html <span style=color:#ff79c6>{</span> color-scheme: light dark; <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>body <span style=color:#ff79c6>{</span> width: 35em; margin: <span style=color:#bd93f9>0</span> auto;
+</span></span><span style=display:flex><span>font-family: Tahoma, Verdana, Arial, sans-serif; <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>&lt;/style&gt;
+</span></span><span style=display:flex><span>&lt;/head&gt;
+</span></span><span style=display:flex><span>&lt;body&gt;
+</span></span><span style=display:flex><span>&lt;h1&gt;Welcome to nginx!&lt;/h1&gt;
+</span></span><span style=display:flex><span>&lt;p&gt;If you see this page, the nginx web server is successfully installed and
+</span></span><span style=display:flex><span>working. Further configuration is required.&lt;/p&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;p&gt;For online documentation and support please refer to
+</span></span><span style=display:flex><span>&lt;a <span style=color:#8be9fd;font-style:italic>href</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;http://nginx.org/&#34;</span>&gt;nginx.org&lt;/a&gt;.&lt;br/&gt;
+</span></span><span style=display:flex><span>Commercial support is available at
+</span></span><span style=display:flex><span>&lt;a <span style=color:#8be9fd;font-style:italic>href</span><span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;http://nginx.com/&#34;</span>&gt;nginx.com&lt;/a&gt;.&lt;/p&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>&lt;p&gt;&lt;em&gt;Thank you <span style=color:#ff79c6>for</span> using nginx.&lt;/em&gt;&lt;/p&gt;
+</span></span><span style=display:flex><span>&lt;/body&gt;
+</span></span><span style=display:flex><span>&lt;/html&gt;
+</span></span></code></pre></div><p>总结：在 Kubernetes 中，首先需要理解的是，POD 并不完全等同于一个容器，而是一个容器的集合。而属于同一个 POD 的所有容器共享一个网络栈。Kubernetes 通过在每个 POD 中创建的 pause 容器来管理网络。对于创建的每个 POD，都可以找到一个 pause 容器。
+其他容器都会附加到 pause 容器的网络上，而 pause 容器本身的作用仅仅是提供网络支持。因此，同一个 POD 中的容器可以通过 localhost 与其他容器之间进行通信。这种网络共享机制是 Kubernetes 的核心功能之一。如下图所示：</p><p><img src=/images/2021-10-22-kubernetes-pod-part01/8.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2021-10-15-kubernetes-pod-part03/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 Kube-Proxy（Part3）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2021-11-22-os-something/ data-toggle=tooltip data-placement=top title=科普操作系统与芯片那些事儿>Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2025</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
