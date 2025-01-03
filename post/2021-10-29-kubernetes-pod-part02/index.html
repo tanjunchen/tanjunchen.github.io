@@ -1,0 +1,684 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="Kubernetes 中数据包的生命周期 CNI Calico（Part2）"><meta property="og:title" content="Kubernetes 中数据包的生命周期 CNI Calico（Part2）"><meta property="twitter:title" content="Kubernetes 中数据包的生命周期 CNI Calico（Part2）"><meta name=description content="本文我们将讨论 Kubernetes CNI Calico 核心组件 CNI 的基础知识，如核心模块、路由模式、demo 示例、要求等"><meta property="og:description" content="本文我们将讨论 Kubernetes CNI Calico 核心组件 CNI 的基础知识，如核心模块、路由模式、demo 示例、要求等"><meta property="twitter:description" content="本文我们将讨论 Kubernetes CNI Calico 核心组件 CNI 的基础知识，如核心模块、路由模式、demo 示例、要求等"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>Kubernetes 中数据包的生命周期 CNI Calico（Part2） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2021-10-29-kubernetes-pod-part02/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>Kubernetes 中数据包的生命周期 CNI Calico（Part2）</h1><h2 class=subheading>本文我们将讨论 Kubernetes CNI Calico 核心组件 CNI 的基础知识，如核心模块、路由模式、demo 示例、要求等</h2><span class=meta>Posted by
+陈谭军
+on
+Friday, October 29, 2021
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2021-10-29-kubernetes-pod-part02/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 9050 字</span>，阅读约 <span class=more-meta>19 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>最近在深入学习 Kubernetes 基础知识，通过追踪 HTTP 请求到达 Kubernetes 集群上的服务过程来深入学习 Kubernetes 实现原理。
+希望下列文章能够对我们熟悉 Kubernetes 有一定的帮助。</p><ul><li><a href=https://tanjunchen.github.io/post/2021-10-22-kubernetes-pod-part01/>Linux 网络、Namespace 与容器网络 CNI 基础知识</a></li><li><a href=https://tanjunchen.github.io/post/2021-10-29-kubernetes-pod-part02/>Kubernetes CNI 大利器 - Calico</a></li><li><a href=https://tanjunchen.github.io/post/2021-10-15-kubernetes-pod-part03/>Kubernetes 流量核心组件 - kube-proxy</a></li><li>Kubernetes 使用 Ingress 处理七层流量</li></ul><p>本文我们将讨论 Kubernetes CNI Calico 核心组件 CNI 的基础知识。</p><ul><li>要求</li><li>核心模块</li><li>路由模式</li><li>demo 示例</li></ul><p>正如我们在第一部分中讨论的，CNI插件在Kubernetes网络中起着至关重要的作用。现在有许多第三方CNI插件可用，Calico就是其中之一。但是我们一般更喜欢Calico，主要原因之一就是它的易用性以及它塑造网络的架构。</p><p>Calico支持很多的平台，包括Kubernetes、OpenShift、Docker EE、OpenStack和裸机服务。Calico在Kubernetes主节点和每个Kubernetes工作节点的以Docker容器的方式运行。Calico CNI 插件直接与每个节点上的Kubernetes kubelet进程集成，以发现创建的Pod并将它们添加到Calico网络。</p><h1 id=cni-要求>CNI 要求</h1><p>要实现 CNI，需要支持以下特性（也许有其他的需求，但以下的内容是最基本的要求）：</p><ul><li>创建veth-pair。将veth-pair移动到容器内，veth-pair是一对虚拟网络接口，其两端可以通过网络堆栈相互连接。在Kubernetes中，我们可以使用veth-pair将Pod连接到主机节点的网络。</li><li>识别正确的 POD CIDR。CIDR（无类别域间路由）是用于在IP网络中分配IP地址的方法。在Kubernetes中，每个Node都会被分配一个POD CIDR范围，用于为在该Node上运行的Pod分配IP地址。</li><li>创建CNI配置文件。CNI配置文件定义了如何为Pod设置网络，该文件通常包含关于网络的详细信息，如使用哪种类型的网络插件、网络的名称、IP地址分配等。</li><li>分配和管理IP地址。Calico会自动为每个Pod分配IP地址，并确保每个Pod的IP地址在整个集群中是唯一的。</li><li>在容器内添加默认路由。默认路由是网络路由表中的一条特殊条目，用于指向在路由表中找不到更具体条目的目标的网络接口。</li><li>向所有对等节点广播路由（对于VxLan不适用）。在Kubernetes网络中，每个节点需要知道如何将流量路由到其他节点上的Pod。Calico使用BIRD路由守护进程来完成这项任务。</li><li>在HOST服务器中添加路由。为了能够将流量路由到在其他节点上运行的Pod，每个节点需要在其路由表中添加相应的条目。</li><li>执行网络策略。网络策略是一种规定允许哪些Pod可以相互通信的规则，Calico允许用户定义精细的网络策略，以提供更高级别的安全性。</li></ul><p>让我们看一下Master和Worker节点中的路由表。每个节点都有一个带有IP地址和默认路由的容器。</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/1.png alt></p><p>通过查看路由表，得知Pods可以通过L3网络进行通信的。那么，是哪个模块负责添加这个路由，它如何知道远程路由呢？为什么会有一个以169.254.1.1 为网关的默认路由？</p><p>Calico 核心组件包括 Bird、Felix、ConfD、Etcd 和 Kubernetes APIServer。数据存储用于存储配置信息（如ip-pool、endpoints、网络策略等）。在我们的示例中，我们将使用Kubernetes作为Calico的数据存储。</p><h1 id=核心模块>核心模块</h1><h2 id=bird-bgp>BIRD (BGP)</h2><p>Bird是每个节点上的BGP守护程序，它与在其他节点上运行的BGP守护程序交换路由信息。常见的拓扑结构可能是节点到节点的网状结构，其中每个BGP与其他所有节点建立对等关系。</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/2.png alt></p><p>对于大规模场景，网络路由可能会变得混乱。有路由反射器（Route Reflectors）用于完成路由传播（某些BGP节点可以配置为路由反射器）以减少BGP-BGP连接的数量。与其让每个BGP系统都与AS中的每个其他BGP系统对等，每个BGP发言者反而与路由反射器（Route Reflectors）对等。发送到路由反射器（Route Reflectors）的路由广播然后被反射出去，发给所有其他的BGP发言者。更多信息，请参考 RFC4456 <a href=https://datatracker.ietf.org/doc/html/rfc4456>https://datatracker.ietf.org/doc/html/rfc4456</a>。</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/3.png alt></p><p>BIRD实例负责将路由传播到其他BIRD实例。默认配置是“BGP网状”，这可以用于小规模部署。在大规模部署中，建议使用路由反射器（Route Reflectors）避免此问题。可以有多个RR以获得高可用性，此外，还可以使用外部机架RR代替BIRD。</p><h2 id=confd>ConfD</h2><p>ConfD是一个在Calico节点容器中运行的简单配置管理工具。它从etcd读取值（Calico的BIRD配置），并将它们写入磁盘文件。它循环遍历池（网络和子网）来应用配置数据（CIDR 键），并以BIRD可以使用的方式组装它们。因此，当网络发生变化时，BIRD可以检测并将路由传播到其他节点。</p><h2 id=felix>Felix</h2><p>Calico Felix 守护进程运行在Calico节点容器中，执行流程主要如下所示：</p><ul><li>从Kubernetes etcd读取信息</li><li>构建路由表</li><li>配置IPTables（kube-proxy iptables 模式）</li><li>配置IPVS（kube-proxy ipvs 模式）</li></ul><p>让我们来看看拥有所有Calico模块的集群，如下所示：</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/4.png alt></p><p>注意：veth的一端悬挂着，没有连接到任何地方，它位于内核空间。数据包是如何被路由到对等节点？</p><ul><li>主节点中的Pod尝试ping IP地址10.0.2.11</li><li>Pod向网关发送ARP请求。</li><li>得到带有MAC地址的ARP响应。</li></ul><p>让我们详细解析一下这个过程。可能有些读者已经注意到169.254.1.1是一个IPv4的链路本地地址。容器有一个默认路由指向一个链路本地地址。容器期望在其直接连接的接口上能够到达这个IP地址，在这种情况下，是容器的eth0地址。当容器希望通过默认路由路由出去时，它会尝试对该IP地址进行ARP。
+如果我们捕获ARP响应，它将显示veth另一端的MAC地址（cali123）。所以你可能会想知道，主机是如何回复一个它没有IP的接口ARP请求的。答案是 proxy_arp，如果我们检查主机侧veth接口，我们会看到proxy_arp已被启用。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>master $ cat /proc/sys/net/ipv4/conf/cali123/proxy_arp
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1</span>
+</span></span></code></pre></div><p>“Proxy ARP 是一种技术，通过这种技术给网络上的代理设备回答对不在该网络上的IP地址 <a href=https://en.wikipedia.org/wiki/IP_address>https://en.wikipedia.org/wiki/IP_address</a> 的ARP <a href=https://en.wikipedia.org/wiki/Address_Resolution_Protocol>https://en.wikipedia.org/wiki/Address_Resolution_Protocol</a> 查询请求。代理知道流量目的地的位置，并提供其自己的MAC地址 <a href=https://en.wikipedia.org/wiki/MAC_address>https://en.wikipedia.org/wiki/MAC_address</a> 作为（表面上的最终）目的地。然后，通常通过代理将定向到代理地址的流量通过另一个接口或通过 <a href=https://en.wikipedia.org/wiki/Tunneling_protocol>https://en.wikipedia.org/wiki/Tunneling_protocol</a> tunnel 隧道路由到预期的目的地。这个过程，即节点以其自己的MAC地址回应对其他IP地址的ARP请求进行代理，被称为发布。”
+让我们看看工作节点 work 的网络配置，如下所示：</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/5.png alt></p><p>一旦数据包到达内核，它会根据路由表条目对数据包进行路由。传入的流量处理流程如下所示：</p><ul><li>数据包到达工作节点内核。</li><li>内核将数据包放入cali123。</li></ul><h1 id=路由模式>路由模式</h1><p>Calico支持3种路由模式，如下所示：</p><ul><li>IP-in-IP：默认；封装。</li><li>Direct/无封装模式：未封装（首选）</li><li>VXLAN：封装（无BGP）</li></ul><h2 id=ip-in-ip-默认>IP-in-IP (默认)</h2><p>IP-in-IP 是一种简单的封装形式，通过将一个IP包放入另一个IP包来实现。一个传输的数据包包含一个带有主机源和目标IP的外部头，和一个带有pod源和目标IP的内部头。</p><h2 id=无封装模式>无封装模式</h2><p>在这种模式下，发送的数据包就像直接来自pod一样。由于没有封装和解封装的开销，直接模式具有高性能。</p><h2 id=vxlan模式>VXLAN模式</h2><p>Calico 3.7+开始支持VXLAN路由。VXLAN 不适合支持IP-in-IP的网络。</p><p>VXLAN 代表虚拟可扩展局域网。VXLAN是一种封装技术，其中第二层以太网帧被封装在UDP数据包中。VXLAN是一种网络虚拟化技术。当设备在软件定义的数据中心中通信时，会在这些设备之间建立一个VXLAN隧道。这些隧道可以在物理和虚拟交换机上设置。交换机端口被称为VXLAN隧道端点（VTEPs），负责VXLAN数据包的封装和解封装。没有VXLAN支持的设备会连接到具有VTEP功能的交换机。交换机将提供从VXLAN到VXLAN的转换。</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/6.png alt></p><h1 id=demo-示例>demo 示例</h1><h2 id=ipip非封装模式>ipip（非封装模式）</h2><p>我们使用 kind 搭建一个未安装 Calico 的 Kubernetes 集群，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kind create cluster --config - <span style=color:#f1fa8c>&lt;&lt;EOF
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>kind: Cluster
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>apiVersion: kind.x-k8s.io/v1alpha4
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>networking:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  disableDefaultCNI: true   # do not install kindnet
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>nodes:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: control-plane
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: worker
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: worker
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: worker
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>EOF</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# kubectl get nodes
+</span></span><span style=display:flex><span>NAME                 STATUS     ROLES                  AGE     VERSION
+</span></span><span style=display:flex><span>kind-control-plane   NotReady   control-plane,master   8m23s   v1.20.15
+</span></span><span style=display:flex><span>kind-worker          NotReady   &lt;none&gt;                 7m7s    v1.20.15
+</span></span><span style=display:flex><span>kind-worker2         NotReady   &lt;none&gt;                 7m8s    v1.20.15
+</span></span><span style=display:flex><span>kind-worker3         NotReady   &lt;none&gt;                 7m7s    v1.20.15
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# kubectl get pods -A
+</span></span><span style=display:flex><span>NAMESPACE            NAME                                         READY   STATUS    RESTARTS   AGE
+</span></span><span style=display:flex><span>kube-system          coredns-74ff55c5b-lgf56                      0/1     Pending   <span style=color:#bd93f9>0</span>          8m18s
+</span></span><span style=display:flex><span>kube-system          coredns-74ff55c5b-qh62n                      0/1     Pending   <span style=color:#bd93f9>0</span>          8m18s
+</span></span><span style=display:flex><span>kube-system          etcd-kind-control-plane                      1/1     Running   <span style=color:#bd93f9>0</span>          8m29s
+</span></span><span style=display:flex><span>kube-system          kube-apiserver-kind-control-plane            1/1     Running   <span style=color:#bd93f9>0</span>          8m29s
+</span></span><span style=display:flex><span>kube-system          kube-controller-manager-kind-control-plane   1/1     Running   <span style=color:#bd93f9>0</span>          8m29s
+</span></span><span style=display:flex><span>kube-system          kube-proxy-7hp9g                             1/1     Running   <span style=color:#bd93f9>0</span>          7m17s
+</span></span><span style=display:flex><span>kube-system          kube-proxy-bghhf                             1/1     Running   <span style=color:#bd93f9>0</span>          7m17s
+</span></span><span style=display:flex><span>kube-system          kube-proxy-dqjtc                             1/1     Running   <span style=color:#bd93f9>0</span>          7m18s
+</span></span><span style=display:flex><span>kube-system          kube-proxy-rh2xz                             1/1     Running   <span style=color:#bd93f9>0</span>          8m18s
+</span></span><span style=display:flex><span>kube-system          kube-scheduler-kind-control-plane            1/1     Running   <span style=color:#bd93f9>0</span>          8m29s
+</span></span><span style=display:flex><span>local-path-storage   local-path-provisioner-58c8ccd54c-lk46k      0/1     Pending   <span style=color:#bd93f9>0</span>          8m18s
+</span></span></code></pre></div><p>在Node节点上检查CNI的bin和conf目录，将不会有任何配置文件或calico二进制文件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                   COMMAND                  CREATED         STATUS         PORTS                       NAMES
+</span></span><span style=display:flex><span>98b22509f530   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>9</span> minutes ago   Up <span style=color:#bd93f9>9</span> minutes                               kind-worker3
+</span></span><span style=display:flex><span>2ff124662d21   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>9</span> minutes ago   Up <span style=color:#bd93f9>9</span> minutes   127.0.0.1:41775-&gt;6443/tcp   kind-control-plane
+</span></span><span style=display:flex><span>aa61c697c5a3   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>9</span> minutes ago   Up <span style=color:#bd93f9>9</span> minutes                               kind-worker2
+</span></span><span style=display:flex><span>c1d7fd8cfd4c   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>9</span> minutes ago   Up <span style=color:#bd93f9>9</span> minutes                               kind-worker
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# docker <span style=color:#8be9fd;font-style:italic>exec</span> -it 2ff124662d21 bash
+</span></span><span style=display:flex><span>root@kind-control-plane:/# <span style=color:#8be9fd;font-style:italic>cd</span> /etc/cni/
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni# ls
+</span></span><span style=display:flex><span>net.d
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni# <span style=color:#8be9fd;font-style:italic>cd</span> net.d/
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni/net.d# ls
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni/net.d# <span style=color:#8be9fd;font-style:italic>pwd</span>
+</span></span><span style=display:flex><span>/etc/cni/net.d
+</span></span></code></pre></div><p>检查 master/node 节点上的 IP 路由规则，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# docker <span style=color:#8be9fd;font-style:italic>exec</span> -it 2ff124662d21 bash
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni/net.d# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.5 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-worker:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.3
+</span></span></code></pre></div><p>按照文档 <a href=https://docs.tigera.io/archive/v3.16/getting-started/kubernetes/quickstart>https://docs.tigera.io/archive/v3.16/getting-started/kubernetes/quickstart</a> 下载并安装 calico 文件，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl create -f https://docs.projectcalico.org/archive/v3.16/manifests/tigera-operator.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>kubectl create -f custom-resources.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>apiVersion: operator.tigera.io/v1
+</span></span><span style=display:flex><span>kind: Installation
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: default
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># Configures Calico networking.</span>
+</span></span><span style=display:flex><span>  calicoNetwork:
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># Note: The ipPools section cannot be modified post-install.</span>
+</span></span><span style=display:flex><span>    ipPools:
+</span></span><span style=display:flex><span>    - blockSize: <span style=color:#bd93f9>26</span>
+</span></span><span style=display:flex><span>      cidr: 10.244.0.0/16   <span style=color:#6272a4># service cidr 值</span>
+</span></span><span style=display:flex><span>      encapsulation: IPIP      <span style=color:#6272a4># IPIP、VXLAN、IPIPCrossSubnet、VXLANCrossSubnet、None 等</span>
+</span></span><span style=display:flex><span>      natOutgoing: Enabled
+</span></span><span style=display:flex><span>      nodeSelector: all<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>kubectl get pods -n calico-system
+</span></span></code></pre></div><p>在 Calico 3.16 版本中 encapsulation 有 IPIP、VXLAN、IPIPCrossSubnet、VXLANCrossSubnet、None 等类型的参数。</p><ul><li>“IPIP”：将CALICO_IPV4POOL_IPIP设置为"Always"，并将CALICO_IPV4POOL_VXLAN设置为"Never"。</li><li>“VXLAN”：将CALICO_IPV4POOL_IPIP设置为"Never"，并将CALICO_IPV4POOL_VXLAN设置为"Always"。</li><li>“IPIPCrossSubnet”：将CALICO_IPV4POOL_IPIP设置为"CrossSubnet"，并将CALICO_IPV4POOL_VXLAN设置为"Never"。</li><li>“VXLANCrossSubnet”：将CALICO_IPV4POOL_IPIP设置为"Never"，并将CALICO_IPV4POOL_VXLAN设置为"CrossSubnet"。</li><li>“None”：将CALICO_IPV4POOL_IPIP和CALICO_IPV4POOL_VXLAN都设置为"Never"。</li></ul><p>部署完成后，我们查看下 Configmap cni-config 网络配置，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# kubectl -n calico-system get cm cni-config -oyaml
+</span></span><span style=display:flex><span>apiVersion: v1
+</span></span><span style=display:flex><span>data:
+</span></span><span style=display:flex><span>  config: |-
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;k8s-pod-network&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;cniVersion&#34;</span>: <span style=color:#f1fa8c>&#34;0.3.1&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;plugins&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;calico&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;datastore_type&#34;</span>: <span style=color:#f1fa8c>&#34;kubernetes&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;mtu&#34;</span>: 1410,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;nodename_file_optional&#34;</span>: false,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;log_file_path&#34;</span>: <span style=color:#f1fa8c>&#34;/var/log/calico/cni/cni.log&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;ipam&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>              <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;calico-ipam&#34;</span>,
+</span></span><span style=display:flex><span>              <span style=color:#f1fa8c>&#34;assign_ipv4&#34;</span> : <span style=color:#f1fa8c>&#34;true&#34;</span>,
+</span></span><span style=display:flex><span>              <span style=color:#f1fa8c>&#34;assign_ipv6&#34;</span> : <span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;container_settings&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>              <span style=color:#f1fa8c>&#34;allow_ip_forwarding&#34;</span>: <span style=color:#8be9fd;font-style:italic>false</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;policy&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>              <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;k8s&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;kubernetes&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>              <span style=color:#f1fa8c>&#34;kubeconfig&#34;</span>: <span style=color:#f1fa8c>&#34;__KUBECONFIG_FILEPATH__&#34;</span>
+</span></span><span style=display:flex><span>          <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;portmap&#34;</span>, <span style=color:#f1fa8c>&#34;snat&#34;</span>: true, <span style=color:#f1fa8c>&#34;capabilities&#34;</span>: <span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;portMappings&#34;</span>: true<span style=color:#ff79c6>}}</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>kind: ConfigMap
+</span></span></code></pre></div><p>在安装Calico后，检查Pod和Node的状态。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# kubectl get nodes
+</span></span><span style=display:flex><span>NAME                 STATUS   ROLES                  AGE   VERSION
+</span></span><span style=display:flex><span>kind-control-plane   Ready    control-plane,master   27m   v1.20.15
+</span></span><span style=display:flex><span>kind-worker          Ready    &lt;none&gt;                 26m   v1.20.15
+</span></span><span style=display:flex><span>kind-worker2         Ready    &lt;none&gt;                 26m   v1.20.15
+</span></span><span style=display:flex><span>kind-worker3         Ready    &lt;none&gt;                 26m   v1.20.15
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# kubectl -n calico-system get pod
+</span></span><span style=display:flex><span>NAME                                       READY   STATUS    RESTARTS   AGE
+</span></span><span style=display:flex><span>calico-kube-controllers-569b4c5cb7-8zmlp   1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-node-5kphx                          1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-node-9rt2x                          1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-node-bc24n                          1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-node-szr86                          1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-typha-5655555b44-dks5w              1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-typha-5655555b44-drjnk              1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-typha-5655555b44-qq26k              1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span><span style=display:flex><span>calico-typha-5655555b44-t6zg2              1/1     Running   <span style=color:#bd93f9>0</span>          5m20s
+</span></span></code></pre></div><p>因为Kubelet需要CNI配置网络，我们查看控制节点的网络配置如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# docker <span style=color:#8be9fd;font-style:italic>exec</span> -it 2ff124662d21 bash
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni/net.d# ls
+</span></span><span style=display:flex><span>10-calico.conflist  calico-kubeconfig
+</span></span><span style=display:flex><span>root@kind-control-plane:/etc/cni/net.d# cat 10-calico.conflist 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;name&#34;</span>: <span style=color:#f1fa8c>&#34;k8s-pod-network&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;cniVersion&#34;</span>: <span style=color:#f1fa8c>&#34;0.3.1&#34;</span>,
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;plugins&#34;</span>: <span style=color:#ff79c6>[</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;calico&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;datastore_type&#34;</span>: <span style=color:#f1fa8c>&#34;kubernetes&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;mtu&#34;</span>: 1410,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;nodename_file_optional&#34;</span>: false,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;log_file_path&#34;</span>: <span style=color:#f1fa8c>&#34;/var/log/calico/cni/cni.log&#34;</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;ipam&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;calico-ipam&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;assign_ipv4&#34;</span> : <span style=color:#f1fa8c>&#34;true&#34;</span>,
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;assign_ipv6&#34;</span> : <span style=color:#f1fa8c>&#34;false&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;container_settings&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;allow_ip_forwarding&#34;</span>: <span style=color:#8be9fd;font-style:italic>false</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;policy&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;k8s&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>      <span style=color:#f1fa8c>&#34;kubernetes&#34;</span>: <span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>          <span style=color:#f1fa8c>&#34;kubeconfig&#34;</span>: <span style=color:#f1fa8c>&#34;/etc/cni/net.d/calico-kubeconfig&#34;</span>
+</span></span><span style=display:flex><span>      <span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>}</span>,
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;portmap&#34;</span>, <span style=color:#f1fa8c>&#34;snat&#34;</span>: true, <span style=color:#f1fa8c>&#34;capabilities&#34;</span>: <span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#34;portMappings&#34;</span>: true<span style=color:#ff79c6>}}</span>
+</span></span><span style=display:flex><span>  <span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>我们在 kind-control-plane 节点查看 cni 二进制文件，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/opt/cni/bin# <span style=color:#8be9fd;font-style:italic>pwd</span>
+</span></span><span style=display:flex><span>/opt/cni/bin
+</span></span><span style=display:flex><span>root@kind-control-plane:/opt/cni/bin# ls
+</span></span><span style=display:flex><span>bandwidth  calico  calico-ipam  flannel  host-local  install  loopback  portmap  ptp  tuning
+</span></span></code></pre></div><ul><li>bandwidth: 用于控制Pod间网络通信的带宽限制。</li><li>bridge: 为容器创建网络桥接，使其能够与主机网络通信。</li><li>calico: 实现了Calico的网络方案，提供了网络路由和策略控制功能。</li><li>calico-ipam: 实现了Calico的IP地址管理(IPAM)功能。</li><li>dhcp: 为Pod提供动态主机配置协议(DHCP)服务。</li><li>flannel: 实现了Flannel的网络方案，提供了简单的网络覆盖功能。</li><li>host-device: 将主机的网络设备直接映射到Pod中。</li><li>host-local: 实现了一个基本的静态IP地址管理(IPAM)方案。</li><li>install: 通常用于安装或更新CNI插件。</li><li>ipvlan: 实现了IPvlan网络模式，允许Pod直接使用主机的IP地址。</li><li>loopback: 创建一个回环网络设备，用于Pod的本地回环通信。</li><li>macvlan: 实现了Macvlan网络模式，允许Pod直接使用主机的MAC地址。</li><li>portmap: 提供了端口映射功能，允许Pod通过主机的端口与外部网络通信。</li><li>ptp: 实现了点对点(PTP)网络模式，允许Pod直接与主机进行网络通信。</li><li>sample: 通常是示例或测试用的CNI插件。</li><li>tuning: 提供了网络参数调整功能，允许更细粒度地控制Pod的网络行为。</li><li>vlan: 实现了虚拟局域网(VLAN)网络模式，允许Pod在隔离的网络空间中运行。</li></ul><p>让我们安装 calicoctl，它可以提供有关Calico的详细信息，并允许我们修改Calico配置。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/opt/cni/bin# <span style=color:#8be9fd;font-style:italic>cd</span> /usr/local/bin/
+</span></span><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# curl -O -L  https://github.com/projectcalico/calicoctl/releases/download/v3.16.3/calicoctl
+</span></span><span style=display:flex><span>  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+</span></span><span style=display:flex><span>                                 Dload  Upload   Total   Spent    Left  Speed
+</span></span><span style=display:flex><span>  <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span>      <span style=color:#bd93f9>0</span> --:--:-- --:--:-- --:--:--     <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span><span style=color:#bd93f9>100</span> 38.4M  <span style=color:#bd93f9>100</span> 38.4M    <span style=color:#bd93f9>0</span>     <span style=color:#bd93f9>0</span>  1238k      <span style=color:#bd93f9>0</span>  0:00:31  0:00:31 --:--:-- 1204k
+</span></span><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# chmod +x calicoctl
+</span></span><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# <span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>DATASTORE_TYPE</span><span style=color:#ff79c6>=</span>kubernetes
+</span></span><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# <span style=color:#8be9fd;font-style:italic>echo</span> <span style=color:#8be9fd;font-style:italic>$KUBECONFIG</span>
+</span></span><span style=display:flex><span>/etc/kubernetes/admin.conf
+</span></span><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# calicoctl get workloadendpoints
+</span></span><span style=display:flex><span>WORKLOAD   NODE   NETWORKS   INTERFACE
+</span></span></code></pre></div><p>检查 BGP（边界网关协议）对等体状态，这将显示’worker’节点作为一个对等体。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# calicoctl node status
+</span></span><span style=display:flex><span>Calico process is running.
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>IPv4 BGP status
+</span></span><span style=display:flex><span>+--------------+-------------------+-------+----------+-------------+
+</span></span><span style=display:flex><span>| PEER ADDRESS |     PEER TYPE     | STATE |  SINCE   |    INFO     |
+</span></span><span style=display:flex><span>+--------------+-------------------+-------+----------+-------------+
+</span></span><span style=display:flex><span>| 172.18.0.2   | node-to-node mesh | up    | 08:06:37 | Established |
+</span></span><span style=display:flex><span>| 172.18.0.3   | node-to-node mesh | up    | 08:07:33 | Established |
+</span></span><span style=display:flex><span>| 172.18.0.4   | node-to-node mesh | up    | 08:07:56 | Established |
+</span></span><span style=display:flex><span>+--------------+-------------------+-------+----------+-------------+
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>IPv6 BGP status
+</span></span><span style=display:flex><span>No IPv6 peers found.
+</span></span></code></pre></div><p>这是 BGP（边界网关协议）对等体的状态信息。对于每一个对等体，都有一个状态来描述它当前的连接状态。这里有三个状态：start，up和Established。</p><ul><li>start： 这是BGP会话初始建立的状态，在这个状态下，BGP会尝试建立连接。</li><li>up： 这是BGP会话正在进行的状态，表示连接已经建立，但还没达到完全稳定（Established）。</li><li>Established： 这是BGP对等体连接已经完全建立并且稳定的状态，能够正常交换路由信息。</li></ul><p>创建一个带有两个副本和主节点容忍度的 busybox。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cat &gt; busybox.yaml &lt;&lt;<span style=color:#f1fa8c>&#34;EOF&#34;</span>
+</span></span><span style=display:flex><span>apiVersion: apps/v1
+</span></span><span style=display:flex><span>kind: Deployment
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: busybox-deployment
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  selector:
+</span></span><span style=display:flex><span>    matchLabels:
+</span></span><span style=display:flex><span>      app: busybox
+</span></span><span style=display:flex><span>  replicas: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>  template:
+</span></span><span style=display:flex><span>    metadata:
+</span></span><span style=display:flex><span>      labels:
+</span></span><span style=display:flex><span>        app: busybox
+</span></span><span style=display:flex><span>    spec:
+</span></span><span style=display:flex><span>      tolerations:
+</span></span><span style=display:flex><span>      - key: <span style=color:#f1fa8c>&#34;node-role.kubernetes.io/master&#34;</span>
+</span></span><span style=display:flex><span>        operator: <span style=color:#f1fa8c>&#34;Exists&#34;</span>
+</span></span><span style=display:flex><span>        effect: <span style=color:#f1fa8c>&#34;NoSchedule&#34;</span>
+</span></span><span style=display:flex><span>      containers:
+</span></span><span style=display:flex><span>      - name: busybox
+</span></span><span style=display:flex><span>        image: busybox
+</span></span><span style=display:flex><span>        command: <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;sleep&#34;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>        args: <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;10000&#34;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>EOF
+</span></span><span style=display:flex><span>kubectl apply -f busybox.yaml
+</span></span></code></pre></div><p>获取Pod和端点状态。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# kubectl get pods -o wide 
+</span></span><span style=display:flex><span>NAME                                  READY   STATUS    RESTARTS   AGE   IP               NODE           NOMINATED NODE   READINESS GATES
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-gbmnj   1/1     Running   <span style=color:#bd93f9>0</span>          84s   10.244.195.194   kind-worker3   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-lm5nf   1/1     Running   <span style=color:#bd93f9>0</span>          84s   10.244.110.129   kind-worker2   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# calicoctl get workloadendpoints
+</span></span><span style=display:flex><span>WORKLOAD                              NODE           NETWORKS            INTERFACE         
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-gbmnj   kind-worker3   10.244.195.194/32   cali6ad45a7cd51   
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-lm5nf   kind-worker2   10.244.110.129/32   calie4f3c781c5e   
+</span></span></code></pre></div><p>获取 Master 节点所在主机详细信息，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/# ifconfig
+</span></span><span style=display:flex><span>cali38bd23d7943: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1410</span>
+</span></span><span style=display:flex><span>        ether ee:ee:ee:ee:ee:ee  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>1480</span>  bytes <span style=color:#bd93f9>140599</span> <span style=color:#ff79c6>(</span>140.5 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>1</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>1457</span>  bytes <span style=color:#bd93f9>153780</span> <span style=color:#ff79c6>(</span>153.7 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>calia4307b0e305: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1410</span>
+</span></span><span style=display:flex><span>        ether ee:ee:ee:ee:ee:ee  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>158</span>  bytes <span style=color:#bd93f9>12443</span> <span style=color:#ff79c6>(</span>12.4 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>1</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>134</span>  bytes <span style=color:#bd93f9>14196</span> <span style=color:#ff79c6>(</span>14.1 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>calid50353acbd9: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1410</span>
+</span></span><span style=display:flex><span>        ether ee:ee:ee:ee:ee:ee  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>1489</span>  bytes <span style=color:#bd93f9>141483</span> <span style=color:#ff79c6>(</span>141.4 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>1</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>1464</span>  bytes <span style=color:#bd93f9>154968</span> <span style=color:#ff79c6>(</span>154.9 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>eth0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>        inet 172.18.0.5  netmask 255.255.0.0  broadcast 172.18.255.255
+</span></span><span style=display:flex><span>        inet6 fe80::42:acff:fe12:5  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x20&lt;link&gt;
+</span></span><span style=display:flex><span>        inet6 fc00:f853:ccd:e793::5  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x0&lt;global&gt;
+</span></span><span style=display:flex><span>        ether 02:42:ac:12:00:05  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>116976</span>  bytes <span style=color:#bd93f9>272380205</span> <span style=color:#ff79c6>(</span>272.3 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>96570</span>  bytes <span style=color:#bd93f9>37176929</span> <span style=color:#ff79c6>(</span>37.1 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>lo: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>73&lt;UP,LOOPBACK,RUNNING&gt;  mtu <span style=color:#bd93f9>65536</span>
+</span></span><span style=display:flex><span>        inet 127.0.0.1  netmask 255.0.0.0
+</span></span><span style=display:flex><span>        inet6 ::1  prefixlen <span style=color:#bd93f9>128</span>  scopeid 0x10&lt;host&gt;
+</span></span><span style=display:flex><span>        loop  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Local Loopback<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>430506</span>  bytes <span style=color:#bd93f9>114320499</span> <span style=color:#ff79c6>(</span>114.3 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>430506</span>  bytes <span style=color:#bd93f9>114320499</span> <span style=color:#ff79c6>(</span>114.3 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>tunl0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>193&lt;UP,RUNNING,NOARP&gt;  mtu <span style=color:#bd93f9>1440</span>
+</span></span><span style=display:flex><span>        inet 10.244.82.0  netmask 255.255.255.255
+</span></span><span style=display:flex><span>        tunnel   txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>IPIP Tunnel<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>0</span>  bytes <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>0</span>  bytes <span style=color:#bd93f9>0</span> <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-control-plane:/# ip link 
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noqueue state UNKNOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>2: calia4307b0e305@if3: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1410</span> qdisc noqueue state UP mode DEFAULT group default 
+</span></span><span style=display:flex><span>    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-eb831c53-7ee0-61da-0106-fa3092bffec7
+</span></span><span style=display:flex><span>3: tunl0@NONE: &lt;NOARP,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1440</span> qdisc noqueue state UNKNOWN mode DEFAULT group default qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ipip 0.0.0.0 brd 0.0.0.0
+</span></span><span style=display:flex><span>6: calid50353acbd9@if4: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1410</span> qdisc noqueue state UP mode DEFAULT group default 
+</span></span><span style=display:flex><span>    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-441fa6ff-7b2a-32bf-a142-902bd66f855b
+</span></span><span style=display:flex><span>7: cali38bd23d7943@if4: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1410</span> qdisc noqueue state UP mode DEFAULT group default 
+</span></span><span style=display:flex><span>    link/ether ee:ee:ee:ee:ee:ee brd ff:ff:ff:ff:ff:ff link-netns cni-f235c16c-cd2c-e28c-b308-04919c22e186
+</span></span><span style=display:flex><span>11: eth0@if12: &lt;BROADCAST,MULTICAST,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>1500</span> qdisc noqueue state UP mode DEFAULT group default 
+</span></span><span style=display:flex><span>    link/ether 02:42:ac:12:00:05 brd ff:ff:ff:ff:ff:ff link-netnsid <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-control-plane:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>blackhole 10.244.82.0/26 proto bird 
+</span></span><span style=display:flex><span>10.244.82.1 dev calia4307b0e305 scope link 
+</span></span><span style=display:flex><span>10.244.82.2 dev calid50353acbd9 scope link 
+</span></span><span style=display:flex><span>10.244.82.3 dev cali38bd23d7943 scope link 
+</span></span><span style=display:flex><span>10.244.110.128/26 via 172.18.0.2 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.162.128/26 via 172.18.0.3 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.195.192/26 via 172.18.0.4 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.5 
+</span></span></code></pre></div><p>获取 busybox Pod （kind-worker3）所在的主机节点上的网络配置，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-worker3:/# ifconfig
+</span></span><span style=display:flex><span>cali15c1d999844: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1410</span>
+</span></span><span style=display:flex><span>        ether ee:ee:ee:ee:ee:ee  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>1670</span>  bytes <span style=color:#bd93f9>145288</span> <span style=color:#ff79c6>(</span>145.2 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>1</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>1647</span>  bytes <span style=color:#bd93f9>1275171</span> <span style=color:#ff79c6>(</span>1.2 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>cali6ad45a7cd51: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1410</span>
+</span></span><span style=display:flex><span>        ether ee:ee:ee:ee:ee:ee  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>35</span>  bytes <span style=color:#bd93f9>2951</span> <span style=color:#ff79c6>(</span>2.9 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>1</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>20</span>  bytes <span style=color:#bd93f9>1897</span> <span style=color:#ff79c6>(</span>1.8 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>eth0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>        inet 172.18.0.4  netmask 255.255.0.0  broadcast 172.18.255.255
+</span></span><span style=display:flex><span>        inet6 fc00:f853:ccd:e793::4  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x0&lt;global&gt;
+</span></span><span style=display:flex><span>        inet6 fe80::42:acff:fe12:4  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x20&lt;link&gt;
+</span></span><span style=display:flex><span>        ether 02:42:ac:12:00:04  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>89950</span>  bytes <span style=color:#bd93f9>240361353</span> <span style=color:#ff79c6>(</span>240.3 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>74909</span>  bytes <span style=color:#bd93f9>6516500</span> <span style=color:#ff79c6>(</span>6.5 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>lo: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>73&lt;UP,LOOPBACK,RUNNING&gt;  mtu <span style=color:#bd93f9>65536</span>
+</span></span><span style=display:flex><span>        inet 127.0.0.1  netmask 255.0.0.0
+</span></span><span style=display:flex><span>        inet6 ::1  prefixlen <span style=color:#bd93f9>128</span>  scopeid 0x10&lt;host&gt;
+</span></span><span style=display:flex><span>        loop  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Local Loopback<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>20706</span>  bytes <span style=color:#bd93f9>1448963</span> <span style=color:#ff79c6>(</span>1.4 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>20706</span>  bytes <span style=color:#bd93f9>1448963</span> <span style=color:#ff79c6>(</span>1.4 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>tunl0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>193&lt;UP,RUNNING,NOARP&gt;  mtu <span style=color:#bd93f9>1440</span>
+</span></span><span style=display:flex><span>        inet 10.244.195.192  netmask 255.255.255.255
+</span></span><span style=display:flex><span>        tunnel   txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>IPIP Tunnel<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>18</span>  bytes <span style=color:#bd93f9>1561</span> <span style=color:#ff79c6>(</span>1.5 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>18</span>  bytes <span style=color:#bd93f9>1469</span> <span style=color:#ff79c6>(</span>1.4 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-worker3:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>10.244.82.0/26 via 172.18.0.5 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.110.128/26 via 172.18.0.2 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.162.128/26 via 172.18.0.3 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>blackhole 10.244.195.192/26 proto bird 
+</span></span><span style=display:flex><span>10.244.195.193 dev cali15c1d999844 scope link 
+</span></span><span style=display:flex><span>10.244.195.194 dev cali6ad45a7cd51 scope link 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.4 
+</span></span></code></pre></div><p>获取 busybox Pod （kind-worker2）所在的主机节点上的网络配置，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-worker2:/# ifconfig 
+</span></span><span style=display:flex><span>calie4f3c781c5e: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1410</span>
+</span></span><span style=display:flex><span>        ether ee:ee:ee:ee:ee:ee  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>32</span>  bytes <span style=color:#bd93f9>2700</span> <span style=color:#ff79c6>(</span>2.7 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>1</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>17</span>  bytes <span style=color:#bd93f9>1554</span> <span style=color:#ff79c6>(</span>1.5 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>eth0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>4163&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span style=color:#bd93f9>1500</span>
+</span></span><span style=display:flex><span>        inet 172.18.0.2  netmask 255.255.0.0  broadcast 172.18.255.255
+</span></span><span style=display:flex><span>        inet6 fc00:f853:ccd:e793::2  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x0&lt;global&gt;
+</span></span><span style=display:flex><span>        inet6 fe80::42:acff:fe12:2  prefixlen <span style=color:#bd93f9>64</span>  scopeid 0x20&lt;link&gt;
+</span></span><span style=display:flex><span>        ether 02:42:ac:12:00:02  txqueuelen <span style=color:#bd93f9>0</span>  <span style=color:#ff79c6>(</span>Ethernet<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>82210</span>  bytes <span style=color:#bd93f9>217292086</span> <span style=color:#ff79c6>(</span>217.2 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>67612</span>  bytes <span style=color:#bd93f9>5847063</span> <span style=color:#ff79c6>(</span>5.8 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>lo: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>73&lt;UP,LOOPBACK,RUNNING&gt;  mtu <span style=color:#bd93f9>65536</span>
+</span></span><span style=display:flex><span>        inet 127.0.0.1  netmask 255.0.0.0
+</span></span><span style=display:flex><span>        inet6 ::1  prefixlen <span style=color:#bd93f9>128</span>  scopeid 0x10&lt;host&gt;
+</span></span><span style=display:flex><span>        loop  txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>Local Loopback<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>19083</span>  bytes <span style=color:#bd93f9>1372255</span> <span style=color:#ff79c6>(</span>1.3 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>19083</span>  bytes <span style=color:#bd93f9>1372255</span> <span style=color:#ff79c6>(</span>1.3 MB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>tunl0: <span style=color:#8be9fd;font-style:italic>flags</span><span style=color:#ff79c6>=</span>193&lt;UP,RUNNING,NOARP&gt;  mtu <span style=color:#bd93f9>1440</span>
+</span></span><span style=display:flex><span>        inet 10.244.110.128  netmask 255.255.255.255
+</span></span><span style=display:flex><span>        tunnel   txqueuelen <span style=color:#bd93f9>1000</span>  <span style=color:#ff79c6>(</span>IPIP Tunnel<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX packets <span style=color:#bd93f9>15</span>  bytes <span style=color:#bd93f9>1260</span> <span style=color:#ff79c6>(</span>1.2 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        RX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span>  overruns <span style=color:#bd93f9>0</span>  frame <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>        TX packets <span style=color:#bd93f9>15</span>  bytes <span style=color:#bd93f9>1260</span> <span style=color:#ff79c6>(</span>1.2 KB<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>        TX errors <span style=color:#bd93f9>0</span>  dropped <span style=color:#bd93f9>0</span> overruns <span style=color:#bd93f9>0</span>  carrier <span style=color:#bd93f9>0</span>  collisions <span style=color:#bd93f9>0</span>
+</span></span></code></pre></div><p>获取 Pod 网络接口的详细信息，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj -- ifconfig 
+</span></span><span style=display:flex><span>eth0      Link encap:Ethernet  HWaddr 0E:10:D4:06:AA:F9  
+</span></span><span style=display:flex><span>          inet addr:10.244.195.194  Bcast:10.244.195.194  Mask:255.255.255.255
+</span></span><span style=display:flex><span>          inet6 addr: fe80::c10:d4ff:fe06:aaf9/64 Scope:Link
+</span></span><span style=display:flex><span>          UP BROADCAST RUNNING MULTICAST  MTU:1410  Metric:1
+</span></span><span style=display:flex><span>          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+</span></span><span style=display:flex><span>          TX packets:13 errors:0 dropped:1 overruns:0 carrier:0
+</span></span><span style=display:flex><span>          collisions:0 txqueuelen:0 
+</span></span><span style=display:flex><span>          RX bytes:0 <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>  TX bytes:1006 <span style=color:#ff79c6>(</span>1006.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>lo        Link encap:Local Loopback  
+</span></span><span style=display:flex><span>          inet addr:127.0.0.1  Mask:255.0.0.0
+</span></span><span style=display:flex><span>          inet6 addr: ::1/128 Scope:Host
+</span></span><span style=display:flex><span>          UP LOOPBACK RUNNING  MTU:65536  Metric:1
+</span></span><span style=display:flex><span>          RX packets:0 errors:0 dropped:0 overruns:0 frame:0
+</span></span><span style=display:flex><span>          TX packets:0 errors:0 dropped:0 overruns:0 carrier:0
+</span></span><span style=display:flex><span>          collisions:0 txqueuelen:1000 
+</span></span><span style=display:flex><span>          RX bytes:0 <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>  TX bytes:0 <span style=color:#ff79c6>(</span>0.0 B<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-control-plane:/# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj --  ip link 
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noqueue qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>2: tunl0@NONE: &lt;NOARP&gt; mtu <span style=color:#bd93f9>1480</span> qdisc noop qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ipip 0.0.0.0 brd 0.0.0.0
+</span></span><span style=display:flex><span>4: eth0@if5: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span style=color:#bd93f9>1410</span> qdisc noqueue 
+</span></span><span style=display:flex><span>    link/ether 0e:10:d4:06:aa:f9 brd ff:ff:ff:ff:ff:ff
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-control-plane:/# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj -- ip a     
+</span></span><span style=display:flex><span>1: lo: &lt;LOOPBACK,UP,LOWER_UP&gt; mtu <span style=color:#bd93f9>65536</span> qdisc noqueue qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+</span></span><span style=display:flex><span>    inet 127.0.0.1/8 scope host lo
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>    inet6 ::1/128 scope host 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>2: tunl0@NONE: &lt;NOARP&gt; mtu <span style=color:#bd93f9>1480</span> qdisc noop qlen <span style=color:#bd93f9>1000</span>
+</span></span><span style=display:flex><span>    link/ipip 0.0.0.0 brd 0.0.0.0
+</span></span><span style=display:flex><span>4: eth0@if5: &lt;BROADCAST,MULTICAST,UP,LOWER_UP,M-DOWN&gt; mtu <span style=color:#bd93f9>1410</span> qdisc noqueue 
+</span></span><span style=display:flex><span>    link/ether 0e:10:d4:06:aa:f9 brd ff:ff:ff:ff:ff:ff
+</span></span><span style=display:flex><span>    inet 10.244.195.194/32 brd 10.244.195.194 scope global eth0
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>    inet6 fe80::c10:d4ff:fe06:aaf9/64 scope link 
+</span></span><span style=display:flex><span>       valid_lft forever preferred_lft forever
+</span></span><span style=display:flex><span>root@kind-control-plane:/# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj -- ip route
+</span></span><span style=display:flex><span>default via 169.254.1.1 dev eth0 
+</span></span><span style=display:flex><span>169.254.1.1 dev eth0 scope link 
+</span></span><span style=display:flex><span>root@kind-control-plane:/# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj -- arp 
+</span></span><span style=display:flex><span>root@kind-control-plane:/# 
+</span></span></code></pre></div><p>注意我们在 calico 中获取的 workloadendpoints 如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/usr/local/bin# calicoctl get workloadendpoints
+</span></span><span style=display:flex><span>WORKLOAD                              NODE           NETWORKS            INTERFACE         
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-gbmnj   kind-worker3   10.244.195.194/32   cali6ad45a7cd51   
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-lm5nf   kind-worker2   10.244.110.129/32   calie4f3c781c5e   
+</span></span><span style=display:flex><span>root@kind-control-plane:/proc/sys/net/ipv4/conf/cali38bd23d7943# kubectl get pod -owide
+</span></span><span style=display:flex><span>NAME                                  READY   STATUS    RESTARTS   AGE   IP               NODE           NOMINATED NODE   READINESS GATES
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-gbmnj   1/1     Running   <span style=color:#bd93f9>0</span>          35m   10.244.195.194   kind-worker3   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-lm5nf   1/1     Running   <span style=color:#bd93f9>0</span>          35m   10.244.110.129   kind-worker2   &lt;none&gt;           &lt;none&gt;
+</span></span></code></pre></div><p>让我们尝试ping工作节点的Pod以触发ARP。在一个终端执行以下操作：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@instance-820epr0w:~# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj -- ping 10.244.110.129
+</span></span><span style=display:flex><span>PING 10.244.110.129 <span style=color:#ff79c6>(</span>10.244.110.129<span style=color:#ff79c6>)</span>: <span style=color:#bd93f9>56</span> data bytes
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.244.110.129: <span style=color:#8be9fd;font-style:italic>seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>62</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.235 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.244.110.129: <span style=color:#8be9fd;font-style:italic>seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>1</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>62</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.122 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.244.110.129: <span style=color:#8be9fd;font-style:italic>seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>2</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>62</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.107 ms
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 10.244.110.129: <span style=color:#8be9fd;font-style:italic>seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>3</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>62</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>0.116 ms
+</span></span></code></pre></div><p>在另一个终端执行以下操作：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-worker3:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>10.244.82.0/26 via 172.18.0.5 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.110.128/26 via 172.18.0.2 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.162.128/26 via 172.18.0.3 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>blackhole 10.244.195.192/26 proto bird 
+</span></span><span style=display:flex><span>10.244.195.193 dev cali15c1d999844 scope link 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  dev cali6ad45a7cd51 scope link 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.4 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-820epr0w:~# kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-gbmnj -- arp
+</span></span><span style=display:flex><span>172-18-0-4.calico-typha.calico-system.svc.cluster.local <span style=color:#ff79c6>(</span>172.18.0.4<span style=color:#ff79c6>)</span> at ee:ee:ee:ee:ee:ee <span style=color:#ff79c6>[</span>ether<span style=color:#ff79c6>]</span>  on eth0
+</span></span><span style=display:flex><span>? <span style=color:#ff79c6>(</span>169.254.1.1<span style=color:#ff79c6>)</span> at ee:ee:ee:ee:ee:ee <span style=color:#ff79c6>[</span>ether<span style=color:#ff79c6>]</span>  on eth0
+</span></span></code></pre></div><p>网关的 MAC 地址就是 cali6ad45a7cd51:。从现在开始，只要有流量出去，它就会直接打到内核上；内核知道它必须根据 IP 路由将数据包写入tunl0。Proxy ARP 配置如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-worker3:/# cat /proc/sys/net/ipv4/conf/cali6ad45a7cd51/proxy_arp
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1</span>
+</span></span></code></pre></div><p>那么目标节点如何处理数据包？</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-worker2:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>10.244.82.0/26 via 172.18.0.5 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>blackhole 10.244.110.128/26 proto bird 
+</span></span><span style=display:flex><span>10.244.110.129 dev calie4f3c781c5e scope link 
+</span></span><span style=display:flex><span>10.244.162.128/26 via 172.18.0.3 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>10.244.195.192/26 via 172.18.0.4 dev tunl0 proto bird onlink 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.2 
+</span></span></code></pre></div><p>在接收到数据包后，内核会根据路由表将数据包发送到正确的 veth。如果我们抓取数据包，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-worker2:/# crictl ps | grep busybox
+</span></span><span style=display:flex><span>3ccd405036ae5       3f57d9401f8d4       About an hour ago   Running             busybox             <span style=color:#bd93f9>0</span>                   c819af069a3a4       busybox-deployment-654565d6ff-lm5nf
+</span></span><span style=display:flex><span>root@kind-worker2:/# crictl inspect 3ccd405036ae5 | grep pid
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;pid&#34;</span>: 5466,
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;pid&#34;</span>: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>            <span style=color:#f1fa8c>&#34;type&#34;</span>: <span style=color:#f1fa8c>&#34;pid&#34;</span>
+</span></span><span style=display:flex><span>root@kind-worker2:/# nsenter -t <span style=color:#bd93f9>5466</span> -n tcpdump -n -i any
+</span></span><span style=display:flex><span>tcpdump: data link <span style=color:#8be9fd;font-style:italic>type</span> LINUX_SLL2
+</span></span><span style=display:flex><span>tcpdump: verbose output suppressed, use -v<span style=color:#ff79c6>[</span>v<span style=color:#ff79c6>]</span>... <span style=color:#ff79c6>for</span> full protocol decode
+</span></span><span style=display:flex><span>listening on any, link-type LINUX_SLL2 <span style=color:#ff79c6>(</span>Linux cooked v2<span style=color:#ff79c6>)</span>, snapshot length <span style=color:#bd93f9>262144</span> bytes
+</span></span><span style=display:flex><span>09:24:48.870719 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 0, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:48.870728 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 0, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:49.870853 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 1, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:49.870861 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 1, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:50.870995 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 2, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:50.871004 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 2, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:51.871127 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 3, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:51.871138 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 3, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:52.871264 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 4, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:52.871285 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 4, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:53.871410 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 5, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:53.871419 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 5, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:54.055279 eth0  Out ARP, Request who-has 169.254.1.1 tell 10.244.110.129, length <span style=color:#bd93f9>28</span>
+</span></span><span style=display:flex><span>09:24:54.055307 eth0  In  ARP, Reply 169.254.1.1 is-at ee:ee:ee:ee:ee:ee, length <span style=color:#bd93f9>28</span>
+</span></span><span style=display:flex><span>09:24:54.871536 eth0  In  IP 10.244.195.194 &gt; 10.244.110.129: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> request, id 236, seq 6, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:54.871544 eth0  Out IP 10.244.110.129 &gt; 10.244.195.194: ICMP <span style=color:#8be9fd;font-style:italic>echo</span> reply, id 236, seq 6, length <span style=color:#bd93f9>64</span>
+</span></span><span style=display:flex><span>09:24:55.075282 eth0  In  ARP, Request who-has 10.244.110.129 tell 172.18.0.2, length <span style=color:#bd93f9>28</span>
+</span></span><span style=display:flex><span>09:24:55.075303 eth0  Out ARP, Reply 10.244.110.129 is-at 0a:d9:c9:76:e7:d4, length <span style=color:#bd93f9>28</span>
+</span></span></code></pre></div><p>为了获得更好的性能，最好禁用IP-IP。</p><h2 id=禁用-ipip>禁用 ipip</h2><p>更新 ipPool 配置禁用 IPIP。打开 ippool.yaml 文件，将 IPIP 设置为 ‘Never’，然后通过 calicoctl 应用该 yaml 文件。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>root@kind-control-plane:/# calicoctl get ippool default-ipv4-ippool -o yaml 
+</span></span><span style=display:flex><span>apiVersion: projectcalico.org/v3
+</span></span><span style=display:flex><span>kind: IPPool
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  creationTimestamp: <span style=color:#f1fa8c>&#34;2024-02-07T08:04:33Z&#34;</span>
+</span></span><span style=display:flex><span>  name: default-ipv4-ippool
+</span></span><span style=display:flex><span>  resourceVersion: <span style=color:#f1fa8c>&#34;12460&#34;</span>
+</span></span><span style=display:flex><span>  uid: 0a42dc66-b743-4b82-a715-4a5b8172e2a2
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  blockSize: <span style=color:#bd93f9>26</span>
+</span></span><span style=display:flex><span>  cidr: 10.244.0.0/16
+</span></span><span style=display:flex><span>  ipipMode: Never
+</span></span><span style=display:flex><span>  natOutgoing: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>  nodeSelector: all<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>  vxlanMode: Never
+</span></span><span style=display:flex><span>root@kind-control-plane:/# calicoctl apply -f ippool.yaml
+</span></span><span style=display:flex><span>Successfully applied <span style=color:#bd93f9>1</span> <span style=color:#f1fa8c>&#39;IPPool&#39;</span> resource<span style=color:#ff79c6>(</span>s<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@kind-control-plane:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0 
+</span></span><span style=display:flex><span>blackhole 10.244.82.0/26 proto bird 
+</span></span><span style=display:flex><span>10.244.82.1 dev calia4307b0e305 scope link 
+</span></span><span style=display:flex><span>10.244.82.2 dev calid50353acbd9 scope link 
+</span></span><span style=display:flex><span>10.244.82.3 dev cali38bd23d7943 scope link 
+</span></span><span style=display:flex><span>10.244.110.128/26 via 172.18.0.2 dev eth0 proto bird 
+</span></span><span style=display:flex><span>10.244.162.128/26 via 172.18.0.3 dev eth0 proto bird 
+</span></span><span style=display:flex><span>10.244.195.192/26 via 172.18.0.4 dev eth0 proto bird 
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.5 
+</span></span></code></pre></div><p>设备不再是 tunl0；它被设置为节点的管理（eth0）接口。让我们重新执行上述 ping 操作，确保一切正常运行。从现在开始，将不再涉及到任何IPIP协议。</p><h2 id=vxlan>vxlan</h2><p>重新创建一个 k8s 集群，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kind create cluster --config - <span style=color:#f1fa8c>&lt;&lt;EOF
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>kind: Cluster
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>apiVersion: kind.x-k8s.io/v1alpha4
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>networking:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  disableDefaultCNI: true   # do not install kindnet
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>nodes:
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: control-plane
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: worker
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: worker
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>- role: worker
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>  image: kindest/node:v1.20.15@sha256:a32bf55309294120616886b5338f95dd98a2f7231519c7dedcec32ba29699394
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c>EOF</span>
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl create -f https://docs.projectcalico.org/archive/v3.16/manifests/tigera-operator.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>kubectl create -f custom-resources-vxlan.yaml
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>apiVersion: operator.tigera.io/v1
+</span></span><span style=display:flex><span>kind: Installation
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: default
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  <span style=color:#6272a4># Configures Calico networking.</span>
+</span></span><span style=display:flex><span>  calicoNetwork:
+</span></span><span style=display:flex><span>    <span style=color:#6272a4># Note: The ipPools section cannot be modified post-install.</span>
+</span></span><span style=display:flex><span>    ipPools:
+</span></span><span style=display:flex><span>    - blockSize: <span style=color:#bd93f9>26</span>
+</span></span><span style=display:flex><span>      cidr: 10.244.0.0/16   <span style=color:#6272a4># service cidr 值</span>
+</span></span><span style=display:flex><span>      encapsulation: VXLAN      <span style=color:#6272a4># IPIP、VXLAN、IPIPCrossSubnet、VXLANCrossSubnet、None 等</span>
+</span></span><span style=display:flex><span>      natOutgoing: Enabled
+</span></span><span style=display:flex><span>      nodeSelector: all<span style=color:#ff79c6>()</span>
+</span></span></code></pre></div><p>集群信息如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  cni-calico  kubectl get pods -A -owide
+</span></span><span style=display:flex><span>NAMESPACE            NAME                                         READY   STATUS    RESTARTS   AGE   IP               NODE                 NOMINATED NODE   READINESS GATES
+</span></span><span style=display:flex><span>calico-system        calico-kube-controllers-569b4c5cb7-5c2x6     1/1     Running   <span style=color:#bd93f9>0</span>          12m   10.244.110.129   kind-worker2         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-node-4pg8w                            1/1     Running   <span style=color:#bd93f9>0</span>          12m   172.18.0.4       kind-worker3         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-node-7ffjr                            1/1     Running   <span style=color:#bd93f9>0</span>          12m   172.18.0.2       kind-worker          &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-node-mt7nh                            1/1     Running   <span style=color:#bd93f9>0</span>          12m   172.18.0.3       kind-worker2         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-node-rc4xk                            0/1     Running   <span style=color:#bd93f9>0</span>          12m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-typha-c47c58b89-8x8z4                 1/1     Running   <span style=color:#bd93f9>0</span>          11m   172.18.0.3       kind-worker2         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-typha-c47c58b89-qcn96                 1/1     Running   <span style=color:#bd93f9>0</span>          11m   172.18.0.4       kind-worker3         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-typha-c47c58b89-vbg79                 1/1     Running   <span style=color:#bd93f9>0</span>          12m   172.18.0.2       kind-worker          &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>calico-system        calico-typha-c47c58b89-xqf7w                 1/1     Running   <span style=color:#bd93f9>0</span>          11m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>default              busybox-deployment-654565d6ff-7lj4t          1/1     Running   <span style=color:#bd93f9>0</span>          74s   10.244.162.129   kind-worker          &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>default              busybox-deployment-654565d6ff-h4xw2          1/1     Running   <span style=color:#bd93f9>0</span>          74s   10.244.110.131   kind-worker2         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          coredns-74ff55c5b-glltq                      1/1     Running   <span style=color:#bd93f9>0</span>          19m   10.244.110.130   kind-worker2         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          coredns-74ff55c5b-s68bf                      1/1     Running   <span style=color:#bd93f9>0</span>          19m   10.244.195.193   kind-worker3         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          etcd-kind-control-plane                      1/1     Running   <span style=color:#bd93f9>0</span>          19m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-apiserver-kind-control-plane            1/1     Running   <span style=color:#bd93f9>0</span>          19m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-controller-manager-kind-control-plane   1/1     Running   <span style=color:#bd93f9>0</span>          19m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-proxy-5g952                             1/1     Running   <span style=color:#bd93f9>0</span>          19m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-proxy-fmctx                             1/1     Running   <span style=color:#bd93f9>0</span>          18m   172.18.0.3       kind-worker2         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-proxy-lklns                             1/1     Running   <span style=color:#bd93f9>0</span>          18m   172.18.0.4       kind-worker3         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-proxy-rzk29                             1/1     Running   <span style=color:#bd93f9>0</span>          18m   172.18.0.2       kind-worker          &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>kube-system          kube-scheduler-kind-control-plane            1/1     Running   <span style=color:#bd93f9>0</span>          19m   172.18.0.5       kind-control-plane   &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>local-path-storage   local-path-provisioner-58c8ccd54c-nffsc      1/1     Running   <span style=color:#bd93f9>0</span>          19m   10.244.195.194   kind-worker3         &lt;none&gt;           &lt;none&gt;
+</span></span><span style=display:flex><span>tigera-operator      tigera-operator-655db97ccb-cd6xb             1/1     Running   <span style=color:#bd93f9>0</span>          13m   172.18.0.4       kind-worker3         &lt;none&gt;           &lt;none&gt;
+</span></span></code></pre></div><p>查看 calico 配置</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  cni-calico  kubectl -n calico-system  get ds -oyaml | grep -i -C2  vxlan
+</span></span><span style=display:flex><span>          - name: CALICO_IPV4POOL_CIDR
+</span></span><span style=display:flex><span>            value: 10.244.0.0/16
+</span></span><span style=display:flex><span>          - name: CALICO_IPV4POOL_VXLAN
+</span></span><span style=display:flex><span>            value: Always
+</span></span><span style=display:flex><span>          - name: CALICO_IPV4POOL_BLOCK_SIZE
+</span></span><span style=display:flex><span>--
+</span></span><span style=display:flex><span>          - name: CALICO_IPV4POOL_NODE_SELECTOR
+</span></span><span style=display:flex><span>            value: all<span style=color:#ff79c6>()</span>
+</span></span><span style=display:flex><span>          - name: FELIX_VXLANMTU
+</span></span><span style=display:flex><span>            value: <span style=color:#f1fa8c>&#34;1410&#34;</span>
+</span></span><span style=display:flex><span>          - name: FELIX_WIREGUARDMTU
+</span></span></code></pre></div><p>在 master 节点查看网络配置：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  cni-calico  docker ps
+</span></span><span style=display:flex><span>CONTAINER ID   IMAGE                   COMMAND                   CREATED          STATUS          PORTS                       NAMES
+</span></span><span style=display:flex><span>5e55184a6fd5   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>23</span> minutes ago   Up <span style=color:#bd93f9>23</span> minutes                               kind-worker
+</span></span><span style=display:flex><span>23cb30dd696d   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>23</span> minutes ago   Up <span style=color:#bd93f9>23</span> minutes   127.0.0.1:58782-&gt;6443/tcp   kind-control-plane
+</span></span><span style=display:flex><span>5221920dc5e5   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>23</span> minutes ago   Up <span style=color:#bd93f9>23</span> minutes                               kind-worker3
+</span></span><span style=display:flex><span>e626537d9d0f   kindest/node:v1.20.15   <span style=color:#f1fa8c>&#34;/usr/local/bin/entr…&#34;</span>   <span style=color:#bd93f9>23</span> minutes ago   Up <span style=color:#bd93f9>23</span> minutes                               kind-worker2
+</span></span><span style=display:flex><span>➜  cni-calico  docker <span style=color:#8be9fd;font-style:italic>exec</span> -it 23cb30dd696d bash
+</span></span><span style=display:flex><span>root@kind-control-plane:/# ip route
+</span></span><span style=display:flex><span>default via 172.18.0.1 dev eth0
+</span></span><span style=display:flex><span>10.244.110.128/26 via 10.244.110.128 dev vxlan.calico onlink
+</span></span><span style=display:flex><span>10.244.162.128/26 via 10.244.162.128 dev vxlan.calico onlink
+</span></span><span style=display:flex><span>10.244.195.192/26 via 10.244.195.192 dev vxlan.calico onlink
+</span></span><span style=display:flex><span>172.18.0.0/16 dev eth0 proto kernel scope link src 172.18.0.5
+</span></span></code></pre></div><p>创建一个带有两个副本和主节点容忍度的 busybox。</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>cat &gt; busybox.yaml &lt;&lt;<span style=color:#f1fa8c>&#34;EOF&#34;</span>
+</span></span><span style=display:flex><span>apiVersion: apps/v1
+</span></span><span style=display:flex><span>kind: Deployment
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: busybox-deployment
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  selector:
+</span></span><span style=display:flex><span>    matchLabels:
+</span></span><span style=display:flex><span>      app: busybox
+</span></span><span style=display:flex><span>  replicas: <span style=color:#bd93f9>2</span>
+</span></span><span style=display:flex><span>  template:
+</span></span><span style=display:flex><span>    metadata:
+</span></span><span style=display:flex><span>      labels:
+</span></span><span style=display:flex><span>        app: busybox
+</span></span><span style=display:flex><span>    spec:
+</span></span><span style=display:flex><span>      tolerations:
+</span></span><span style=display:flex><span>      - key: <span style=color:#f1fa8c>&#34;node-role.kubernetes.io/master&#34;</span>
+</span></span><span style=display:flex><span>        operator: <span style=color:#f1fa8c>&#34;Exists&#34;</span>
+</span></span><span style=display:flex><span>        effect: <span style=color:#f1fa8c>&#34;NoSchedule&#34;</span>
+</span></span><span style=display:flex><span>      containers:
+</span></span><span style=display:flex><span>      - name: busybox
+</span></span><span style=display:flex><span>        image: busybox
+</span></span><span style=display:flex><span>        command: <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;sleep&#34;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>        args: <span style=color:#ff79c6>[</span><span style=color:#f1fa8c>&#34;10000&#34;</span><span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>EOF
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>kubectl apply -f busybox.yaml
+</span></span><span style=display:flex><span>➜  cni-calico  kubectl get pod
+</span></span><span style=display:flex><span>NAME                                  READY   STATUS    RESTARTS   AGE
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-7lj4t   1/1     Running   <span style=color:#bd93f9>0</span>          7m5s
+</span></span><span style=display:flex><span>busybox-deployment-654565d6ff-h4xw2   1/1     Running   <span style=color:#bd93f9>0</span>          7m5s
+</span></span></code></pre></div><p>在 busybox pod 触发 arp 请求</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>➜  cni-calico  kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-7lj4t -- arp
+</span></span><span style=display:flex><span>172-18-0-2.calico-typha.calico-system.svc.cluster.local <span style=color:#ff79c6>(</span>172.18.0.2<span style=color:#ff79c6>)</span> at ee:ee:ee:ee:ee:ee <span style=color:#ff79c6>[</span>ether<span style=color:#ff79c6>]</span>  on eth0
+</span></span><span style=display:flex><span>^Ccommand terminated with <span style=color:#8be9fd;font-style:italic>exit</span> code <span style=color:#bd93f9>130</span>
+</span></span><span style=display:flex><span>➜  cni-calico  kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-7lj4t -- ping  8.8.8.8
+</span></span><span style=display:flex><span>PING 8.8.8.8 <span style=color:#ff79c6>(</span>8.8.8.8<span style=color:#ff79c6>)</span>: <span style=color:#bd93f9>56</span> data bytes
+</span></span><span style=display:flex><span><span style=color:#bd93f9>64</span> bytes from 8.8.8.8: <span style=color:#8be9fd;font-style:italic>seq</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>0</span> <span style=color:#8be9fd;font-style:italic>ttl</span><span style=color:#ff79c6>=</span><span style=color:#bd93f9>62</span> <span style=color:#8be9fd;font-style:italic>time</span><span style=color:#ff79c6>=</span>105.489 ms
+</span></span><span style=display:flex><span>^C
+</span></span><span style=display:flex><span>--- 8.8.8.8 ping statistics ---
+</span></span><span style=display:flex><span><span style=color:#bd93f9>1</span> packets transmitted, <span style=color:#bd93f9>1</span> packets received, 0% packet loss
+</span></span><span style=display:flex><span>round-trip min/avg/max <span style=color:#ff79c6>=</span> 105.489/105.489/105.489 ms
+</span></span><span style=display:flex><span>➜  cni-calico  kubectl <span style=color:#8be9fd;font-style:italic>exec</span> -it busybox-deployment-654565d6ff-7lj4t -- ip route
+</span></span><span style=display:flex><span>default via 169.254.1.1 dev eth0
+</span></span><span style=display:flex><span>169.254.1.1 dev eth0 scope link
+</span></span></code></pre></div><p>这个概念与之前的模式类似，但唯一的区别在于，数据包到达 VXLAN 时，VXLAN 会将数据包封装，并在内层头部中加入节点的 IP 和 MAC 地址，然后发送出去。此外，VXLAN 协议的 UDP 端口为 4789。在此过程中，etcd 提供了可用节点及其支持的 IP 范围的详细信息，以便 VXLAN-Calico 构建数据包。</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/7.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2021-10-22-kubernetes-pod-part01/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 网络基础知识（Part1）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2021-11-22-os-something/ data-toggle=tooltip data-placement=top title=科普操作系统与芯片那些事儿>Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2025</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
