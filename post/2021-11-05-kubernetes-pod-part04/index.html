@@ -1,0 +1,113 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="Kubernetes 中数据包的生命周期 Ingress 等处理七层流量（Part4）"><meta property="og:title" content="Kubernetes 中数据包的生命周期 Ingress 等处理七层流量（Part4）"><meta property="twitter:title" content="Kubernetes 中数据包的生命周期 Ingress 等处理七层流量（Part4）"><meta name=description content="本文我们将讨论 Kubernetes 的 Ingress 资源和 Ingress 控制器。Ingress 控制器是一个控制器，它监视 Kubernetes API 服务器上 Ingress 资源的更新，并相应地重新配置 Ingress 负载均衡器。"><meta property="og:description" content="本文我们将讨论 Kubernetes 的 Ingress 资源和 Ingress 控制器。Ingress 控制器是一个控制器，它监视 Kubernetes API 服务器上 Ingress 资源的更新，并相应地重新配置 Ingress 负载均衡器。"><meta property="twitter:description" content="本文我们将讨论 Kubernetes 的 Ingress 资源和 Ingress 控制器。Ingress 控制器是一个控制器，它监视 Kubernetes API 服务器上 Ingress 资源的更新，并相应地重新配置 Ingress 负载均衡器。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>Kubernetes 中数据包的生命周期 Ingress 等处理七层流量（Part4） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2021-11-05-kubernetes-pod-part04/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a></div><h1>Kubernetes 中数据包的生命周期 Ingress 等处理七层流量（Part4）</h1><h2 class=subheading>本文我们将讨论 Kubernetes 的 Ingress 资源和 Ingress 控制器。Ingress 控制器是一个控制器，它监视 Kubernetes API 服务器上 Ingress 资源的更新，并相应地重新配置 Ingress 负载均衡器。</h2><span class=meta>Posted by
+陈谭军
+on
+Friday, November 5, 2021
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2021-11-05-kubernetes-pod-part04/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 2610 字</span>，阅读约 <span class=more-meta>6 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><p>最近在深入学习 Kubernetes 基础知识，通过追踪 HTTP 请求到达 Kubernetes 集群上的服务过程来深入学习 Kubernetes 实现原理。希望下列文章能够对我们熟悉 Kubernetes 有一定的帮助。</p><ul><li><a href=https://tanjunchen.github.io/post/2021-10-22-kubernetes-pod-part01/>Linux 网络、Namespace 与容器网络 CNI 基础知识</a></li><li><a href=https://tanjunchen.github.io/post/2021-10-29-kubernetes-pod-part02/>Kubernetes CNI 大利器 - Calico</a></li><li><a href=https://tanjunchen.github.io/post/2021-10-15-kubernetes-pod-part03/>Kubernetes 流量核心组件 - kube-proxy</a></li><li><a href=https://tanjunchen.github.io/post/2021-11-05-kubernetes-pod-part04/>Kubernetes 使用 Ingress 处理七层流量</a></li></ul><p>本文我们将讨论 Kubernetes 的 Ingress 资源和 Ingress 控制器。Ingress 控制器是一个控制器，它监视 Kubernetes API 服务器上 Ingress 资源的更新，并相应地重新配置 Ingress 负载均衡器。</p><h1 id=nginx-controller-与-loadbalancerproxy>Nginx Controller 与 LoadBalancer/Proxy</h1><p>Ingress Controller 通常是一个在 Kubernetes 集群中作为 Pod 运行的应用程序，它根据 Ingress 资源配置负载均衡器。负载均衡器可以是运行在集群中的软件负载均衡器，也可以是外部运行的硬件或云负载均衡器，不同的负载均衡器需要不同的 Ingress 控制器。</p><p><img src=/images/2021-11-05-kubernetes-pod-part04/1.png alt></p><p>Ingress 的基本原则是提供一种描述更高层次流量管理约束的方法，特别是针对 HTTP(S)。通过 Ingress，我们可以定义路由流量的规则，而不需要创建大量的负载均衡器或在每个节点上暴露每个服务。它可以配置为为服务提供外部可访问的 URL、负载均衡流量、终止 SSL/TLS，并提供基于名称的虚拟主机和基于内容的路由功能。</p><h1 id=配置选项>配置选项</h1><p>Kubernetes Ingress 控制器使用 Ingress 类来筛选 Kubernetes Ingress 对象和其他资源，然后将它们转换为配置。这使得它可以与其他 Ingress 控制器和/或同一集群中其他部署的 Kubernetes Ingress 控制器共存：Kubernetes Ingress 控制器只会处理标记为其使用的配置。</p><h2 id=基于前缀-prefix>基于前缀 Prefix</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>apiVersion: networking.k8s.io/v1
+</span></span><span style=display:flex><span>kind: Ingress
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: prefix-based
+</span></span><span style=display:flex><span>  annotations:
+</span></span><span style=display:flex><span>    kubernetes.io/ingress.class: <span style=color:#f1fa8c>&#34;nginx-ingress-inst-1&#34;</span>
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  rules:
+</span></span><span style=display:flex><span>  - http:
+</span></span><span style=display:flex><span>      paths:
+</span></span><span style=display:flex><span>      - path: /video
+</span></span><span style=display:flex><span>        pathType: Prefix
+</span></span><span style=display:flex><span>        backend:
+</span></span><span style=display:flex><span>          service:
+</span></span><span style=display:flex><span>            name: video
+</span></span><span style=display:flex><span>            port:
+</span></span><span style=display:flex><span>              number: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>      - path: /store
+</span></span><span style=display:flex><span>        pathType: Prefix
+</span></span><span style=display:flex><span>        backend:
+</span></span><span style=display:flex><span>          service:
+</span></span><span style=display:flex><span>            name: store
+</span></span><span style=display:flex><span>            port:
+</span></span><span style=display:flex><span>              number: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><h2 id=基于-host>基于 Host</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>apiVersion: networking.k8s.io/v1
+</span></span><span style=display:flex><span>kind: Ingress
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: host-based
+</span></span><span style=display:flex><span>  annotations:
+</span></span><span style=display:flex><span>    kubernetes.io/ingress.class: <span style=color:#f1fa8c>&#34;nginx-ingress-inst-1&#34;</span>
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  rules:
+</span></span><span style=display:flex><span>  - host: <span style=color:#f1fa8c>&#34;video.example.com&#34;</span>
+</span></span><span style=display:flex><span>    http:
+</span></span><span style=display:flex><span>      paths:
+</span></span><span style=display:flex><span>      - pathType: Prefix
+</span></span><span style=display:flex><span>        path: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>        backend:
+</span></span><span style=display:flex><span>          service:
+</span></span><span style=display:flex><span>            name: video
+</span></span><span style=display:flex><span>            port:
+</span></span><span style=display:flex><span>              number: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>  - host: <span style=color:#f1fa8c>&#34;store.example.com&#34;</span>
+</span></span><span style=display:flex><span>    http:
+</span></span><span style=display:flex><span>      paths:
+</span></span><span style=display:flex><span>      - pathType: Prefix
+</span></span><span style=display:flex><span>        path: <span style=color:#f1fa8c>&#34;/&#34;</span>
+</span></span><span style=display:flex><span>        backend:
+</span></span><span style=display:flex><span>          service:
+</span></span><span style=display:flex><span>            name: store
+</span></span><span style=display:flex><span>            port:
+</span></span><span style=display:flex><span>              number: <span style=color:#bd93f9>80</span>
+</span></span></code></pre></div><h2 id=基于-host-与-prefix>基于 Host 与 Prefix</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>apiVersion: extensions/v1beta1
+</span></span><span style=display:flex><span>kind: Ingress
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: host-prefix-based
+</span></span><span style=display:flex><span>  annotations:
+</span></span><span style=display:flex><span>    kubernetes.io/ingress.class: <span style=color:#f1fa8c>&#34;nginx-ingress-inst-1&#34;</span>
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  rules:
+</span></span><span style=display:flex><span>  - host: foo.com
+</span></span><span style=display:flex><span>    http:
+</span></span><span style=display:flex><span>      paths:
+</span></span><span style=display:flex><span>      - backend:
+</span></span><span style=display:flex><span>          serviceName: foovideo
+</span></span><span style=display:flex><span>          servicePort: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        path: /video
+</span></span><span style=display:flex><span>      - backend:
+</span></span><span style=display:flex><span>          serviceName: foostore
+</span></span><span style=display:flex><span>          servicePort: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        path: /store
+</span></span><span style=display:flex><span>  - host: bar.com
+</span></span><span style=display:flex><span>    http:
+</span></span><span style=display:flex><span>      paths:
+</span></span><span style=display:flex><span>      - backend:
+</span></span><span style=display:flex><span>          serviceName: barvideo
+</span></span><span style=display:flex><span>          servicePort: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        path: /video
+</span></span><span style=display:flex><span>      - backend:
+</span></span><span style=display:flex><span>          serviceName: barstore
+</span></span><span style=display:flex><span>          servicePort: <span style=color:#bd93f9>80</span>
+</span></span><span style=display:flex><span>        path: /store
+</span></span></code></pre></div><p>Ingress 是 Kubernetes 中的一个内置 API，但没有内置控制器，因此需要一个 Ingress 控制器来实际实现 Ingress API。目前有许多不同的 Ingress 控制器，常见的有 Nginx 和 Contour。</p><p>Ingress 由一个 Ingress API 对象和一个 Ingress 控制器组成。如前所述，Kubernetes Ingress 是一个 API 对象，用于描述暴露到 Kubernetes 集群的服务的期望状态。因此，为了使其作为一个 Ingress 控制器工作，需要实际实现 Ingress API 来读取和处理 Ingress 资源的信息。由于 Ingress API 本质上只是元数据，实际的工作由 Ingress 控制器承担。市面上有多种 Ingress 控制器，选择合适的控制器对于每个使用场景非常重要。</p><p>此外，在同一集群中可以有多个 Ingress 控制器，并且可以为每个 Ingress 设置所需的控制器。通常，我们会在同一个集群中针对不同的场景使用这些控制器的组合。例如，我们可能会使用一个控制器来处理进入集群的外部流量，该控制器绑定了 SSL 证书，而另一个控制器则用于处理集群内部的流量，并且没有 SSL 绑定。</p><h1 id=部署选项>部署选项</h1><h2 id=contour--envoy>Contour + Envoy</h2><p>Contour Ingress 控制器是一个由以下两个组件协作组成的解决方案：</p><ul><li>Envoy：提供高性能的反向代理。</li><li>Contour：作为 Envoy 的管理服务器，并为其提供配置。</li></ul><p>这两个容器是分别部署的，Contour 作为一个 Deployment，Envoy 作为一个 DaemonSet。Contour 是 Kubernetes API 的客户端，它监视 Ingress、HTTPProxy、Secret、Service 和 Endpoint 对象，并通过将这些对象的缓存转化为相应的 JSON 配置段（如：Service 对象用于 CDS、Ingress 用于 RDS、Endpoint 对象用于 EDS 等），来充当 Envoy 的管理服务器。</p><p>以下示例展示了启用主机网络的 EnvoyProxy（监听地址为 0.0.0.0:80）。</p><p><img src=/images/2021-11-05-kubernetes-pod-part04/2.png alt></p><h2 id=nginx>Nginx</h2><p>Nginx Ingress 控制器的目标是生成一个配置文件（nginx.conf）。这一要求的主要影响是每次配置文件发生变化时，都需要重新加载 NGINX。需要注意的是，对于仅影响上游配置（例如，当你部署应用时，Endpoints 发生变化）的更改，我们并不会重新加载 Nginx。为了实现这一点，我们使用了 <a href=https://github.com/openresty/lua-nginx-module>lua-nginx-module</a>。</p><p>每当 Endpoints 发生变化时，控制器会从它所看到的所有服务中获取 Endpoints，并生成相应的 Backend 对象。然后，它将这些对象发送给在 Nginx 中运行的 Lua 处理程序。Lua 代码会将这些后端存储在共享内存区域中。接着，每当有请求时，运行在 <a href=https://github.com/openresty/lua-resty-core/blob/master/lib/ngx/balancer.md>balancer_by_lua</a> 上下文中的 Lua 代码会检测应从哪些 Endpoints 选择上游节点，并应用配置的负载均衡算法来选择合适的节点。随后，Nginx 会处理其余的请求。这种方式避免了在 Endpoint 发生变化时重新加载 Nginx。在一个相对较大的集群中，应用频繁部署时，这一特性可以显著减少 Nginx 重新加载次数，从而避免影响响应延迟、负载均衡质量（每次重新加载时，Nginx 会重置负载均衡的状态）等问题。</p><h2 id=nginx--keepalived--高可用部署>Nginx + Keepalived — 高可用部署</h2><p>keepalived 守护进程可以用于监控服务或系统，并在发生问题时自动切换到备用节点。我们配置一个浮动 IP 地址，该地址可以在工作节点之间移动。如果某个工作节点宕机，浮动 IP 会自动迁移到另一个工作节点，从而允许 Nginx 绑定到新的 IP 地址。</p><p>这种配置通过使用 keepalived 实现了 Nginx 的高可用性，当某个节点出现故障时，Nginx 能够继续服务，避免单点故障影响整个系统。</p><p><img src=/images/2021-11-05-kubernetes-pod-part04/3.png alt></p><h2 id=metallb--nginx-with-loadbalancer-service-适用于具有小型公共-ip-地址池的私有集群>MetalLB — Nginx with LoadBalancer Service (适用于具有小型公共 IP 地址池的私有集群)</h2><p>MetalLB 将 Kubernetes 集群与网络负载均衡器功能连接起来。简单来说，它允许在没有云提供商支持的集群中创建类型为“LoadBalancer”的 Kubernetes 服务。在启用了云平台的 Kubernetes 集群中，可以请求负载均衡器，云平台会分配一个 IP 地址；而在裸金属集群中，MetalLB 负责此分配。一旦 MetalLB 为服务分配了外部 IP 地址，它需要确保集群外的网络知道该 IP 地址“存在”于集群中。为此，MetalLB 使用标准路由协议来实现这一目标：<a href=https://en.wikipedia.org/wiki/Address_Resolution_Protocol>ARP</a>、<a href=https://en.wikipedia.org/wiki/Neighbor_Discovery_Protocol>NDP</a> 或 <a href=https://en.wikipedia.org/wiki/Border_Gateway_Protocol>BGP</a>。</p><ul><li>在 Layer 2 模式下，集群中的一台机器负责服务，并使用标准的地址发现协议（对于 IPv4 使用 ARP，IPv6 使用 NDP）使这些 IP 在本地网络中可达。从局域网的角度来看，发布这些 IP 地址的机器看起来拥有多个 IP 地址。</li><li>在 BGP 模式下，集群中的所有机器与控制的附近路由器建立 BGP 对等会话，并告知这些路由器如何将流量转发到服务 IP。使用 BGP 可以实现跨多个节点的真正负载均衡，并通过 BGP 的策略机制提供精细的流量控制。</li></ul><p>MetalLB Pods：</p><ul><li>controller：集群范围内的 MetalLB 控制器，负责 IP 分配（以 Deployment 方式部署）。</li><li>speaker：每个节点的守护进程，使用不同的广告策略将已分配 IP 的服务进行广告宣传（以 DaemonSet 方式部署）。</li></ul><p>通过 MetalLB，Kubernetes 集群可以在没有云服务的情况下提供类似云负载均衡器的功能，使得私有集群也能享受到高效的服务暴露和流量管理。</p><p><img src=/images/2021-11-05-kubernetes-pod-part04/4.png alt></p><p>注意：MetalLB 可以通过将服务类型定义为“LoadBalancer”来供集群中的任何服务使用，但实际上，获取一个大的公共 IP 地址池来与 MetalLB 一起使用并不实际。</p><h1 id=参考>参考</h1><ol><li><a href=https://kubernetes.io/docs/concepts/services-networking/ingress/>https://kubernetes.io/docs/concepts/services-networking/ingress/</a></li><li><a href=https://www.nginx.com/products/nginx-ingress-controller/>https://www.nginx.com/products/nginx-ingress-controller/</a></li><li><a href=https://www.keepalived.org/>https://www.keepalived.org/</a></li><li><a href=https://www.envoyproxy.io/>https://www.envoyproxy.io/</a></li><li><a href=https://projectcontour.io/>https://projectcontour.io/</a></li><li><a href=https://metallb.universe.tf/>https://metallb.universe.tf/</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2021-10-29-kubernetes-pod-part02/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 CNI Calico（Part2）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2021-11-22-os-something/ data-toggle=tooltip data-placement=top title=科普操作系统与芯片那些事儿>Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2025</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
