@@ -1,0 +1,204 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="vLLM 多机多卡推理测试与验证（Kubernetes）"><meta property="og:title" content="vLLM 多机多卡推理测试与验证（Kubernetes）"><meta property="twitter:title" content="vLLM 多机多卡推理测试与验证（Kubernetes）"><meta name=description content="vLLM 采用多机多卡推理，是为了解决超大规模模型的显存限制、算力瓶颈、高并发吞吐需求以及长序列处理等挑战。通过模型并行、数据并行和高效的内存管理技术，vLLM 能将模型参数和计算任务分布到多块 GPU 和多台机器上，充分利用硬件资源，实现快速、高效的推理能力，满足工业级场景中对性能和扩展性的要求。"><meta property="og:description" content="vLLM 采用多机多卡推理，是为了解决超大规模模型的显存限制、算力瓶颈、高并发吞吐需求以及长序列处理等挑战。通过模型并行、数据并行和高效的内存管理技术，vLLM 能将模型参数和计算任务分布到多块 GPU 和多台机器上，充分利用硬件资源，实现快速、高效的推理能力，满足工业级场景中对性能和扩展性的要求。"><meta property="twitter:description" content="vLLM 采用多机多卡推理，是为了解决超大规模模型的显存限制、算力瓶颈、高并发吞吐需求以及长序列处理等挑战。通过模型并行、数据并行和高效的内存管理技术，vLLM 能将模型参数和计算任务分布到多块 GPU 和多台机器上，充分利用硬件资源，实现快速、高效的推理能力，满足工业级场景中对性能和扩展性的要求。"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>vLLM 多机多卡推理测试与验证（Kubernetes） | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2025-01-19-inference-serve-k8s/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/kubernetes title=kubernetes>kubernetes</a>
+<a class=tag href=/tags/ai title=AI>AI</a>
+<a class=tag href=/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B title=大模型>大模型</a></div><h1>vLLM 多机多卡推理测试与验证（Kubernetes）</h1><h2 class=subheading>vLLM 多机多卡推理 Kubernetes 验证</h2><span class=meta>Posted by
+陈谭军
+on
+Sunday, January 19, 2025
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2025-01-19-inference-serve-k8s/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 3186 字</span>，阅读约 <span class=more-meta>7 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=基础概念>基础概念</h1><p>【分布式推理与服务】（Distributed Inference and Serving）是指在多个机器或设备之间部署和管理机器学习模型，以高效地处理推理请求并满足大规模服务需求。</p><p>【推理】是指使用训练好的机器学习模型，对新的、未见过的数据进行预测或决策的过程。
+推理可能需要大量计算资源，尤其是在处理大型模型时，因此通过分布式方式将推理任务分摊到多个机器上，可以显著提升性能并减少延迟。</p><p>服务（Serving）模型服务是指将模型部署到生产环境中，通过 API 或其他接口提供预测服务的过程。
+模型可以部署在单台机器上，也可以分布在多个节点中，以应对高并发请求或降低响应时间。</p><p>本文记录在两台 L20 机器，每台机器 4 块 L20 显卡（46G）的环境下，使用 vLLM 部署 Qwen2.5-32B-Instruct-GPTQ-Int4 模型并提供多节点多卡推理服务的过程。</p><h1 id=环境信息>环境信息</h1><ul><li>OS：CentOS Linux release 7.9.2009 (Core)</li><li>Kernel：3.10.0-1160.83.1.el7.x86_64</li><li>驱动： NVIDIA-SMI 535.183.06 Driver Version: 535.183.06 CUDA Version: 12.2</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>GPU：NVIDIA L20
+</span></span><span style=display:flex><span><span style=color:#ff79c6>(</span>base<span style=color:#ff79c6>)</span> <span style=color:#ff79c6>[</span>root@instance-crwsvl7m-1 multiple-nodes-vllm<span style=color:#ff79c6>]</span><span style=color:#6272a4># nvidia-smi -L</span>
+</span></span><span style=display:flex><span>GPU 0: NVIDIA L20 <span style=color:#ff79c6>(</span>UUID: GPU-126fe4b0-c735-771d-680c-0d6826c03129<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>GPU 1: NVIDIA L20 <span style=color:#ff79c6>(</span>UUID: GPU-11153395-f39b-6d51-1a91-ee33fb04bac1<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>GPU 2: NVIDIA L20 <span style=color:#ff79c6>(</span>UUID: GPU-992e9b13-7cf8-e571-6826-1c95aa375a53<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>GPU 3: NVIDIA L20 <span style=color:#ff79c6>(</span>UUID: GPU-70c1a850-a443-6619-7b42-ba59aec4d07a<span style=color:#ff79c6>)</span>
+</span></span></code></pre></div><ul><li>模型：<a href=https://huggingface.co/Qwen/Qwen2.5-32B-Instruct-GPTQ-Int4>Qwen2.5-32B-Instruct-GPTQ-Int4</a></li><li><a href=https://docs.vllm.ai/en/stable/>vLLM</a></li><li>Docker：20.10.5</li><li>nvidia-container-runtime：1.0.2-dev</li><li>测试镜像：vllm/vllm-openai:v0.6.4.post1</li><li>2 台 L20 机器：</li></ul><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># head 节点</span>
+</span></span><span style=display:flex><span>192.168.30.4  
+</span></span><span style=display:flex><span><span style=color:#6272a4># worker 工作节点</span>
+</span></span><span style=display:flex><span>192.168.30.5 
+</span></span><span style=display:flex><span><span style=color:#6272a4>### 配置与模型根目录 /root/chentanjun/multiple-nodes-vllm ###</span>
+</span></span></code></pre></div><p><em><strong>注意：需要保障模型在每个机器上的路径一致</strong></em></p><h1 id=参数说明>参数说明</h1><ul><li>IP_OF_HEAD_NODE:Ray Head Node 的 IP 地址。测试值：vllm-head-service.vllm.svc.cluster.local</li><li>NCCL_SOCKET_IFNAME:NCCL 通信的以太网接口名称。测试值：eth0</li><li>NCCL_DEBUG:NCCL 的调试信息级别。测试值：TRACE</li><li>NCCL_IB_DISABLE:禁用 InfiniBand。测试值：1</li><li>CUDA_VISIBLE_DEVICES:可用的 GPU 设备列表。</li><li>MODEL_PATH:模型文件的存储路径。</li><li>SERVED_MODEL_NAME:服务化模型的名称。</li><li>TENSOR_PARALLEL_SIZE:张量并行度大小。 测试值：4。</li><li>PIPELINE_PARALLEL_SIZE 管道并行度大小。测试值：2。</li><li>MAX_MODEL_LEN:模型支持的最大输入长度。 测试值：4096。</li><li>QUANTIZATION:模型量化方式。 测试值：gptq_marlin。</li><li>GPU_MEMORY_UTILIZATION:GPU 内存的最大利用率。测试值：0.90。</li><li>PORT:服务监听的端口号。测试值：8009。</li></ul><h1 id=并行策略>并行策略</h1><h2 id=张量并行tensor-parallelism-tp>张量并行（Tensor Parallelism, TP）</h2><ul><li><strong>简介</strong>：模型的张量（如权重矩阵）被切分到多个 GPU 上，计算由这些 GPU 协同完成。</li><li><strong>典型例子</strong>：GPT-3 和 GPT-4 的分布式推理使用 Megatron-LM 框架，依靠张量并行来分散矩阵乘法计算。</li><li><strong>适用场景</strong>：模型权重矩阵较大（如多亿参数级别），单张 GPU 无法处理时。</li><li><strong>优点</strong>：减少单 GPU 显存占用，提高计算效率。</li><li><strong>缺点</strong>：GPU 通信频繁，可能成为性能瓶颈。</li></ul><h2 id=管道并行pipeline-parallelism-pp>管道并行（Pipeline Parallelism, PP）</h2><ul><li><strong>简介</strong>：将模型按层划分，每组层分配到不同的 GPU 上，输入数据以流水线方式依次经过这些 GPU 处理。</li><li><strong>典型例子</strong>：BERT 或 GPT-3 推理中，使用 Hugging Face 的 DeepSpeed 或 FairScale 框架结合管道并行进行推理。</li><li><strong>适用场景</strong>：模型规模超大（数百亿或更多参数），显存需求超过单 GPU 时。</li><li><strong>优点</strong>：分摊显存需求，提高利用率。</li><li><strong>缺点</strong>：存在流水线延迟，计算资源可能闲置。</li></ul><h2 id=数据并行data-parallelism-dp>数据并行（Data Parallelism, DP）</h2><ul><li><strong>简介</strong>：将整个模型复制到多个 GPU 上，所有 GPU 同步计算不同的输入数据分片。</li><li><strong>典型例子</strong>：ResNet 和 ViT 等模型在分布式推理或训练时广泛采用数据并行策略（如 PyTorch Distributed Data Parallel，DDP）。</li><li><strong>适用场景</strong>：大批量推理任务，模型规模适中，显存足够容纳完整模型时。</li><li><strong>优点</strong>：实现简单，通信开销小。</li><li><strong>缺点</strong>：参数同步开销随 GPU 数量增加。</li></ul><h2 id=混合并行hybrid-parallelism>混合并行（Hybrid Parallelism）</h2><ul><li><strong>简介</strong>：同时采用张量并行、管道并行和数据并行，结合其优势进行优化。</li><li><strong>典型例子</strong>：GPT-3 训练使用 Megatron-LM 的混合并行技术，尤其是在多节点分布式系统中。</li><li><strong>适用场景</strong>：超大规模模型（数百亿到数万亿参数），需要跨节点分布式推理或训练时。</li><li><strong>优点</strong>：高效利用硬件资源，适应复杂任务。</li><li><strong>缺点</strong>：实现复杂，需精细调优并行配置。</li></ul><h2 id=流式并行stream-parallelism>流式并行（Stream Parallelism）</h2><ul><li><strong>简介</strong>：将任务划分为多个子任务并发执行，减少 GPU 空闲时间。</li><li><strong>典型例子</strong>：NVIDIA TensorRT 在推理优化中，通过异步执行多个推理流实现流式并行。</li><li><strong>适用场景</strong>：实时推理，任务间独立性较高时。</li><li><strong>优点</strong>：减少延迟，提高 GPU 利用率。</li><li><strong>缺点</strong>：对任务间的独立性要求较高。</li></ul><h2 id=特定硬件优化并行hardware-specific-parallelism>特定硬件优化并行（Hardware-Specific Parallelism）</h2><ul><li><strong>简介</strong>：针对硬件架构（如 NVIDIA Tensor Cores 或 Google TPU）设计计算优化策略。</li><li><strong>典型例子</strong>：<ul><li>NVIDIA 的 Transformer Engine 针对 A100 和 H100 GPU 优化张量并行和低精度计算。</li><li>TPU Pod 上使用的切片并行策略。</li></ul></li><li><strong>适用场景</strong>：有特定硬件支持的部署场景。</li><li><strong>优点</strong>：能充分利用硬件特性，达到最佳性能。</li><li><strong>缺点</strong>：硬件依赖性强，迁移性差。</li></ul><h2 id=异步并行asynchronous-parallelism>异步并行（Asynchronous Parallelism）</h2><ul><li><strong>简介</strong>：不同 GPU 处理不同任务，避免同步等待。</li><li><strong>典型例子</strong>：在自定义推理服务中，结合异步任务调度框架（如 Ray Serve）实现分布式推理。</li><li><strong>适用场景</strong>：并发推理场景，允许输入任务间异步执行。</li><li><strong>优点</strong>：最大化吞吐量。</li><li><strong>缺点</strong>：实现复杂，需要任务解耦。</li></ul><p>总结与选择策略：</p><ul><li>小模型且任务独立：选择数据并行。</li><li>大模型且显存不足：选择张量并行、管道并行或混合并行。</li><li>超大规模分布式系统：混合并行是首选。</li><li>实时性要求高：结合流式并行或异步并行优化延迟。</li><li>硬件优化场景：优先使用硬件特定并行策略。</li></ul><h1 id=验证过程>验证过程</h1><p><em><strong>因为涉及到跨机通信，环境无 IB/RoCE RDMA 高性能网卡，所以使用以太网进行验证</strong></em></p><p>1、使用以下 yaml 搭建ray集群</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>apiVersion: v1
+</span></span><span style=display:flex><span>kind: Namespace
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: vllm
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span>apiVersion: v1
+</span></span><span style=display:flex><span>kind: ConfigMap
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: vllm-config
+</span></span><span style=display:flex><span>  namespace: vllm
+</span></span><span style=display:flex><span>data:
+</span></span><span style=display:flex><span>  IP_OF_HEAD_NODE: <span style=color:#f1fa8c>&#34;vllm-head-service.vllm.svc.cluster.local&#34;</span> <span style=color:#6272a4># 主机网络模式可填 ray head node 的 IP 地址</span>
+</span></span><span style=display:flex><span>  NCCL_SOCKET_IFNAME: <span style=color:#f1fa8c>&#34;eth0&#34;</span> <span style=color:#6272a4># 以太网接口名称，根据实际情况修改</span>
+</span></span><span style=display:flex><span>  NCCL_DEBUG: <span style=color:#f1fa8c>&#34;TRACE&#34;</span> <span style=color:#6272a4># 调试信息级别，可根据需要调整</span>
+</span></span><span style=display:flex><span>  NCCL_IB_DISABLE: <span style=color:#f1fa8c>&#34;1&#34;</span> <span style=color:#6272a4># 禁用 InfiniBand，根据实际情况调整</span>
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span>apiVersion: v1
+</span></span><span style=display:flex><span>kind: Service
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: vllm-head-service
+</span></span><span style=display:flex><span>  namespace: vllm
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  selector:
+</span></span><span style=display:flex><span>    app: vllm-head
+</span></span><span style=display:flex><span>  ports:
+</span></span><span style=display:flex><span>    - name: ray-port
+</span></span><span style=display:flex><span>      protocol: TCP
+</span></span><span style=display:flex><span>      port: <span style=color:#bd93f9>6379</span>
+</span></span><span style=display:flex><span>      targetPort: <span style=color:#bd93f9>6379</span>
+</span></span><span style=display:flex><span>    - name: object-manager-port
+</span></span><span style=display:flex><span>      protocol: TCP
+</span></span><span style=display:flex><span>      port: <span style=color:#bd93f9>8625</span>
+</span></span><span style=display:flex><span>      targetPort: <span style=color:#bd93f9>8625</span>
+</span></span><span style=display:flex><span>  type: ClusterIP
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span>apiVersion: apps/v1
+</span></span><span style=display:flex><span>kind: Deployment
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: vllm-head
+</span></span><span style=display:flex><span>  namespace: vllm
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  replicas: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  selector:
+</span></span><span style=display:flex><span>    matchLabels:
+</span></span><span style=display:flex><span>      app: vllm-head
+</span></span><span style=display:flex><span>  template:
+</span></span><span style=display:flex><span>    metadata:
+</span></span><span style=display:flex><span>      labels:
+</span></span><span style=display:flex><span>        app: vllm-head
+</span></span><span style=display:flex><span>    spec:
+</span></span><span style=display:flex><span>      nodeSelector:
+</span></span><span style=display:flex><span>        kubernetes.io/hostname: 192.168.30.4 <span style=color:#6272a4># ray 集群 head node 的 hostname，根据实际情况调整</span>
+</span></span><span style=display:flex><span>      <span style=color:#6272a4># hostNetwork: true   # 主机网络模式，根据实际情况调整</span>
+</span></span><span style=display:flex><span>      containers:
+</span></span><span style=display:flex><span>      - name: vllm-head
+</span></span><span style=display:flex><span>        image: vllm/vllm-openai:v0.6.4.post1  
+</span></span><span style=display:flex><span>        command:
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#34;/bin/bash&#34;</span>   
+</span></span><span style=display:flex><span>        args:
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#34;-c&#34;</span>
+</span></span><span style=display:flex><span>          - |
+</span></span><span style=display:flex><span>            ray start --head --port<span style=color:#ff79c6>=</span><span style=color:#bd93f9>6379</span> --dashboard-host<span style=color:#ff79c6>=</span>0.0.0.0 --object-manager-port<span style=color:#ff79c6>=</span><span style=color:#bd93f9>8625</span> --block
+</span></span><span style=display:flex><span>        securityContext:
+</span></span><span style=display:flex><span>          privileged: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>        volumeMounts:
+</span></span><span style=display:flex><span>        - name: shm-volume
+</span></span><span style=display:flex><span>          mountPath: /dev/shm
+</span></span><span style=display:flex><span>        - name: hf-cache
+</span></span><span style=display:flex><span>          mountPath: /root/.cache/huggingface 
+</span></span><span style=display:flex><span>        envFrom:
+</span></span><span style=display:flex><span>        - configMapRef:
+</span></span><span style=display:flex><span>            name: vllm-config
+</span></span><span style=display:flex><span>      volumes:
+</span></span><span style=display:flex><span>      - name: shm-volume
+</span></span><span style=display:flex><span>        emptyDir:
+</span></span><span style=display:flex><span>          medium: Memory  
+</span></span><span style=display:flex><span>          sizeLimit: 10Gi  
+</span></span><span style=display:flex><span>      - name: hf-cache
+</span></span><span style=display:flex><span>        hostPath:
+</span></span><span style=display:flex><span>          path: /root/chentanjun/multiple-nodes-vllm/models
+</span></span><span style=display:flex><span>---
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>apiVersion: apps/v1
+</span></span><span style=display:flex><span>kind: Deployment
+</span></span><span style=display:flex><span>metadata:
+</span></span><span style=display:flex><span>  name: vllm-worker
+</span></span><span style=display:flex><span>  namespace: vllm
+</span></span><span style=display:flex><span>spec:
+</span></span><span style=display:flex><span>  replicas: <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>  selector:
+</span></span><span style=display:flex><span>    matchLabels:
+</span></span><span style=display:flex><span>      app: vllm-worker
+</span></span><span style=display:flex><span>  template:
+</span></span><span style=display:flex><span>    metadata:
+</span></span><span style=display:flex><span>      labels:
+</span></span><span style=display:flex><span>        app: vllm-worker
+</span></span><span style=display:flex><span>    spec:
+</span></span><span style=display:flex><span>      nodeSelector:
+</span></span><span style=display:flex><span>        kubernetes.io/hostname: 192.168.30.5 <span style=color:#6272a4># ray 集群 worker node 的 hostname，根据实际情况调整</span>
+</span></span><span style=display:flex><span>      <span style=color:#6272a4># hostNetwork: true # 主机网络模式，根据实际情况调整</span>
+</span></span><span style=display:flex><span>      containers:
+</span></span><span style=display:flex><span>      - name: vllm-worker
+</span></span><span style=display:flex><span>        image: vllm/vllm-openai:v0.6.4.post1   
+</span></span><span style=display:flex><span>        command:
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#34;/bin/bash&#34;</span>  
+</span></span><span style=display:flex><span>        args:
+</span></span><span style=display:flex><span>          - <span style=color:#f1fa8c>&#34;-c&#34;</span>
+</span></span><span style=display:flex><span>          - |
+</span></span><span style=display:flex><span>            ray start --address<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>${</span><span style=color:#8be9fd;font-style:italic>IP_OF_HEAD_NODE</span><span style=color:#f1fa8c>}</span>:6379 --block
+</span></span><span style=display:flex><span>        securityContext:
+</span></span><span style=display:flex><span>          privileged: <span style=color:#8be9fd;font-style:italic>true</span>
+</span></span><span style=display:flex><span>        volumeMounts:
+</span></span><span style=display:flex><span>        - name: hf-cache
+</span></span><span style=display:flex><span>          mountPath: /root/.cache/huggingface
+</span></span><span style=display:flex><span>        - name: shm-volume
+</span></span><span style=display:flex><span>          mountPath: /dev/shm
+</span></span><span style=display:flex><span>        envFrom:
+</span></span><span style=display:flex><span>        - configMapRef:
+</span></span><span style=display:flex><span>            name: vllm-config
+</span></span><span style=display:flex><span>      volumes:
+</span></span><span style=display:flex><span>      - name: shm-volume
+</span></span><span style=display:flex><span>        emptyDir:
+</span></span><span style=display:flex><span>          medium: Memory  
+</span></span><span style=display:flex><span>          sizeLimit: 10Gi 
+</span></span><span style=display:flex><span>      - name: hf-cache
+</span></span><span style=display:flex><span>        hostPath:
+</span></span><span style=display:flex><span>          path: /root/chentanjun/multiple-nodes-vllm/models
+</span></span></code></pre></div><p>2、检查 ray 集群状态（随机找ray集群中的节点就行，执行命令 <code>kube exec -it vllm-head-5b555598cc-ftdlz bash</code>）：</p><p><img src=/images/2025-01-19-inference-serve-k8s/1.png alt></p><p><img src=/images/2025-01-19-inference-serve-k8s/2.png alt></p><p><img src=/images/2025-01-19-inference-serve-k8s/3.png alt></p><p>3、启动 vLLM 服务</p><p>在节点 head 的容器中启动服务，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>nohup vllm serve /root/.cache/huggingface/Qwen2.5-32B-Instruct-GPTQ-Int4 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --served-model-name Qwen2.5-32B-Instruct-GPTQ-Int4 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --tensor-parallel-size <span style=color:#bd93f9>4</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --pipeline-parallel-size <span style=color:#bd93f9>2</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --max-model-len <span style=color:#bd93f9>4096</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --quantization gptq_marlin <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --gpu-memory-utilization 0.90 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --trust-remote-code <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --port <span style=color:#bd93f9>8009</span> &gt; vllm_serve.log 2&gt;&amp;<span style=color:#bd93f9>1</span> &amp;
+</span></span></code></pre></div><p>查看服务日志，确保服务正常启动；</p><p><img src=/images/2025-01-19-inference-serve-k8s/4.png alt></p><p><img src=/images/2025-01-19-inference-serve-k8s/5.png alt></p><p><img src=/images/2025-01-19-inference-serve-k8s/6.png alt></p><p>4、请求 openapi 测试</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#6272a4># Qwen2.5-32B-Instruct-GPTQ-Int4 vllm 对外暴露的服务地址</span>
+</span></span><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>export</span> <span style=color:#8be9fd;font-style:italic>IP_OF_HEAD_NODE</span><span style=color:#ff79c6>=</span>localhost
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 非流式  </span>
+</span></span><span style=display:flex><span>curl --request POST <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  -H <span style=color:#f1fa8c>&#34;Content-Type: application/json&#34;</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --url http://<span style=color:#8be9fd;font-style:italic>$IP_OF_HEAD_NODE</span>:8009/v1/chat/completions <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --data <span style=color:#f1fa8c>&#39;{&#34;messages&#34;:[{&#34;role&#34;:&#34;user&#34;,&#34;content&#34;:&#34;给我推荐中国适合旅游的方&#34;}],&#34;stream&#34;:false,&#34;model&#34;:&#34;Qwen2.5-32B-Instruct-GPTQ-Int4&#34;}&#39;</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#6272a4># 流式</span>
+</span></span><span style=display:flex><span>curl --request POST <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  -H <span style=color:#f1fa8c>&#34;Content-Type: application/json&#34;</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --url http://<span style=color:#8be9fd;font-style:italic>$IP_OF_HEAD_NODE</span>:8009/v1/chat/completions <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --data <span style=color:#f1fa8c>&#39;{&#34;messages&#34;:[{&#34;role&#34;:&#34;user&#34;,&#34;content&#34;:&#34;给我推荐中国适合旅游的地方&#34;}],&#34;stream&#34;:true,&#34;model&#34;:&#34;Qwen2.5-32B-Instruct-GPTQ-Int4&#34;}&#39;</span>
+</span></span></code></pre></div><p>测试结果（非流式）</p><p><img src=/images/2025-01-19-inference-serve-k8s/7.png alt></p><p>测试结果（流式）</p><p><img src=/images/2025-01-19-inference-serve-k8s/8.png alt></p><h1 id=附录>附录</h1><p>校验模型hash值工具如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>sha256sum *.safetensors &gt; sum.txt 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>root@instance-o6t26vv4:~/chentanjun/Qwen2.5-32B-Instruct-GPTQ-Int4# cat sum.txt 
+</span></span><span style=display:flex><span>942d93a82fb6d0cb27c940329db971c1e55da78aed959b7a9ac23944363e8f47  model-00001-of-00005.safetensors
+</span></span><span style=display:flex><span>19139f34508cb30b78868db0f19ed23dbc9f248f1c5688e29000ed19b29a7eef  model-00002-of-00005.safetensors
+</span></span><span style=display:flex><span>d0f829efe1693dddaa4c6e42e867603f19d9cc71806df6e12b56cc3567927169  model-00003-of-00005.safetensors
+</span></span><span style=display:flex><span>3a5a428f449bc9eaf210f8c250bc48f3edeae027c4ef8ae48dd4f80e744dd19e  model-00004-of-00005.safetensors
+</span></span><span style=display:flex><span>c22a1d1079136e40e1d445dda1de9e3fe5bd5d3b08357c2eb052c5b71bf871fe  model-00005-of-00005.safetensors
+</span></span></code></pre></div><h1 id=参考>参考</h1><ol><li><a href=https://docs.vllm.ai/en/latest/serving/distributed_serving.html>distributed_serving</a></li><li><a href=https://github.com/vllm-project/vllm/blob/main/examples/online_serving/run_cluster.sh>run_cluster.sh</a></li><li><a href=https://github.com/vllm-project/vllm/issues/1363>vllm-project</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2025-01-05-ai-infra/ data-toggle=tooltip data-placement=top title="云原生 AI 能力引擎（大模型 AI 基础套件）">&larr;
+Previous Post</a></li><li class=next><a href=/post/2025-01-19-inference-serve/ data-toggle=tooltip data-placement=top title="vLLM 多机多卡推理测试与验证（Docker）">Next
+Post &rarr;</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2025</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
