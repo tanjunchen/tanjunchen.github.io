@@ -1,0 +1,401 @@
+<!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="单台 H20 机器 DeepSeek R1 (FP8)、DeepSeek-R1-Block-INT8 精度测试与性能测试过程"><meta property="og:title" content="单台 H20 机器 DeepSeek R1 (FP8)、DeepSeek-R1-Block-INT8 精度测试与性能测试过程"><meta property="twitter:title" content="单台 H20 机器 DeepSeek R1 (FP8)、DeepSeek-R1-Block-INT8 精度测试与性能测试过程"><meta name=description content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="陈谭军，软件工程师, 开源爱好者, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="陈谭军, 互联网, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>单台 H20 机器 DeepSeek R1 (FP8)、DeepSeek-R1-Block-INT8 精度测试与性能测试过程 | 陈谭军的博客 | tanjunchen Blog</title><link rel=canonical href=/post/2025-03-23-h20-deepseek-r1/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><script src=/js/jquery.min.js></script>
+<script src=/js/bootstrap.min.js></script>
+<script src=/js/hux-blog.min.js></script>
+<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span></button>
+<a class=navbar-brand href=/>漫步远方，心荡神往</a></div><div id=huxblog_navbar><div class=navbar-collapse><ul class="nav navbar-nav navbar-right"><li><a href=/>All Posts</a></li><li><a href=/categories/technology/>technology</a></li><li><a href=/categories/think/>think</a></li><li><a href=/learning/>LEARNING</a></li><li><a href=/archive/>ARCHIVE</a></li><li><a href=/about/>ABOUT</a></li><li><a href=/search><i class="fa fa-search"></i></a></li></ul></div></div></div></nav><script>var $body=document.body,$toggle=document.querySelector(".navbar-toggle"),$navbar=document.querySelector("#huxblog_navbar"),$collapse=document.querySelector(".navbar-collapse");$toggle.addEventListener("click",handleMagic);function handleMagic(){$navbar.className.indexOf("in")>0?($navbar.className=" ",setTimeout(function(){$navbar.className.indexOf("in")<0&&($collapse.style.height="0px")},400)):($collapse.style.height="auto",$navbar.className+=" in")}</script><style type=text/css>header.intro-header{background-image:url(/img/home.webp)}</style><header class=intro-header><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><div class=tags><a class=tag href=/tags/ai title=AI>AI</a>
+<a class=tag href=/tags/%E5%A4%A7%E6%A8%A1%E5%9E%8B title=大模型>大模型</a>
+<a class=tag href=/tags/deepseek title=DeepSeek>DeepSeek</a>
+<a class=tag href=/tags/nvidia-%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95 title="NVIDIA 性能测试">NVIDIA 性能测试</a></div><h1>单台 H20 机器 DeepSeek R1 (FP8)、DeepSeek-R1-Block-INT8 精度测试与性能测试过程</h1><h2 class=subheading>测试下 DeepSeek R1（FP8）、DeepSeek-R1-Block-INT8 使用单台 H20 机器在 aime、math500、gpqa (使用开源工具 evalscope) 数据集下进行精度测试；给定输入、输出等参数，性能压测；</h2><span class=meta>Posted by
+陈谭军
+on
+Sunday, March 23, 2025
+<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
+<span id=/post/2025-03-23-h20-deepseek-r1/ class="leancloud_visitors meta_data_item" data-flag-title><span class=post-meta-item-icon><span class="octicon octicon-eye"></span></span>
+<i class="fa fa-eye"></i>
+<span class=old-visitors-count style=display:none></span>
+<span class=leancloud-visitors-count></span></span>
+<script src=https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js></script>
+<script>AV.initialize("","")</script><script type=text/javascript>function showTime(e){var n=new AV.Query(e),t=[],s=$(".leancloud_visitors");s.each(function(){t.push($(this).attr("id").trim())}),n.containedIn("url",t),n.find().done(function(e){for(var s,o,i,a,r,c,l=".leancloud-visitors-count",d=".old-visitors-count",n=0;n<e.length;n++)a=e[n],i=a.get("url"),c=a.get("time"),s=document.getElementById(i),$(s).find(l).text(c);for(n=0;n<t.length;n++)i=t[n],s=document.getElementById(i),o=$(s).find(l),o.text()==""&&(r=$(s).find(d).text(),r!=""?o.text(0+parseInt(r)):o.text(0))}).fail(function(e,t){console.log("Error: "+t.code+" "+t.message)})}function addCount(e){var n=$(".leancloud_visitors"),t=n.attr("id").trim(),o=n.attr("data-flag-title").trim(),s=new AV.Query(e);s.equalTo("url",t),s.find({success:function(n){if(n.length>0){var s,i,r,c,l,a=n[0];a.fetchWhenSave(!0),a.increment("time"),a.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(e,t){console.log("Failed to save Visitor num, with error message: "+t.message)}})}else s=new e,i=new AV.ACL,i.setPublicReadAccess(!0),i.setPublicWriteAccess(!0),s.setACL(i),s.set("title",o),s.set("url",t),c=".old-visitors-count",l=$(document.getElementById(t)),r=l.find(c).text(),r!=""?s.set("time",parseInt(r)+1):s.set("time",1),s.save(null,{success:function(e){var n=$(document.getElementById(t));n.find(".leancloud-visitors-count").text(e.get("time"))},error:function(){console.log("Failed to create")}})},error:function(e){console.log("Error:"+e.code+" "+e.message)}})}$(function(){var e=AV.Object.extend("Counter");$(".leancloud_visitors").length==1?addCount(e):showTime(e)})</script>阅读 </span></span>|<span class=post-date>共 2623 字</span>，阅读约 <span class=more-meta>6 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+post-container"><h1 id=测试目标>测试目标</h1><ul><li>测试下 DeepSeek R1（FP8） 使用单台 H20 机器在 aime、math500、gpqa (使用开源工具 evalscope) 数据集下进行精度测试；</li><li>给定输入、输出等参数，性能压测，具体可见 <a href=https://github.com/sgl-project/sglang/blob/main/benchmark/benchmark_vllm_060/README.md>benchmark_vllm_060</a>；</li></ul><h1 id=环境信息>环境信息</h1><ul><li>【CPU】lscpu | grep &ldquo;Model name&rdquo; Model name: INTEL(R) XEON(R) PLATINUM 8563C</li><li>【CPU架构】lscpu | grep Architecture Architecture: x86_64</li><li>【MEM】free -g total： 2015</li><li>【HDD/SDD】lsblk NVME 3.5T * 4</li><li>【卡类型】nvidia-smi -q | grep -i &ldquo;Product Name&rdquo; H20 * 8</li><li>【操作系统】cat /etc/os-release CentOS Linux 7 (Core)</li><li>【内核】uname -r 5.10.0-1.0.0.41</li><li>【GPU CUDA】nvidia-smi -q | grep -i &ldquo;Version&rdquo; 12.2</li><li>【GPU 驱动】nvidia-smi -q | grep -i &ldquo;Driver Version&rdquo; 535.216.03</li><li>【Docker】docker version 20.10.5</li></ul><h2 id=机器配置>机器配置</h2><p>H20（8*96G）</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>[</span>root@xxxx ~<span style=color:#ff79c6>]</span><span style=color:#6272a4># nvidia-smi</span>
+</span></span><span style=display:flex><span>Thu Mar <span style=color:#bd93f9>20</span> 20:47:18 <span style=color:#bd93f9>2025</span>       
+</span></span><span style=display:flex><span>+---------------------------------------------------------------------------------------+
+</span></span><span style=display:flex><span>| NVIDIA-SMI 535.216.03             Driver Version: 535.216.03   CUDA Version: 12.2     |
+</span></span><span style=display:flex><span>|-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>| GPU  Name                 Persistence-M | Bus-Id        Disp.A | Volatile Uncorr. ECC |
+</span></span><span style=display:flex><span>| Fan  Temp   Perf          Pwr:Usage/Cap |         Memory-Usage | GPU-Util  Compute M. |
+</span></span><span style=display:flex><span>|                                         |                      |               MIG M. |
+</span></span><span style=display:flex><span>|<span style=color:#ff79c6>=========================================</span>+<span style=color:#ff79c6>======================</span>+<span style=color:#ff79c6>======================</span>|
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>0</span>  NVIDIA H20                     Off | 00000000:22:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   27C    P0              75W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>1</span>  NVIDIA H20                     Off | 00000000:34:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   27C    P0              72W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>2</span>  NVIDIA H20                     Off | 00000000:48:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   28C    P0              73W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>3</span>  NVIDIA H20                     Off | 00000000:5A:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   27C    P0              72W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>4</span>  NVIDIA H20                     Off | 00000000:9B:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   28C    P0              73W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>5</span>  NVIDIA H20                     Off | 00000000:AE:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   26C    P0              72W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>6</span>  NVIDIA H20                     Off | 00000000:C2:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   29C    P0              74W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>|   <span style=color:#bd93f9>7</span>  NVIDIA H20                     Off | 00000000:D7:00.0 Off |                    <span style=color:#bd93f9>0</span> |
+</span></span><span style=display:flex><span>| N/A   27C    P0              72W / 500W |      0MiB / 97871MiB |      0%      Default |
+</span></span><span style=display:flex><span>|                                         |                      |             Disabled |
+</span></span><span style=display:flex><span>+-----------------------------------------+----------------------+----------------------+
+</span></span><span style=display:flex><span>                                                                                         
+</span></span><span style=display:flex><span>+---------------------------------------------------------------------------------------+
+</span></span><span style=display:flex><span>| Processes:                                                                            |
+</span></span><span style=display:flex><span>|  GPU   GI   CI        PID   Type   Process name                            GPU Memory |
+</span></span><span style=display:flex><span>|        ID   ID                                                             Usage      |
+</span></span><span style=display:flex><span>|<span style=color:#ff79c6>=======================================================================================</span>|
+</span></span><span style=display:flex><span>|  No running processes found                                                           |
+</span></span><span style=display:flex><span>+---------------------------------------------------------------------------------------+
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>[</span>root@xxxx ~<span style=color:#ff79c6>]</span><span style=color:#6272a4># nvidia-smi topo -m</span>
+</span></span><span style=display:flex><span>        GPU0    GPU1    GPU2    GPU3    GPU4    GPU5    GPU6    GPU7    NIC0    NIC1    NIC2    NIC3    NIC4    NIC5    NIC6    NIC7    NIC8    CPU Affinity    NUMA Affinity   GPU NUMA ID
+</span></span><span style=display:flex><span>GPU0     X      NV18    NV18    NV18    NV18    NV18    NV18    NV18    NODE    PIX     NODE    NODE    NODE    SYS     SYS     SYS     SYS     0-51,104-155    <span style=color:#bd93f9>0</span>               N/A
+</span></span><span style=display:flex><span>GPU1    NV18     X      NV18    NV18    NV18    NV18    NV18    NV18    NODE    NODE    PIX     NODE    NODE    SYS     SYS     SYS     SYS     0-51,104-155    <span style=color:#bd93f9>0</span>               N/A
+</span></span><span style=display:flex><span>GPU2    NV18    NV18     X      NV18    NV18    NV18    NV18    NV18    NODE    NODE    NODE    PIX     NODE    SYS     SYS     SYS     SYS     0-51,104-155    <span style=color:#bd93f9>0</span>               N/A
+</span></span><span style=display:flex><span>GPU3    NV18    NV18    NV18     X      NV18    NV18    NV18    NV18    NODE    NODE    NODE    NODE    PIX     SYS     SYS     SYS     SYS     0-51,104-155    <span style=color:#bd93f9>0</span>               N/A
+</span></span><span style=display:flex><span>GPU4    NV18    NV18    NV18    NV18     X      NV18    NV18    NV18    SYS     SYS     SYS     SYS     SYS     PIX     NODE    NODE    NODE    52-103,156-207  <span style=color:#bd93f9>1</span>               N/A
+</span></span><span style=display:flex><span>GPU5    NV18    NV18    NV18    NV18    NV18     X      NV18    NV18    SYS     SYS     SYS     SYS     SYS     NODE    PIX     NODE    NODE    52-103,156-207  <span style=color:#bd93f9>1</span>               N/A
+</span></span><span style=display:flex><span>GPU6    NV18    NV18    NV18    NV18    NV18    NV18     X      NV18    SYS     SYS     SYS     SYS     SYS     NODE    NODE    PIX     NODE    52-103,156-207  <span style=color:#bd93f9>1</span>               N/A
+</span></span><span style=display:flex><span>GPU7    NV18    NV18    NV18    NV18    NV18    NV18    NV18     X      SYS     SYS     SYS     SYS     SYS     NODE    NODE    NODE    PIX     52-103,156-207  <span style=color:#bd93f9>1</span>               N/A
+</span></span><span style=display:flex><span>NIC0    NODE    NODE    NODE    NODE    SYS     SYS     SYS     SYS      X      NODE    NODE    NODE    NODE    SYS     SYS     SYS     SYS
+</span></span><span style=display:flex><span>NIC1    PIX     NODE    NODE    NODE    SYS     SYS     SYS     SYS     NODE     X      NODE    NODE    NODE    SYS     SYS     SYS     SYS
+</span></span><span style=display:flex><span>NIC2    NODE    PIX     NODE    NODE    SYS     SYS     SYS     SYS     NODE    NODE     X      NODE    NODE    SYS     SYS     SYS     SYS
+</span></span><span style=display:flex><span>NIC3    NODE    NODE    PIX     NODE    SYS     SYS     SYS     SYS     NODE    NODE    NODE     X      NODE    SYS     SYS     SYS     SYS
+</span></span><span style=display:flex><span>NIC4    NODE    NODE    NODE    PIX     SYS     SYS     SYS     SYS     NODE    NODE    NODE    NODE     X      SYS     SYS     SYS     SYS
+</span></span><span style=display:flex><span>NIC5    SYS     SYS     SYS     SYS     PIX     NODE    NODE    NODE    SYS     SYS     SYS     SYS     SYS      X      NODE    NODE    NODE
+</span></span><span style=display:flex><span>NIC6    SYS     SYS     SYS     SYS     NODE    PIX     NODE    NODE    SYS     SYS     SYS     SYS     SYS     NODE     X      NODE    NODE
+</span></span><span style=display:flex><span>NIC7    SYS     SYS     SYS     SYS     NODE    NODE    PIX     NODE    SYS     SYS     SYS     SYS     SYS     NODE    NODE     X      NODE
+</span></span><span style=display:flex><span>NIC8    SYS     SYS     SYS     SYS     NODE    NODE    NODE    PIX     SYS     SYS     SYS     SYS     SYS     NODE    NODE    NODE     X 
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>Legend:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>X</span>    <span style=color:#ff79c6>=</span> Self
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>SYS</span>  <span style=color:#ff79c6>=</span> Connection traversing PCIe as well as the SMP interconnect between NUMA nodes <span style=color:#ff79c6>(</span>e.g., QPI/UPI<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>NODE</span> <span style=color:#ff79c6>=</span> Connection traversing PCIe as well as the interconnect between PCIe Host Bridges within a NUMA node
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>PHB</span>  <span style=color:#ff79c6>=</span> Connection traversing PCIe as well as a PCIe Host Bridge <span style=color:#ff79c6>(</span>typically the CPU<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>PXB</span>  <span style=color:#ff79c6>=</span> Connection traversing multiple PCIe bridges <span style=color:#ff79c6>(</span>without traversing the PCIe Host Bridge<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>  <span style=color:#8be9fd;font-style:italic>PIX</span>  <span style=color:#ff79c6>=</span> Connection traversing at most a single PCIe bridge
+</span></span><span style=display:flex><span>  NV#  <span style=color:#ff79c6>=</span> Connection traversing a bonded <span style=color:#8be9fd;font-style:italic>set</span> of <span style=color:#6272a4># NVLinks</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>NIC Legend:
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>  NIC0: mlx5_0
+</span></span><span style=display:flex><span>  NIC1: mlx5_1
+</span></span><span style=display:flex><span>  NIC2: mlx5_2
+</span></span><span style=display:flex><span>  NIC3: mlx5_3
+</span></span><span style=display:flex><span>  NIC4: mlx5_4
+</span></span><span style=display:flex><span>  NIC5: mlx5_5
+</span></span><span style=display:flex><span>  NIC6: mlx5_6
+</span></span><span style=display:flex><span>  NIC7: mlx5_7
+</span></span><span style=display:flex><span>  NIC8: mlx5_8
+</span></span></code></pre></div><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>[</span>root@xxx ~<span style=color:#ff79c6>]</span><span style=color:#6272a4># nvidia-smi nvlink --status -i 0</span>
+</span></span><span style=display:flex><span>GPU 0: NVIDIA H20 <span style=color:#ff79c6>(</span>UUID: GPU-3c0f23f4-6f23-0feb-28e3-92a276556a6c<span style=color:#ff79c6>)</span>
+</span></span><span style=display:flex><span>         Link 0: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 1: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 2: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 3: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 4: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 5: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 6: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 7: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 8: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 9: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 10: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 11: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 12: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 13: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 14: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 15: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 16: 26.562 GB/s
+</span></span><span style=display:flex><span>         Link 17: 26.562 GB/s
+</span></span></code></pre></div><p><span style=color:red>⚠️ 注意：模型文件可能分为多个部分，一定要验证所有文件的完整性，避免因文件损坏导致的启动失败</span></p><h2 id=下载权重>下载权重</h2><p>从 <a href=https://huggingface.co/deepseek-ai/DeepSeek-R1>DeepSeek-R1</a> 下载 DeepSeek-R1 FP8 模型文件；</p><h2 id=下载镜像>下载镜像</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>lmsysorg/sglang:latest
+</span></span></code></pre></div><h1 id=测试过程>测试过程</h1><p>vLLM 在通用场景下表现更稳定，而SGLang在批处理场景下吞吐量略高；</p><p>运行 SGlang</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>docker run -itd --gpus all --shm-size 32g -p 30000:30000 -v <span style=color:#8be9fd;font-style:italic>$PWD</span>:/workspace --ipc<span style=color:#ff79c6>=</span>host --network<span style=color:#ff79c6>=</span>host --privileged  ccr-25mlx515-pub.cnc.bj.baidubce.com/cce-private/lmsysorg-sglang-latest:ea52b45be1a7 bash
+</span></span></code></pre></div><p>运行 DeepSeek-R1 模型服务</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>python3 -m sglang.launch_server --model-path /workspace/DeepSeek-R1 --served-model-name DeepSeek-R1 --tp <span style=color:#bd93f9>8</span> --trust-remote-code --host 0.0.0.0 --port <span style=color:#bd93f9>30000</span> --mem-fraction-static 0.95 --max-running-requests <span style=color:#bd93f9>32</span>  --context-length  <span style=color:#bd93f9>65536</span> --quantization fp8  --chunked-prefill-size  <span style=color:#bd93f9>4096</span>
+</span></span></code></pre></div><p><span style=color:red>参考<a href=https://github.com/sgl-project/sglang/blob/main/benchmark/deepseek_v3/README.md>官方测试命令</a>，启动失败，需要改成上述命令；</span></p><h2 id=精度测试>精度测试</h2><h3 id=gpqa>gpqa</h3><p>启动测试：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>evalscope <span style=color:#8be9fd;font-style:italic>eval</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --model DeepSeek-R1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --api-url http://127.0.0.1:30000/v1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --api-key EMPTY <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --eval-type service <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --datasets gpqa <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --dataset-args <span style=color:#f1fa8c>&#39;{&#34;gpqa&#34;: {&#34;local_path&#34;: &#34;/workspace/datasets/gpqa/&#34;, &#34;metrics_list&#34;: [&#34;Pass@1&#34;], &#34;subset_list&#34;: [&#34;gpqa_diamond&#34;], &#34;few_shot_num&#34;: 0}}&#39;</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --generation-config <span style=color:#8be9fd;font-style:italic>max_tokens</span><span style=color:#ff79c6>=</span>20480,temperature<span style=color:#ff79c6>=</span>0.0 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --eval-batch-size <span style=color:#bd93f9>30</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --timeout <span style=color:#bd93f9>10000000</span>
+</span></span></code></pre></div><p>测试结果：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>2025-03-17 02:51:28,364 - evalscope - INFO - Use default settings: &gt; few_shot_num: 0, &gt; few_shot_split: None, &gt; target_eval_split: train
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:   1%|          | 1/198 <span style=color:#ff79c6>[</span>02:05&lt;6:52:52, 125.75s/it<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:   3%|▎         | 5/198 <span style=color:#ff79c6>[</span>03:00&lt;1:09:46, 21.69s/it<span style=color:#ff79c6>]</span> 
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:  30%|███       | 60/198 <span style=color:#ff79c6>[</span>22:07&lt;53:55, 23.45s/it<span style=color:#ff79c6>]</span>  
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:  49%|████▉     | 97/198 <span style=color:#ff79c6>[</span>36:52&lt;29:39, 17.61s/it<span style=color:#ff79c6>]</span>  
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:  75%|███████▌  | 149/198 <span style=color:#ff79c6>[</span>59:19&lt;19:43, 24.15s/it<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:  94%|█████████▍| 187/198 <span style=color:#ff79c6>[</span>1:13:54&lt;05:27, 29.77s/it<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>:  99%|█████████▉| 197/198 <span style=color:#ff79c6>[</span>1:22:03&lt;00:58, 58.33s/it<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>Predicting<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>: 100%|██████████| 198/198 <span style=color:#ff79c6>[</span>1:23:36&lt;00:00, 25.34s/it<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>2025-03-17 04:15:05,223 - evalscope - INFO - Dump predictions to ./outputs/20250317_025127/predictions/DeepSeek-R1/gpqa_gpqa_diamond.jsonl.
+</span></span><span style=display:flex><span>Reviewing<span style=color:#ff79c6>(</span>gpqa_diamond<span style=color:#ff79c6>)</span>: 100%|██████████| 198/198 <span style=color:#ff79c6>[</span>00:00&lt;00:00, 1092.30it/s<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>2025-03-17 04:15:05,438 - evalscope - INFO - Dump report: ./outputs/20250317_025127/reports/DeepSeek-R1/gpqa.json 
+</span></span><span style=display:flex><span>2025-03-17 04:15:05,441 - evalscope - INFO - Report table: 
+</span></span><span style=display:flex><span>+-------------+-----------+---------------+--------------+-------+---------+---------+
+</span></span><span style=display:flex><span>| Model       | Dataset   | Metric        | Subset       |   Num |   Score | Cat.0   |
+</span></span><span style=display:flex><span>+<span style=color:#ff79c6>=============</span>+<span style=color:#ff79c6>===========</span>+<span style=color:#ff79c6>===============</span>+<span style=color:#ff79c6>==============</span>+<span style=color:#ff79c6>=======</span>+<span style=color:#ff79c6>=========</span>+<span style=color:#ff79c6>=========</span>+
+</span></span><span style=display:flex><span>| DeepSeek-R1 | gpqa      | AveragePass@1 | gpqa_diamond |   <span style=color:#bd93f9>198</span> |   0.702 | default |
+</span></span><span style=display:flex><span>+-------------+-----------+---------------+--------------+-------+---------+---------+ 
+</span></span><span style=display:flex><span>2025-03-17 04:15:05,441 - evalscope - INFO - **** Evaluation finished on /workspace/datasets/gpqa/ ****
+</span></span></code></pre></div><h3 id=aime24>aime24</h3><p>启动测试：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>python3 -u math_eval_h20.py <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --tokenzier_dir /workspace/DeepSeek-R1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --model_name_or_path /workspace/DeepSeek-R1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --data_name aime24 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --output_dir /workspace/h20-output/ <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --split <span style=color:#8be9fd;font-style:italic>test</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --prompt_type deepseek-math <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --num_test_sample -1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --max_tokens_per_call <span style=color:#bd93f9>20480</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --seed <span style=color:#bd93f9>0</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --temperature <span style=color:#bd93f9>0</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --n_sampling <span style=color:#bd93f9>1</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --top_p <span style=color:#bd93f9>1</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --start <span style=color:#bd93f9>0</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --end -1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --use_openai <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --save_outputs <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --apply_chat_template
+</span></span></code></pre></div><p>测试结果：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>100%|██████████| 28/28 <span style=color:#ff79c6>[</span>00:00&lt;00:00, 457.67it/s<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>-------------------- Epoch <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Saved to /workspace/h20-output//1742186525.2899108/raw_result.jsonl
+</span></span><span style=display:flex><span>-------------------- Epoch <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>Unsolved samples: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Evaluate: 100%|██████████| 30/30 <span style=color:#ff79c6>[</span>00:00&lt;00:00, 134.13it/s<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#39;num_samples&#39;</span>: 30, <span style=color:#f1fa8c>&#39;num_scores&#39;</span>: 30, <span style=color:#f1fa8c>&#39;timeout_samples&#39;</span>: 0, <span style=color:#f1fa8c>&#39;empty_samples&#39;</span>: 0, <span style=color:#f1fa8c>&#39;acc&#39;</span>: 83.3<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>Saved to /workspace/h20-output/aime24/test_deepseek-math_-1_seed0_t0.0_s0_e-1.jsonl
+</span></span><span style=display:flex><span>aime24  avg   
+</span></span><span style=display:flex><span>83.3    83.3  
+</span></span></code></pre></div><h3 id=math500>math500</h3><p>启动测试：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>python3 -u math_eval_h20.py <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --tokenzier_dir /workspace/DeepSeek-R1  <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --model_name_or_path /workspace/DeepSeek-R1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --data_name math500 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --output_dir /workspace/h20-output-math500/ <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --split <span style=color:#8be9fd;font-style:italic>test</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --prompt_type deepseek-math <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --num_test_sample -1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --max_tokens_per_call <span style=color:#bd93f9>20480</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --seed <span style=color:#bd93f9>0</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --temperature <span style=color:#bd93f9>0</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --n_sampling <span style=color:#bd93f9>1</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --top_p <span style=color:#bd93f9>1</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --start <span style=color:#bd93f9>0</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --end -1 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --use_openai <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --save_outputs <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>  --apply_chat_template
+</span></span></code></pre></div><p>测试结果：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Assistant:
+</span></span><span style=display:flex><span>100%|██████████| 500/500 <span style=color:#ff79c6>[</span>00:01&lt;00:00, 328.63it/s<span style=color:#ff79c6>]</span>
+</span></span><span style=display:flex><span>-------------------- Epoch <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Saved to /workspace/h20-output-math500//1742190683.1334848/raw_result.jsonl
+</span></span><span style=display:flex><span>-------------------- Epoch <span style=color:#bd93f9>1</span>
+</span></span><span style=display:flex><span>Unsolved samples: <span style=color:#bd93f9>0</span>
+</span></span><span style=display:flex><span>Evaluate: 100%|██████████| 500/500 <span style=color:#ff79c6>[</span>00:00&lt;00:00, 731.59it/s<span style=color:#ff79c6>]</span> 
+</span></span><span style=display:flex><span><span style=color:#ff79c6>{</span><span style=color:#f1fa8c>&#39;num_samples&#39;</span>: 500, <span style=color:#f1fa8c>&#39;num_scores&#39;</span>: 500, <span style=color:#f1fa8c>&#39;timeout_samples&#39;</span>: 0, <span style=color:#f1fa8c>&#39;empty_samples&#39;</span>: 1, <span style=color:#f1fa8c>&#39;acc&#39;</span>: 96.0<span style=color:#ff79c6>}</span>
+</span></span><span style=display:flex><span>Saved to /workspace/h20-output-math500//math500/test_deepseek-math_-1_seed0_t0.0_s0_e-1.jsonl
+</span></span><span style=display:flex><span>math500 avg    
+</span></span><span style=display:flex><span>96.0    96.0
+</span></span></code></pre></div><h2 id=性能测试>性能测试</h2><p>运行 SGlang</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>docker run -itd --gpus all --shm-size 32g -p 30000:30000 -v <span style=color:#8be9fd;font-style:italic>$PWD</span>:/workspace --ipc<span style=color:#ff79c6>=</span>host --network<span style=color:#ff79c6>=</span>host --privileged  ccr-25mlx515-pub.cnc.bj.baidubce.com/cce-private/lmsysorg-sglang-latest:ea52b45be1a7 bash
+</span></span></code></pre></div><p>运行 DeepSeek-R1 模型服务</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>python3 -m sglang.launch_server --model-path /workspace/DeepSeek-R1 --served-model-name DeepSeek-R1 --tp <span style=color:#bd93f9>8</span> --trust-remote-code --host 0.0.0.0 --port <span style=color:#bd93f9>30000</span> --mem-fraction-static 0.95 --max-running-requests <span style=color:#bd93f9>32</span>  --context-length  <span style=color:#bd93f9>65536</span> --quantization fp8  --chunked-prefill-size  <span style=color:#bd93f9>4096</span>
+</span></span></code></pre></div><p><span style=color:red>参考<a href=https://github.com/sgl-project/sglang/blob/main/benchmark/deepseek_v3/README.md>官方测试命令</a>，启动失败，需要改成上述命令；</span></p><p>下载 ShareGPT_V3_unfiltered_cleaned_split：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>wget https://huggingface.co/datasets/anon8231489123/ShareGPT_Vicuna_unfiltered/resolve/main/ShareGPT_V3_unfiltered_cleaned_split.json
+</span></span></code></pre></div><p>性能测试示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>python3 -m sglang.bench_serving <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --backend sglang <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --dataset-name random <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --dataset-path /workspace/datasets/ShareGPT_V3_unfiltered_cleaned_split.json  <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --model /workspace/DeepSeek-R1  <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --random-input <span style=color:#bd93f9>5600</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --random-output <span style=color:#bd93f9>1400</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --random-range-ratio 0.8 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --num-prompts <span style=color:#bd93f9>1</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --host 0.0.0.0 <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --port <span style=color:#bd93f9>30000</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --output-file <span style=color:#f1fa8c>&#34;deepseekr1_1.json&#34;</span> <span style=color:#f1fa8c>\
+</span></span></span><span style=display:flex><span><span style=color:#f1fa8c></span>    --max-concurrency <span style=color:#bd93f9>1</span>
+</span></span></code></pre></div><p>sglang 性能测试响应数据示例如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#ff79c6>{</span>
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;backend&#34;</span>: <span style=color:#f1fa8c>&#34;sglang&#34;</span>, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;dataset_name&#34;</span>: <span style=color:#f1fa8c>&#34;random&#34;</span>, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;request_rate&#34;</span>: <span style=color:#f1fa8c>&#34;Infinity&#34;</span>, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;max_concurrency&#34;</span>: 128, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;sharegpt_output_len&#34;</span>: null, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;random_input_len&#34;</span>: 3500, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;random_output_len&#34;</span>: 1500, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;random_range_ratio&#34;</span>: 0.7, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;duration&#34;</span>: 577.2790666338988, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;completed&#34;</span>: 128, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;total_input_tokens&#34;</span>: 384124, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;total_output_tokens&#34;</span>: 161427, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;total_output_tokens_retokenized&#34;</span>: 160882, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;request_throughput&#34;</span>: 0.22172984852259603, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;input_throughput&#34;</span>: 665.4043463585444, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;output_throughput&#34;</span>: 279.6342520113837, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;mean_e2e_latency_ms&#34;</span>: 356288.1459405144, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;median_e2e_latency_ms&#34;</span>: 383529.29322898854, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;std_e2e_latency_ms&#34;</span>: 149932.69563592484, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;p99_e2e_latency_ms&#34;</span>: 576120.2690516319, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;mean_ttft_ms&#34;</span>: 220795.97218007257, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;median_ttft_ms&#34;</span>: 219905.09079105686, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;std_ttft_ms&#34;</span>: 155288.4408328424, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;p99_ttft_ms&#34;</span>: 461669.7295173723, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;mean_tpot_ms&#34;</span>: 107.60915398548093, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;median_tpot_ms&#34;</span>: 107.54734916891869, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;std_tpot_ms&#34;</span>: 28.123959275677496, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;p99_tpot_ms&#34;</span>: 119.76204162723829, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;mean_itl_ms&#34;</span>: 107.5221331570835, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;median_itl_ms&#34;</span>: 91.4815510623157, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;std_itl_ms&#34;</span>: 970.5097010946142, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;p95_itl_ms&#34;</span>: 93.53254092857242, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;p99_itl_ms&#34;</span>: 737.1417707297951, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;concurrency&#34;</span>: 78.99971662978685, 
+</span></span><span style=display:flex><span>  <span style=color:#f1fa8c>&#34;accept_length&#34;</span>: null
+</span></span><span style=display:flex><span><span style=color:#ff79c6>}</span>
+</span></span></code></pre></div><p>测试脚本，如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#6272a4>#!/usr/bin/bash</span>
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>all_length<span style=color:#ff79c6>=</span>(
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;3500 1500&#34;</span>
+</span></span><span style=display:flex><span>    <span style=color:#f1fa8c>&#34;3000 400&#34;</span>
+</span></span><span style=display:flex><span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>prompt_num<span style=color:#ff79c6>=</span>(<span style=color:#bd93f9>1</span> <span style=color:#bd93f9>4</span> <span style=color:#bd93f9>8</span> <span style=color:#bd93f9>16</span> <span style=color:#bd93f9>32</span> <span style=color:#bd93f9>64</span> <span style=color:#bd93f9>80</span> <span style=color:#bd93f9>128</span> <span style=color:#bd93f9>256</span> <span style=color:#bd93f9>350</span> <span style=color:#bd93f9>512</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>random_range_ratios<span style=color:#ff79c6>=</span>(<span style=color:#bd93f9>0.7</span> <span style=color:#bd93f9>0.8</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>for</span> length <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#34;$</span><span style=color:#f1fa8c>{all_length[@]}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>do
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span> i <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#34;$</span><span style=color:#f1fa8c>{prompt_num[@]}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>    do
+</span></span><span style=display:flex><span>        input_len<span style=color:#ff79c6>=</span>$(echo $length <span style=color:#ff79c6>|</span> cut <span style=color:#ff79c6>-</span>d<span style=color:#f1fa8c>&#39; &#39;</span> <span style=color:#ff79c6>-</span>f1)
+</span></span><span style=display:flex><span>        output_len<span style=color:#ff79c6>=</span>$(echo $length <span style=color:#ff79c6>|</span> cut <span style=color:#ff79c6>-</span>d<span style=color:#f1fa8c>&#39; &#39;</span> <span style=color:#ff79c6>-</span>f2)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>for</span> ratio <span style=color:#ff79c6>in</span> <span style=color:#f1fa8c>&#34;$</span><span style=color:#f1fa8c>{random_range_ratios[@]}</span><span style=color:#f1fa8c>&#34;</span>
+</span></span><span style=display:flex><span>        do
+</span></span><span style=display:flex><span>            python3 <span style=color:#ff79c6>-</span>m sglang<span style=color:#ff79c6>.</span>bench_serving \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>backend sglang \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>dataset<span style=color:#ff79c6>-</span>name random \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>dataset<span style=color:#ff79c6>-</span>path <span style=color:#ff79c6>/</span>workspace<span style=color:#ff79c6>/</span>datasets<span style=color:#ff79c6>/</span>ShareGPT_V3_unfiltered_cleaned_split<span style=color:#ff79c6>.</span>json \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>model <span style=color:#ff79c6>/</span>workspace<span style=color:#ff79c6>/</span>DeepSeek<span style=color:#ff79c6>-</span>R1 \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>random<span style=color:#ff79c6>-</span><span style=color:#8be9fd;font-style:italic>input</span> ${input_len} \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>random<span style=color:#ff79c6>-</span>output ${output_len} \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>random<span style=color:#ff79c6>-</span><span style=color:#8be9fd;font-style:italic>range</span><span style=color:#ff79c6>-</span>ratio ${ratio} \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>num<span style=color:#ff79c6>-</span>prompts ${i} \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>host <span style=color:#bd93f9>0.0.0.0</span> \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>port <span style=color:#bd93f9>30000</span> \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span>output<span style=color:#ff79c6>-</span>file <span style=color:#f1fa8c>&#34;tp$</span><span style=color:#f1fa8c>{i}</span><span style=color:#f1fa8c>_in$</span><span style=color:#f1fa8c>{input_len}</span><span style=color:#f1fa8c>_out$</span><span style=color:#f1fa8c>{output_len}</span><span style=color:#f1fa8c>_ratio$</span><span style=color:#f1fa8c>{ratio}</span><span style=color:#f1fa8c>.json&#34;</span> \
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>--</span><span style=color:#8be9fd;font-style:italic>max</span><span style=color:#ff79c6>-</span>concurrency ${i}
+</span></span><span style=display:flex><span>        done
+</span></span><span style=display:flex><span>    done
+</span></span><span style=display:flex><span>done
+</span></span></code></pre></div><p>收集测试结果：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-python data-lang=python><span style=display:flex><span><span style=color:#ff79c6>import</span> json
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> os
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> csv
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> re
+</span></span><span style=display:flex><span><span style=color:#ff79c6>import</span> argparse
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>fieldnames <span style=color:#ff79c6>=</span> [<span style=color:#f1fa8c>&#34;prompt_num&#34;</span>, <span style=color:#f1fa8c>&#34;concurrency&#34;</span>, <span style=color:#f1fa8c>&#34;random_input_len&#34;</span>, <span style=color:#f1fa8c>&#34;random_output_len&#34;</span>, <span style=color:#f1fa8c>&#34;total_input_tokens&#34;</span>, <span style=color:#f1fa8c>&#34;total_output_tokens&#34;</span>, <span style=color:#f1fa8c>&#34;duration&#34;</span>, <span style=color:#f1fa8c>&#34;request_throughput&#34;</span>, <span style=color:#f1fa8c>&#34;mean_e2e_latency_ms&#34;</span>, <span style=color:#f1fa8c>&#34;median_e2e_latency_ms&#34;</span>, <span style=color:#f1fa8c>&#34;std_e2e_latency_ms&#34;</span>, <span style=color:#f1fa8c>&#34;p99_e2e_latency_ms&#34;</span>, <span style=color:#f1fa8c>&#34;mean_ttft_ms&#34;</span>, <span style=color:#f1fa8c>&#34;median_ttft_ms&#34;</span>, <span style=color:#f1fa8c>&#34;p99_ttft_ms&#34;</span>, <span style=color:#f1fa8c>&#34;mean_tpot_ms&#34;</span>, <span style=color:#f1fa8c>&#34;median_tpot_ms&#34;</span>, <span style=color:#f1fa8c>&#34;p99_tpot_ms&#34;</span>, <span style=color:#f1fa8c>&#34;mean_itl_ms&#34;</span>, <span style=color:#f1fa8c>&#34;median_itl_ms&#34;</span>, <span style=color:#f1fa8c>&#34;p99_itl_ms&#34;</span>, <span style=color:#f1fa8c>&#34;input_output_throughput(tok/s)&#34;</span> ,<span style=color:#f1fa8c>&#34;input_throughput(tok/s)&#34;</span>, <span style=color:#f1fa8c>&#34;output_throughput(tok/s)&#34;</span>]
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>def</span> <span style=color:#50fa7b>main</span>(args):
+</span></span><span style=display:flex><span>    data <span style=color:#ff79c6>=</span> []
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>for</span> _, _, files <span style=color:#ff79c6>in</span> os<span style=color:#ff79c6>.</span>walk(args<span style=color:#ff79c6>.</span>dir):
+</span></span><span style=display:flex><span>        <span style=color:#ff79c6>for</span> file <span style=color:#ff79c6>in</span> files:
+</span></span><span style=display:flex><span>            pattern <span style=color:#ff79c6>=</span> <span style=color:#f1fa8c>r</span><span style=color:#f1fa8c>&#39;tp(\d+)_in(\d+)_out(\d+)_ratio([\d.]+)\.json&#39;</span>
+</span></span><span style=display:flex><span>            match <span style=color:#ff79c6>=</span> re<span style=color:#ff79c6>.</span>match(pattern, file)
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>if</span> match:
+</span></span><span style=display:flex><span>                <span style=color:#6272a4>#print(match.group(0), match.group(1), match.group(2), match.group(3), match.group(4))</span>
+</span></span><span style=display:flex><span>                prompt_num <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>int</span>(match<span style=color:#ff79c6>.</span>group(<span style=color:#bd93f9>1</span>))
+</span></span><span style=display:flex><span>                con <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>int</span>(match<span style=color:#ff79c6>.</span>group(<span style=color:#bd93f9>1</span>))
+</span></span><span style=display:flex><span>                input_length <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>int</span>(match<span style=color:#ff79c6>.</span>group(<span style=color:#bd93f9>2</span>))
+</span></span><span style=display:flex><span>                output_length <span style=color:#ff79c6>=</span> <span style=color:#8be9fd;font-style:italic>int</span>(match<span style=color:#ff79c6>.</span>group(<span style=color:#bd93f9>3</span>))
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>else</span>:
+</span></span><span style=display:flex><span>                <span style=color:#8be9fd;font-style:italic>print</span>(<span style=color:#f1fa8c>f</span><span style=color:#f1fa8c>&#34;File </span><span style=color:#f1fa8c>{</span>file<span style=color:#f1fa8c>}</span><span style=color:#f1fa8c> does not match the pattern&#34;</span>)
+</span></span><span style=display:flex><span>                <span style=color:#ff79c6>continue</span>  
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>            <span style=color:#ff79c6>with</span> <span style=color:#8be9fd;font-style:italic>open</span>(os<span style=color:#ff79c6>.</span>path<span style=color:#ff79c6>.</span>join(args<span style=color:#ff79c6>.</span>dir, file), <span style=color:#f1fa8c>&#39;r&#39;</span>) <span style=color:#ff79c6>as</span> f:
+</span></span><span style=display:flex><span>                result <span style=color:#ff79c6>=</span> json<span style=color:#ff79c6>.</span>load(f)
+</span></span><span style=display:flex><span>                data<span style=color:#ff79c6>.</span>append(
+</span></span><span style=display:flex><span>                    {
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;prompt_num&#34;</span>: prompt_num, 
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;concurrency&#34;</span>: con,
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;random_input_len&#34;</span>: result[<span style=color:#f1fa8c>&#39;random_input_len&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;random_output_len&#34;</span>: result[<span style=color:#f1fa8c>&#39;random_output_len&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;total_input_tokens&#34;</span>: result[<span style=color:#f1fa8c>&#39;total_input_tokens&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;total_output_tokens&#34;</span>: result[<span style=color:#f1fa8c>&#39;total_output_tokens&#39;</span>], 
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;duration&#34;</span>: result[<span style=color:#f1fa8c>&#39;duration&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;request_throughput&#34;</span>: result[<span style=color:#f1fa8c>&#39;request_throughput&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;mean_e2e_latency_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;mean_e2e_latency_ms&#39;</span>], 
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;median_e2e_latency_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;median_e2e_latency_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;std_e2e_latency_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;std_e2e_latency_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;p99_e2e_latency_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;p99_e2e_latency_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;mean_ttft_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;mean_ttft_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;median_ttft_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;median_ttft_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;p99_ttft_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;p99_ttft_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;mean_tpot_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;mean_tpot_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;median_tpot_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;median_tpot_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;p99_tpot_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;p99_tpot_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;mean_itl_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;mean_itl_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;median_itl_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;median_itl_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;p99_itl_ms&#34;</span>: result[<span style=color:#f1fa8c>&#39;p99_itl_ms&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;input_output_throughput(tok/s)&#34;</span>: result[<span style=color:#f1fa8c>&#39;input_throughput&#39;</span>] <span style=color:#ff79c6>+</span> result[<span style=color:#f1fa8c>&#39;output_throughput&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;input_throughput(tok/s)&#34;</span>: result[<span style=color:#f1fa8c>&#39;input_throughput&#39;</span>],
+</span></span><span style=display:flex><span>                        <span style=color:#f1fa8c>&#34;output_throughput(tok/s)&#34;</span>: result[<span style=color:#f1fa8c>&#39;output_throughput&#39;</span>],
+</span></span><span style=display:flex><span>                    }
+</span></span><span style=display:flex><span>                )
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    data<span style=color:#ff79c6>.</span>sort(key<span style=color:#ff79c6>=</span><span style=color:#ff79c6>lambda</span> x: x[<span style=color:#f1fa8c>&#34;concurrency&#34;</span>])
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    output_file <span style=color:#ff79c6>=</span> os<span style=color:#ff79c6>.</span>path<span style=color:#ff79c6>.</span>join(args<span style=color:#ff79c6>.</span>dir, <span style=color:#f1fa8c>&#39;summary.csv&#39;</span>)
+</span></span><span style=display:flex><span>    <span style=color:#ff79c6>with</span> <span style=color:#8be9fd;font-style:italic>open</span>(output_file, <span style=color:#f1fa8c>&#39;w&#39;</span>, newline<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#39;&#39;</span>) <span style=color:#ff79c6>as</span> f:
+</span></span><span style=display:flex><span>        writer <span style=color:#ff79c6>=</span> csv<span style=color:#ff79c6>.</span>DictWriter(f, fieldnames<span style=color:#ff79c6>=</span>fieldnames)
+</span></span><span style=display:flex><span>        writer<span style=color:#ff79c6>.</span>writeheader()
+</span></span><span style=display:flex><span>        writer<span style=color:#ff79c6>.</span>writerows(data)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span>    <span style=color:#8be9fd;font-style:italic>print</span>(<span style=color:#f1fa8c>f</span><span style=color:#f1fa8c>&#34;CSV file saved to </span><span style=color:#f1fa8c>{</span>output_file<span style=color:#f1fa8c>}</span><span style=color:#f1fa8c>&#34;</span>)
+</span></span><span style=display:flex><span>
+</span></span><span style=display:flex><span><span style=color:#ff79c6>if</span> __name__ <span style=color:#ff79c6>==</span> <span style=color:#f1fa8c>&#34;__main__&#34;</span>:
+</span></span><span style=display:flex><span>    parser <span style=color:#ff79c6>=</span> argparse<span style=color:#ff79c6>.</span>ArgumentParser()
+</span></span><span style=display:flex><span>    parser<span style=color:#ff79c6>.</span>add_argument(<span style=color:#f1fa8c>&#34;--dir&#34;</span>, <span style=color:#8be9fd;font-style:italic>type</span><span style=color:#ff79c6>=</span><span style=color:#8be9fd;font-style:italic>str</span>, help<span style=color:#ff79c6>=</span><span style=color:#f1fa8c>&#34;Directory containing JSON result files&#34;</span>)
+</span></span><span style=display:flex><span>    args <span style=color:#ff79c6>=</span> parser<span style=color:#ff79c6>.</span>parse_args()
+</span></span><span style=display:flex><span>    main(args)
+</span></span></code></pre></div><h1 id=测试结果>测试结果</h1><h2 id=deepseek-r1-fp8--单机-h20>DeepSeek R1 FP8 + 单机 H20</h2><p>DeepSeek R1 FP8 + 单机 H20 精度测试结果如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aime24 83.3 
+</span></span><span style=display:flex><span>math500 96.0
+</span></span><span style=display:flex><span>gpqa：70.2
+</span></span></code></pre></div><p>DeepSeek R1 FP8 + 单机 H20 性能测试结果如下所示：</p><p>random-range-ratio 等于 0.7 的测试结果：
+<img src=/images/2025-03-23-h20-deepseek-r1/1.png alt></p><p>random-range-ratio 等于 0.8 的测试结果：
+<img src=/images/2025-03-23-h20-deepseek-r1/2.png alt></p><h2 id=deepseek-r1-block-int8httpshuggingfacecomeituandeepseek-r1-block-int8--单机-h20><a href=https://huggingface.co/meituan/DeepSeek-R1-Block-INT8>DeepSeek-R1-Block-INT8</a> + 单机 H20</h2><p>同理按照上述操作，测试下 <a href=https://huggingface.co/meituan/DeepSeek-R1-Block-INT8>DeepSeek-R1-Block-INT8</a> + 单机 H20 的性能。</p><p>DeepSeek-R1-Block-INT8 + 单机 H20 精度测试结果如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>aime24 0.702
+</span></span><span style=display:flex><span>math500 95.6 
+</span></span><span style=display:flex><span>gpqa：76.7
+</span></span></code></pre></div><p>DeepSeek-R1-Block-INT8 + 单机 H20 性能测试结果如下所示：</p><p>random-range-ratio 等于 0.7 的测试结果：
+<img src=/images/2025-03-23-h20-deepseek-r1/3.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2025-03-15-deepseek-r1-gpu-resource/ data-toggle=tooltip data-placement=top title="DeepSeek R1 推理 GPU 资源配置">&larr;
+Previous Post</a></li></ul></div><div class="col-lg-2 col-lg-offset-0
+visible-lg-block
+sidebar-container
+catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-8 col-lg-offset-2
+col-md-10 col-md-offset-1
+sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center"><li><a href=mailto:tanjunchen20@gmail.com><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=/img/wechat.jpg><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-weixin fa-stack-1x fa-inverse"></i></span></a></li><li><a target=_blank href=https://github.com/tanjunchen><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="copyright text-muted">Copyright &copy; 陈谭军 2025</p></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
