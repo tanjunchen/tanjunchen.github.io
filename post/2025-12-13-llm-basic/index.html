@@ -16,7 +16,7 @@ Saturday, December 13, 2025
 col-md-9
 post-container"><h1 id=推理常见加速手段>推理常见加速手段</h1><p>大模型推理的常见加速手段，本质上围绕 “少算、快算、少等、少搬” 四个方向展开：</p><ul><li>一方面通过算法与模型层优化，如 KV Cache、FlashAttention、Speculative Decoding、量化与裁剪，减少不必要的计算或降低计算精度成本；</li><li>另一方面在系统与工程层面，借助算子融合、并行化（Tensor / Pipeline / Expert Parallelism）、高效调度与批处理，提升硬件利用率；</li><li>同时通过内存与数据路径优化，如 KV Cache 复用与 Offload、Paged Attention、NUMA 感知和高速互联（NVLink / RDMA），减少访存和数据搬运开销；</li><li>最终在部署与服务层，结合请求合并、动态批处理、异构算力协同，实现端到端时延与吞吐的综合最优。</li></ul><p>整体如下所示：</p><p><img src=/images/2025-12-13-llm-basic/1.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2025-12-06-llm/ data-toggle=tooltip data-placement=top title="聊聊 LLM 推理架构演进中的几个关键技术节点">&larr;
 Previous Post</a></li><li class=next><a href=/post/2026-01-01-happy-new-year/ data-toggle=tooltip data-placement=top title="2026 新年快乐（Happy New Year）">Next
-Post &rarr;</a></li></ul></div><div class="col-lg-3 col-lg-offset-0
+Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
 sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9

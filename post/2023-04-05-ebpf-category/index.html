@@ -495,7 +495,7 @@ post-container"><p>通过 eBPF 可以对多种类型的事件进行跟踪，例�
 </span></span><span style=display:flex><span>}
 </span></span></code></pre></div><p>uprobe 监控相比其他类型事件的监控存在一个很明显的差别，需要额外配置 BinaryPath。原因是因为 uprobe 针对用户态程序的监控，所以需要指定用户态程序的路径。在本例中，我们针对的是 bash 进程，所以需要指定 <code>/usr/bin/bash</code>，最终运行的结果如下所示：</p><p><img src=/images/2023-04-05-ebpf-category/2.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2023-04-01-ebpf-introduce/ data-toggle=tooltip data-placement=top title="简单了解与学习 eBPF">&larr;
 Previous Post</a></li><li class=next><a href=/post/2023-04-20-cilium-mesh-one-mesh/ data-toggle=tooltip data-placement=top title="译文：Cilium Mesh - Mesh 连接所有应用">Next
-Post &rarr;</a></li></ul></div><div class="col-lg-3 col-lg-offset-0
+Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
 sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9

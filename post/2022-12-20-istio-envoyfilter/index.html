@@ -21,7 +21,7 @@ post-container"><h1 id=序言>序言</h1><p>Istio 在自己的定制版本 Envoy
 <img src=/images/2022-12-20-istio-envoyfilter/3.png alt></p><p>删除 istio-system 命名空间下的 <code>stats-filter-1.x、tcp-stats-filter-1.x</code> envoyfilter，重新测试，如下所示：
 <img src=/images/2022-12-20-istio-envoyfilter/4.png alt></p><h2 id=结论>结论</h2><p>istio-system 下默认的 envoyfilter 跟指标息息相关，如果删除，所有跟指标相关的事项会有功能缺失。在 Istio 中，istio-system 命名空间下的 EnvoyFilter 主要用于配置 Envoy 代理的行为。EnvoyFilter 允许你对进出网格的流量进行细粒度的控制和修改，从而实现各种功能，如流量路由、安全策略、故障注入、监控指标收集等。</p><hr><ul class=pager><li class=previous><a href=/post/2022-12-01-cilium-1.12-release/ data-toggle=tooltip data-placement=top title="Cilium 1.12 GA：发布 Cilium Service Mesh 和企业级 Kubernetes 新功能">&larr;
 Previous Post</a></li><li class=next><a href=/post/2023-01-01-chatgpt-article/ data-toggle=tooltip data-placement=top title=程序员技术：探索创新的编码之道>Next
-Post &rarr;</a></li></ul></div><div class="col-lg-3 col-lg-offset-0
+Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
 sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9

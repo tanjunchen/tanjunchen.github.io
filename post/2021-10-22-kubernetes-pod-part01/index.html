@@ -408,7 +408,7 @@ post-container"><p>最近在深入学习 Kubernetes 基础知识，通过追踪 
 </span></span></code></pre></div><p>总结：在 Kubernetes 中，首先需要理解的是，POD 并不完全等同于一个容器，而是一个容器的集合。而属于同一个 POD 的所有容器共享一个网络栈。Kubernetes 通过在每个 POD 中创建的 pause 容器来管理网络。对于创建的每个 POD，都可以找到一个 pause 容器。
 其他容器都会附加到 pause 容器的网络上，而 pause 容器本身的作用仅仅是提供网络支持。因此，同一个 POD 中的容器可以通过 localhost 与其他容器之间进行通信。这种网络共享机制是 Kubernetes 的核心功能之一。如下图所示：</p><p><img src=/images/2021-10-22-kubernetes-pod-part01/8.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2021-10-15-kubernetes-pod-part03/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 Kube-Proxy（Part3）">&larr;
 Previous Post</a></li><li class=next><a href=/post/2021-10-29-kubernetes-pod-part02/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 CNI Calico（Part2）">Next
-Post &rarr;</a></li></ul></div><div class="col-lg-3 col-lg-offset-0
+Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
 sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9

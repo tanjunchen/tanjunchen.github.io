@@ -92,7 +92,7 @@ post-container"><p>最近在深入学习 Kubernetes 基础知识，通过追踪 
 </span></span></code></pre></div><p>请看以下的 iptables 流程图：</p><ul><li>ClusterIP: KUBE-SERVICES → KUBE-SVC-XXX → KUBE-SEP-XXX</li><li>NodePort: KUBE-SERVICES → KUBE-NODEPORTS → KUBE-SVC-XXX → KUBE-SEP-XXX</li></ul><p>流量数据包整体请求流程如下所示：
 <img src=/images/2021-10-15-kubernetes-pod-part03/15.png alt></p><h1 id=参考>参考</h1><ol><li><a href=https://kubernetes.io/>https://kubernetes.io/</a></li><li><a href=https://www.netfilter.org/>https://www.netfilter.org/</a></li></ol><hr><ul class=pager><li class=previous><a href=/post/2021-10-01-kubernetes-pod-lifecycle/ data-toggle=tooltip data-placement=top title="Kubernetes 中 Pod 生命周期">&larr;
 Previous Post</a></li><li class=next><a href=/post/2021-10-22-kubernetes-pod-part01/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 网络基础知识（Part1）">Next
-Post &rarr;</a></li></ul></div><div class="col-lg-3 col-lg-offset-0
+Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
 sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9

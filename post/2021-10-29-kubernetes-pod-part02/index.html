@@ -667,7 +667,7 @@ post-container"><p>最近在深入学习 Kubernetes 基础知识，通过追踪 
 </span></span><span style=display:flex><span>169.254.1.1 dev eth0 scope link
 </span></span></code></pre></div><p>这个概念与之前的模式类似，但唯一的区别在于，数据包到达 VXLAN 时，VXLAN 会将数据包封装，并在内层头部中加入节点的 IP 和 MAC 地址，然后发送出去。此外，VXLAN 协议的 UDP 端口为 4789。在此过程中，etcd 提供了可用节点及其支持的 IP 范围的详细信息，以便 VXLAN-Calico 构建数据包。</p><p><img src=/images/2021-10-29-kubernetes-pod-part02/7.png alt></p><hr><ul class=pager><li class=previous><a href=/post/2021-10-22-kubernetes-pod-part01/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 网络基础知识（Part1）">&larr;
 Previous Post</a></li><li class=next><a href=/post/2021-11-05-kubernetes-pod-part04/ data-toggle=tooltip data-placement=top title="Kubernetes 中数据包的生命周期 Ingress 等处理七层流量（Part4）">Next
-Post &rarr;</a></li></ul></div><div class="col-lg-3 col-lg-offset-0
+Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
 sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9
