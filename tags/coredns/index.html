@@ -10,7 +10,7 @@
 col-md-9
 col-sm-12
 col-xs-12
-post-container"><div data-pagefind-ignore=all><div class=post-preview><a href=https://tanjunchen.github.io/post/2024-01-09-kubernetes-coredns/><h2 class=post-title>Kubernetes CoreDNS 核心原理和源码解析</h2><div class=post-content-preview>K8S 中的 DNS 解析原理 示例如下所示： ➜ tanjunchen_blog (main) kubectl exec -it nginx-0 bash ✱ kubectl exec [POD] [COMMAND] is DEPRECATED and will be removed in a future version. Use kubectl exec [POD] -- [COMMAND] instead. root@nginx-0:/# cat /etc/resolv.conf search default.svc.cluster.local svc.cluster.local cluster.local nameserver 10.22.0.10 options ndots:5 root@nginx-0:/# exit exit ➜ tanjunchen_blog (main) kubectl -n kube-system get svc kube-dns ✱ NAME</div></a><p class=post-meta>Posted by <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a> on Sunday, January 7, 2024</p></div><hr></div></div><div class="col-lg-3 col-lg-offset-0
+post-container"><div data-pagefind-ignore=all><div class=post-preview><a href=https://tanjunchen.github.io/post/2024-01-09-kubernetes-coredns/><h2 class=post-title>Kubernetes CoreDNS 核心原理和源码解析</h2><h3 class=post-subtitle>深入解析 K8S DNS SPEC 规范、Corefile 插件链机制与 kubernetes 插件源码实现</h3><div class=post-content-preview>本文深入分析 Kubernetes CoreDNS 核心工作原理：从 Pod 内 /etc/resolv.conf 配置（ndots/search 域解析规则）、K8S DNS SPEC 规范，到 CoreDNS 插件链架构（Corefile 配置、kubernetes 插件源码分析），全面解密集群 Service 域名与 Headless Service 的 DNS 注册与解析流程。</div></a><p class=post-meta>Posted by <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a> on Sunday, January 7, 2024</p></div><hr></div></div><div class="col-lg-3 col-lg-offset-0
 col-md-3 col-md-offset-0
 col-sm-12
 col-xs-12
