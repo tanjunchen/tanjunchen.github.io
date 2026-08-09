@@ -10,7 +10,7 @@
 col-md-9
 col-sm-12
 col-xs-12
-post-container"><div data-pagefind-ignore=all><div class=post-preview><a href=https://tanjunchen.github.io/post/2023-07-25-network-package/><h2 class=post-title>Linux 是如何处理网络数据包？</h2><h3 class=post-subtitle>当网络数据包到达网卡时，数据包从网卡是如何到 Linux（以内核4.19举例） 网络协议栈？</h3><div class=post-content-preview>当网络数据包到达网卡时，数据包从网卡是如何到 Linux（以内核4.19举例） 网络协议栈？先回顾 OSI 七层模型与 TCP/IP 五层模型，如下所示： TCP/IP 应用层数据</div></a><p class=post-meta>Posted by <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a> on Tuesday, July 25, 2023</p></div><hr></div></div><div class="col-lg-3 col-lg-offset-0
+post-container"><div data-pagefind-ignore=all><div class=post-preview><a href=https://tanjunchen.github.io/post/2023-07-25-network-package/><h2 class=post-title>Linux 是如何处理网络数据包？</h2><h3 class=post-subtitle>当网络数据包到达网卡时，数据包从网卡是如何到 Linux（以内核4.19举例） 网络协议栈？</h3><div class=post-content-preview>当网络数据包到达网卡时，数据包从网卡是如何到 Linux（以内核4.19举例） 网络协议栈？先回顾 OSI 七层模型与 TCP/IP 五层模型，如下所示： TCP/IP 应用层数据包的格式如下所示： 我们先来了解一下 Linux 中的网络协议模型和网络子系统。 网络协议模型（网络协议栈） 应用层提供 socket 接口来供用户进程访问内核空间的网络协议栈 传输层、网络层协议由 Linux 内核网络协议栈实现 链路层协议靠网卡驱动来实现 物理层协议由硬件网卡实现 网络子系统（网络子系统是 Linux 内核中的一部分，由多个模块和驱动程序组成，它负责管理和控制系统的网络功能以实现网</div></a><p class=post-meta>Posted by <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a> on Tuesday, July 25, 2023</p></div><hr></div></div><div class="col-lg-3 col-lg-offset-0
 col-md-3 col-md-offset-0
 col-sm-12
 col-xs-12
