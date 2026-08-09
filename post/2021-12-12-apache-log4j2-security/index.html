@@ -10,8 +10,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Sunday, December 12, 2021
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 4493 字</span>，阅读约 <span class=more-meta>9 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 4493 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 9 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=漏洞说明>漏洞说明</h1><p>2021年12月9日，Apache Log4j2 Java 日志模块存在远程命令执行漏洞可直接控制目标服务器问题，攻击者攻击难度极低。由于 Apache Log4j2 某些功能存在递归解析功能，攻击者可直接构造恶意请求，触发远程代码执行漏洞。该漏洞可通过 critical、error、warining、notice、info、debug等日志级别触发，只需部分日志内容可控，此漏洞波及大量开源组件，包括 ELK、 Apache 、Struts2、Apache Solr、Apache Druid、Apache Flink 等均受影响。目前漏洞细节已被公开，攻击者可利用该漏洞进行远程命令执行。
 <img src=/images/2021-12-12-apache-log4j2-security/1.png alt></p><p>Apache Log4j2 远程代码执行漏洞的详细信息已被披露，而经过分析，本次 Apache Log4j 远程代码执行漏洞，正是由于组件存在 Java JNDI 注入漏洞。当程序将用户输入的数据记入日志时，攻击者通过构造特殊请求，来触发 Apache Log4j2 中的远程代码执行漏洞，从而利用此漏洞在目标服务器上执行任意代码。<br>据悉，此次 Apache Log4j2 远程代码执行漏洞风险已被业内评级为“高危”，且漏洞危害巨大，利用门槛极低。有报道称，目前 Apache Solr、Apache Struts2、Apache Druid、Apache Flink 等众多组件及大型应用均已经受到了影响，需尽快采取防御手段。</p><h1 id=关键因素>关键因素</h1><h2 id=概括>概括</h2><p>2.15.0 之前的 Log4j 版本存在通过 ldap JNDI 解析器的远程代码执行漏洞。根据 Apache 的 Log4j 安全指南：Apache Log4j2 &lt;=2.14.1 在配置、日志消息和参数中使用的 JNDI 功能不能防止攻击者控制的 LDAP 和其他 JNDI 相关端点。当启用消息查找替换时，可以控制日志消息或日志消息参数的攻击者可以执行从 LDAP 服务器加载的任意代码。从 log4j 2.15.0 开始，默认情况下已禁用此行为。

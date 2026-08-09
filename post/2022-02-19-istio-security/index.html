@@ -12,8 +12,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Saturday, February 19, 2022
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 5368 字</span>，阅读约 <span class=more-meta>11 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 5368 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 11 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><p>在这篇博客中，我将解释 Istio 如何解决诸如流量加密、提供灵活的服务访问控制、配置双向 TLS 和细粒度访问策略与审计等问题。</p><h1 id=istio-安全架构>Istio 安全架构</h1><p>Istio 服务网格发展历史如下所示：
 <img src=/images/2022-02-19-istio-security/1.jpeg alt></p><p>Istio 主要由以下组件提供安全功能：</p><ol><li>用于管理密钥和证书的证书颁发机构 (CA)</li><li>Sidecar 代理：实现客户端和服务器之间的安全通信（它们用作策略执行点 (PEP)）</li><li>Envoy 代理扩展层：管理遥测和审计等</li><li>配置 API 服务器：分发身份验证、授权策略和安全命名信息等</li></ol><p>策略执行点 (PEP) 是充当资源守护者的组件。让我们查阅下图中不同组件及其职责的架构图。

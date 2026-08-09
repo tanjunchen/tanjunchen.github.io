@@ -12,8 +12,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Sunday, February 23, 2025
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 2493 字</span>，阅读约 <span class=more-meta>5 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 2493 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 5 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=硬件与系统环境要求>硬件与系统环境要求</h1><h2 id=硬件配置>硬件配置</h2><ul><li>GPU: 8× NVIDIA A800 80GB</li><li>显存要求: 每卡80GB</li><li>系统内存: ≥32GB (用于交换空间)</li><li>CPU：lscpu | grep &ldquo;Model name&rdquo; 值：Model name: Intel(R) Xeon(R) Platinum 8350C CPU @ 2.60GHz</li><li>CPU架构：lscpu | grep Architecture 值：Architecture: x86_64</li><li>MEM：free -g</li><li>HDD/SDD lsblk</li></ul><h2 id=软件环境>软件环境</h2><ul><li>操作系统（OS）: CentOS release 7.6 (Final)</li><li>内核： uname -a 5.10.0-1.0.0.41 #1 SMP Mon Nov 25 08:24:56 UTC 2024 x86_64 x86_64 x86_64 GNU/Linux</li><li>驱动版本: NVIDIA-SMI 535.183.06 Driver Version: 535.183.06 CUDA Version: 12.2</li><li>Docker：docker version 20.10.5</li></ul><h1 id=获取模型与框架>获取模型与框架</h1><h2 id=下载量化版模型文件>下载量化版模型文件</h2><p>方式一：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>git clone 
 </span></span><span style=display:flex><span>https://huggingface.co/cognitivecomputations/DeepSeek-R1-AWQ

@@ -11,8 +11,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Saturday, March 9, 2024
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 1607 字</span>，阅读约 <span class=more-meta>4 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 1607 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 4 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=背景>背景</h1><p>Istio XDS 全量下发在大规模场景下存在性能问题。</p><ul><li>Istio 全量下发配置会导致数据面/控制面出现性能瓶颈；</li><li>全量下发造成数据面 Envoy 配置庞大，Envoy 内存使用率较大；</li></ul><h1 id=测试目标>测试目标</h1><p>主要目标是测试在评估（Sidecar）按需下发后 Istio 控制平面与数据平面性能（数据平面的 Envoy 内存占用与控制平面的推送时延）。</p><h1 id=性能测试>性能测试</h1><h2 id=集群信息>集群信息</h2><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Kubernetes 版本：v1.26.9
 </span></span><span style=display:flex><span>istio 版本：1.16.5 

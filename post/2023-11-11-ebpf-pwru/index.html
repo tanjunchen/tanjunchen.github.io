@@ -11,8 +11,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Saturday, November 11, 2023
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 4620 字</span>，阅读约 <span class=more-meta>10 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 4620 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 10 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=介绍>介绍</h1><p>Linux 中的网络是个很复杂的问题！！！我们常常会遇见以下问题。</p><ul><li>网络命名空间（network）使网络变得更加复杂；</li><li>当一个数据包丢失时，作为网络工程师，如何确切知道问题出在Linux内核的哪个地方；</li><li>一旦融合eBPF和XDP网络程序，如何确切知道需要查看的所有可能的代码路径？</li><li>如何知道你不知道的事情？</li></ul><p>pwru 是 Cilium 推出的基于 eBPF 开发的网络数据包排查工具，它提供了更细粒度的网络数据包排查方案。本文将介绍 pwru 的使用方法和经典场景，并介绍其实现原理。<a href=https://github.com/cilium/pwru>https://github.com/cilium/pwru</a> 是一种基于eBPF的工具，用于在Linux内核中追踪网络数据包，并具有高级过滤能力。它允许对内核状态进行细粒度的跟踪，并可以用来调试网络连接性问题。</p><h1 id=部署与安装>部署与安装</h1><p>pwru 需要 5.3+ 版本的内核才能运行，对于 &ndash;output-skb，需要 5.9+ 版本的内核，对于 &ndash;backend=kprobe-multi，需要 5.18+ 版本的内核。
 debugfs 必须挂载在 /sys/kernel/debug 下，如果该文件夹为空，可以使用以下命令进行挂载：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>mount -t debugfs none /sys/kernel/debug

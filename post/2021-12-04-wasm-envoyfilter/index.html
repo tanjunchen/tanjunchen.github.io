@@ -12,8 +12,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Saturday, December 4, 2021
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 796 字</span>，阅读约 <span class=more-meta>2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 796 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=wasm-c-filter>Wasm C++ Filter</h1><p>这篇博客演示了一个用 C++ 编写的入门 Envoy Wasm Filter，它将返回值注入到 HTTP 响应的 body 中，并且更新与添加 header。</p><p>通过该文章完成构建我们的 C++ Wasm Filter 所需的步骤，并使用 Envoy 运行它。</p><h1 id=示例>示例</h1><p><strong>启动所有的应用进程，首先让我们启动容器应用</strong></p><p>一个使用 Wasm 过滤器的 Envoy 代理服务，以及一个响应我们请求的后端服务，克隆下载 envoy。</p><pre tabindex=0><code>git clone https://github.com/envoyproxy/envoy
 </code></pre><p>切换到 Envoy 仓库中的 examples/wasm-cc 目录下，运行如下命令：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span><span style=color:#8be9fd;font-style:italic>pwd</span>

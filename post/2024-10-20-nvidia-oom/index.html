@@ -12,8 +12,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Sunday, October 20, 2024
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 3520 字</span>，阅读约 <span class=more-meta>8 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 3520 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 8 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=1-问题>1. 问题</h1><p>有客户反馈使用 A100 卡跑训练时会出现 RuntimeError: CUDA error: out of memory 报错。使用 docker Pod 运行的方式下出现的概率很低，但是使用 Kubernetes Pod 会很大的概率出现上述报错现象，总之都会出现该报错。</p><p>具体报错信息如下所示：</p><div class=highlight><pre tabindex=0 style=color:#f8f8f2;background-color:#282a36;-moz-tab-size:4;-o-tab-size:4;tab-size:4><code class=language-bash data-lang=bash><span style=display:flex><span>Traceback <span style=color:#ff79c6>(</span>most recent call last<span style=color:#ff79c6>)</span>:
 </span></span><span style=display:flex><span>  File <span style=color:#f1fa8c>&#34;tools/test.py&#34;</span>, line 195, in &lt;module&gt;

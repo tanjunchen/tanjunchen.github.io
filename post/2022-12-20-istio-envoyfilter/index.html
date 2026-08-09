@@ -12,8 +12,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Tuesday, December 20, 2022
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 774 字</span>，阅读约 <span class=more-meta>2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 774 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=序言>序言</h1><p>Istio 在自己的定制版本 Envoy 中，加入了 stats-filter 插件，用于计算 Istio 指标。可参见<a href=https://github.com/istio/proxy/blob/release-1.14/extensions/stats/plugin.cc>stats-plugin.cc</a>。Istio 安装时默认会在 istio-system 命名空间下部署 <code>stats-filter-1.xx、tcp-stats-filter-1.xx</code> 等 envoyfilter 文件，如下图所示：
 <img src=/images/2022-12-20-istio-envoyfilter/1.png alt></p><h1 id=介绍>介绍</h1><p>Envoyfilter 是 Istio 自定义的 CRD，用于配置 Envoy 的过滤器，EnvoyFilter 配置文件如下所示：

@@ -13,8 +13,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Saturday, September 16, 2023
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 3138 字</span>，阅读约 <span class=more-meta>7 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 3138 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 7 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><p>我们将应用程序部署到 Kubernetes 集群时，比较重要的一步是创建 Service，它允许集群内的应用程序或外部客户端通过 Service 访问。
 Kubernetes 中的服务是一种简单的抽象，但与任何抽象层类似，它增加了系统的复杂性，并使故障排除变得更具挑战性。本文我们来研究下在 Kubernetes 集群中，Service 之间是如何通信的。</p><h1 id=目标>目标</h1><p>集群中的服务是如何通信的？在本文中，我们将使用以下示例来深入了解与学习 Kubernetes Service 通信的工作原理。</p><h1 id=序言>序言</h1><p>在我们开始研究 Kubernetes 集群中的 Service 通信原理之前，先简单了解与学习 Docker Swarm 模式下的 Service 是如何通信的？让我们探索一下服务到服务通信是如何在 Docker Swarm 集群中工作的！！！

@@ -13,8 +13,7 @@
 <a href=https://github.com/tanjunchen target=_blank rel=noopener>tanjunchen</a>
 on
 Monday, May 1, 2023
-<span id=busuanzi_container_page_pv>|<span id=busuanzi_value_page_pv></span><span>
-阅读 </span></span>|<span class=post-date>共 12425 字</span>，阅读约 <span class=more-meta>25 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
+<span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 12425 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 25 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><h1 id=背景>背景</h1><p>传统的基于二层转发（Linux bridge、Netfilter/iptables、OVS 等）和/或三层路由的网络虚拟化方案中，数据包的转发路径通常非常清晰，通过一些常见工具或命令就能判断包的下一跳。当网络出现问题时，例如，一个容器访问另一个容器网络不通，只要沿着这条路径上的设备依次抓包，分析路由表、ARP 表，一般就能定位到问题。但是，如果容器网络使用的是 Cilium，上述网络排查手段是困难的或者失效的。</p><p>本文通过借助常规 Linux 工具来探索 Cilium 的整个转发路径，并分析在每个转发节点分别做了什么事情，深入理解 Cilium 技术原理，提升 Cilium 作为容器网络 CNI 故障排障能力。</p><h1 id=说明>说明</h1><h2 id=环境配置>环境配置</h2><pre tabindex=0><code>➜  cilium-mesh kubectl get pod -owide
 NAME                       READY   STATUS    RESTARTS   AGE   IP             NODE           NOMINATED NODE   READINESS GATES
