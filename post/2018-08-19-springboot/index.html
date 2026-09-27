@@ -1,7 +1,7 @@
 <!doctype html><html lang=en-us><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1"><meta property="og:site_name" content="漫步远方，心荡神往"><meta property="og:type" content="article"><meta property="og:image" content="https://tanjunchen.github.io/img/home.webp"><meta property="twitter:image" content="https://tanjunchen.github.io/img/home.webp"><meta name=title content="初识 Spring Boot"><meta property="og:title" content="初识 Spring Boot"><meta property="twitter:title" content="初识 Spring Boot"><meta name=description content="tanjunchen，软件工程师, 开源爱好者, 互联网, 大模型, AI, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="og:description" content="tanjunchen，软件工程师, 开源爱好者, 互联网, 大模型, AI, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:description" content="tanjunchen，软件工程师, 开源爱好者, 互联网, 大模型, AI, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><meta property="twitter:card" content="summary"><meta name=keyword content="tanjunchen, 互联网, 大模型, AI, 云原生, 容器, 微服务, Web, PaaS, Istio, Kubernetes, Microservice"><link rel="shortcut icon" href=/img/favicon.ico><title>初识 Spring Boot | tanjunchen Blog | tanjunchen的博客</title><link rel=canonical href=/post/2018-08-19-springboot/><link rel=stylesheet href=/css/bootstrap.min.css><link rel=stylesheet href=/css/hugo-theme-cleanwhite.min.css><link rel=stylesheet href=/css/zanshang.css><link rel=stylesheet href=/css/font-awesome.all.min.css><link rel=stylesheet href=/css/site-custom.css><script src=/js/jquery.min.js></script>
 <script src=/js/bootstrap.min.js></script>
-<script src=/js/hux-blog.min.js></script>
-<script src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
+<script defer src=/js/hux-blog.min.js></script>
+<script defer src=/js/lazysizes.min.js></script></head><nav class="navbar navbar-default navbar-custom navbar-fixed-top"><div class=container-fluid><div class="navbar-header page-scroll"><button type=button class=navbar-toggle>
 <span class=sr-only>Toggle navigation</span>
 <span class=icon-bar></span>
 <span class=icon-bar></span>
@@ -14,17 +14,17 @@ Sunday, August 19, 2018
 <span id=busuanzi_container_page_pv>&nbsp;·&nbsp; <span id=busuanzi_value_page_pv></span> 阅读</span> &nbsp;·&nbsp; <span class=post-date>共 704 字</span> &nbsp;·&nbsp; <span class=more-meta>预计阅读约 2 分钟</span></span></div></div></div></div></header><article><div class=container><div class=row><div class="col-lg-9
 col-md-9
 post-container"><p>最近接触到 Spring Boot，让我们一起探讨这个很火的家伙吧！！！</p><p><strong>什么是 Spring Boot?</strong></p><p>Spring Boot 是由 Pivotal 团队提供的全新框架，其设计目的是用来简化 Spring 应用的初始搭建以及开发过程。就像 maven 整合了所有的 jar 包，Spring Boot 整合了所有的框架。<br>Spring Boot 的核心思想就是约定大于配置，多数 Spring Boot 应用只需要很少的 Spring 配置。采用 Spring Boot 可以大大的简化你的开发模式，所有你想集成的常用框架，它都有对应的组件支持。<br>SpringBoot2.0 的推出又激起了一阵学习 SpringBoot 热潮。有缘接触到 spring boot，慢慢感受到了她的魅力。</p><p><strong>Spring Boot 的优势？</strong></p><p>使用 Spring 项目引导页面可以在几秒构建一个项目，方便对外输出各种形式的服务，如 REST API、WebSocket、Web。</p><ol><li>非常简洁的安全策略集成。</li><li>支持关系数据库和非关系数据库。</li><li>支持运行期内嵌容器，如 Tomcat、Jetty。</li><li>强大的开发包，支持热启动。</li><li>自动管理依赖。</li><li>自带应用监控。</li><li>支持各种 IED，如 IntelliJ IDEA 、Eclipse。</li></ol><p><strong>Spring Boot 示例</strong></p><p>最好的方式就是看<a href=https://docs.spring.io/spring-boot/docs>官方文档</a>。SpringBoot 入门小案例？基于 SpringBoot2.0.4.RELEASE 版本。</p><p>第一步：选择新建项目，选择 Spring Starter Project 项目。
-<img src=/images/2018-08-19-springboot/1.jpeg alt></p><p>第二步：填写相应的项目内容。
-<img src=/images/2018-08-19-springboot/2.jpeg alt></p><p>第三步：勾选相应的 pom.xml 的依赖包，入门选择 Web 即可，测试 web 小案例，点击下一步，然后点击完成。</p><p>第四步：maven 更新相应的 jar 包。
-<img src=/images/2018-08-19-springboot/3.jpeg alt></p><p>第五步：如果项目出现如下图的情况，可能是因为 eclipse 开发环境的原因，解决方案在 pom.xml 中加入如图内容。没有则跳过此步骤。
-<img src=/images/2018-08-19-springboot/4.jpeg alt></p><p>第六步：此时项目结构如下图。
-<img src=/images/2018-08-19-springboot/5.jpeg alt></p><p>第七步：新建一个 hello 入门类。
-<img src=/images/2018-08-19-springboot/6.jpeg alt></p><p>第八步：在 src/main/resources 下新建一个 application.yml 配置文件，内容如下：
-<img src=/images/2018-08-19-springboot/7.jpeg alt>
+<img src=/images/2018-08-19-springboot/1.jpeg alt loading=lazy decoding=async></p><p>第二步：填写相应的项目内容。
+<img src=/images/2018-08-19-springboot/2.jpeg alt loading=lazy decoding=async></p><p>第三步：勾选相应的 pom.xml 的依赖包，入门选择 Web 即可，测试 web 小案例，点击下一步，然后点击完成。</p><p>第四步：maven 更新相应的 jar 包。
+<img src=/images/2018-08-19-springboot/3.jpeg alt loading=lazy decoding=async></p><p>第五步：如果项目出现如下图的情况，可能是因为 eclipse 开发环境的原因，解决方案在 pom.xml 中加入如图内容。没有则跳过此步骤。
+<img src=/images/2018-08-19-springboot/4.jpeg alt loading=lazy decoding=async></p><p>第六步：此时项目结构如下图。
+<img src=/images/2018-08-19-springboot/5.jpeg alt loading=lazy decoding=async></p><p>第七步：新建一个 hello 入门类。
+<img src=/images/2018-08-19-springboot/6.jpeg alt loading=lazy decoding=async></p><p>第八步：在 src/main/resources 下新建一个 application.yml 配置文件，内容如下：
+<img src=/images/2018-08-19-springboot/7.jpeg alt loading=lazy decoding=async>
 简单来说就是配置服务器的端口，这里配置的是 8080。</p><p>第九步：运行 Spring Boot 项目，使用 postman 工具测试，是否可以得到预期效果。
-<img src=/images/2018-08-19-springboot/8.jpeg alt></p><p>第十步：浏览器的效果，达到预期效果。入门案例基本完成。
-<img src=/images/2018-08-19-springboot/9.jpeg alt></p><p>Spring Boot 网站，是最好的学习工具。
-<img src=/images/2018-08-19-springboot/10.jpeg alt></p><hr><ul class=pager><li class=previous><a href=/post/2018-08-01-git-learn/ data-toggle=tooltip data-placement=top title="初步浅析 Git 教程">&larr;
+<img src=/images/2018-08-19-springboot/8.jpeg alt loading=lazy decoding=async></p><p>第十步：浏览器的效果，达到预期效果。入门案例基本完成。
+<img src=/images/2018-08-19-springboot/9.jpeg alt loading=lazy decoding=async></p><p>Spring Boot 网站，是最好的学习工具。
+<img src=/images/2018-08-19-springboot/10.jpeg alt loading=lazy decoding=async></p><hr><ul class=pager><li class=previous><a href=/post/2018-08-01-git-learn/ data-toggle=tooltip data-placement=top title="初步浅析 Git 教程">&larr;
 Previous Post</a></li><li class=next><a href=/post/2018-09-01-python-bj-house-price/ data-toggle=tooltip data-placement=top title="Python 揭秘北京房租">Next
 Post &rarr;</a></li></ul><div class=giscus-comments-container style="margin-top:35px;padding-top:25px;border-top:1px solid #f0f3f6"><script src=https://giscus.app/client.js data-repo=tanjunchen/tanjunchen_blog data-repo-id=R_kgDOKARDsg data-category=Announcements data-category-id=DIC_kwDOKARDss4DC_vU data-mapping=pathname data-reactions-enabled=1 data-emit-metadata=0 data-theme=light data-lang=zh-CN crossorigin=anonymous async></script></div></div><div class="col-lg-3 col-lg-offset-0
 visible-lg-block
@@ -32,7 +32,9 @@ sidebar-container
 catalog-container"><div class=side-catalog><hr class="hidden-sm hidden-xs"><h5><a class=catalog-toggle href=#>CATALOG</a></h5><ul class=catalog-body></ul></div></div><div class="col-lg-9
 col-md-9
 sidebar-container"></div></div></div></article><footer><div class=container><div class=row><div class="col-lg-12 col-md-12 text-center"><p class="copyright text-muted">Copyright &copy; 2026
-<a href=https://github.com/tanjunchen target=_blank>tanjunchen</a></p><div class=site-busuanzi-counter><span id=busuanzi_container_site_pv><i class="fa fa-eye"></i> 本站访问量 <span id=busuanzi_value_site_pv class=busuanzi-number></span> 次</span>
+<a href=https://github.com/tanjunchen target=_blank>tanjunchen</a>
 <span class=busuanzi-divider>&nbsp;|&nbsp;</span>
-<span id=busuanzi_container_site_uv><i class="fa fa-user"></i> 您是本站第 <span id=busuanzi_value_site_uv class=busuanzi-number></span> 位访问者</span></div><script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
+<span id=busuanzi_container_site_pv><i class="fa fa-eye"></i> 本站访问量 <span id=busuanzi_value_site_pv class=busuanzi-number></span> 次</span>
+<span class=busuanzi-divider>&nbsp;|&nbsp;</span>
+<span id=busuanzi_container_site_uv><i class="fa fa-user"></i> 您是本站第 <span id=busuanzi_value_site_uv class=busuanzi-number></span> 位访问者</span></p><script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
 <script>$(document).ready(function(){var e=setInterval(n,100),t=1e3;function n(){$("#busuanzi_container_site_pv").css("display")!="none"&&(clearInterval(e),$("#busuanzi_value_site_pv").html(parseInt($("#busuanzi_value_site_pv").html())+t))}})</script></div></div></div></footer><script>function loadAsync(e,t){var s=document,o="script",n=s.createElement(o),i=s.getElementsByTagName(o)[0];n.src=e,t&&n.addEventListener("load",function(e){t(null,e)},!1),i.parentNode.insertBefore(n,i)}</script><script>$("#tag_cloud").length!==0&&loadAsync("/js/jquery.tagcloud.js",function(){$.fn.tagcloud.defaults={color:{start:"#bbbbee",end:"#0085a1"}},$("#tag_cloud a").tagcloud()})</script><script>loadAsync("https://cdn.jsdelivr.net/npm/fastclick@1.0.6/lib/fastclick.min.js",function(){var e=document.querySelector("nav");e&&FastClick.attach(e)})</script><script type=text/javascript>function generateCatalog(e){_containerSelector="div.post-container";var t,n,s,o,i,r=$(_containerSelector),a=r.find("h1,h2,h3,h4,h5,h6");return $(e).html(""),a.each(function(){n=$(this).prop("tagName").toLowerCase(),i="#"+$(this).prop("id"),s=$(this).text(),t=$('<a href="'+i+'" rel="nofollow">'+s+"</a>"),o=$('<li class="'+n+'_nav"></li>').append(t),$(e).append(o)}),!0}generateCatalog(".catalog-body"),$(".catalog-toggle").click(function(e){e.preventDefault(),$(".side-catalog").toggleClass("fold")}),loadAsync("/js/jquery.nav.js",function(){$(".catalog-body").onePageNav({currentClass:"active",changeHash:!1,easing:"swing",filter:"",scrollSpeed:700,scrollOffset:0,scrollThreshold:.2,begin:null,end:null,scrollChange:null,padding:80})})</script></body></html>
